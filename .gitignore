@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.convex/
+.convex.local/
+.vexclaw/
+.vexclaw-state/
+*.log
+!*.example.log
+secrets/
+*.pem
+plugin/openclaw-hook.json

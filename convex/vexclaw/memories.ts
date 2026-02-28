@@ -1,0 +1,315 @@
+import { v } from "convex/values";
+import { mutation, query } from "../_generated/server";
+
+const nowMs = () => Date.now();
+
+const memoryStore = v.union(
+  v.literal("sensory"),
+  v.literal("episodic"),
+  v.literal("semantic"),
+  v.literal("procedural"),
+  v.literal("prospective")
+);
+
+const memoryCategory = v.union(
+  v.literal("decision"),
+  v.literal("lesson"),
+  v.literal("person"),
+  v.literal("rule"),
+  v.literal("event"),
+  v.literal("fact"),
+  v.literal("goal"),
+  v.literal("workflow")
+);
+
+const memorySource = v.union(
+  v.literal("conversation"),
+  v.literal("cron"),
+  v.literal("observation"),
+  v.literal("inference"),
+  v.literal("external")
+);
+
+const createMemoryInput = v.object({
+  store: memoryStore,
+  category: memoryCategory,
+  title: v.string(),
+  content: v.string(),
+  embedding: v.array(v.float64()),
+  strength: v.optional(v.float64()),
+  confidence: v.optional(v.float64()),
+  valence: v.optional(v.float64()),
+  arousal: v.optional(v.float64()),
+  source: v.optional(memorySource),
+  sessionId: v.optional(v.id("vexclawSessions")),
+  channel: v.optional(v.string()),
+  tags: v.optional(v.array(v.string())),
+  archived: v.optional(v.boolean()),
+  archivedAt: v.optional(v.number()),
+  promotedFrom: v.optional(v.id("vexclawMemories")),
+  checkpointId: v.optional(v.id("vexclawCheckpoints")),
+});
+
+const memoryListInput = v.object({
+  store: v.optional(memoryStore),
+  category: v.optional(memoryCategory),
+  channel: v.optional(v.string()),
+  tags: v.optional(v.array(v.string())),
+  archived: v.optional(v.boolean()),
+  minStrength: v.optional(v.float64()),
+  maxStrength: v.optional(v.float64()),
+  limit: v.optional(v.number()),
+});
+
+const updateMemoryInput = v.object({
+  memoryId: v.id("vexclawMemories"),
+  store: v.optional(memoryStore),
+  category: v.optional(memoryCategory),
+  title: v.optional(v.string()),
+  content: v.optional(v.string()),
+  strength: v.optional(v.float64()),
+  confidence: v.optional(v.float64()),
+  valence: v.optional(v.float64()),
+  arousal: v.optional(v.float64()),
+  tags: v.optional(v.array(v.string())),
+  source: v.optional(memorySource),
+  channel: v.optional(v.string()),
+  archived: v.optional(v.boolean()),
+  archivedAt: v.optional(v.number()),
+  promotedFrom: v.optional(v.id("vexclawMemories")),
+  checkpointId: v.optional(v.id("vexclawCheckpoints")),
+});
+
+const forgetMemoryInput = v.object({
+  memoryId: v.id("vexclawMemories"),
+  reason: v.optional(v.string()),
+});
+
+const dedupeTags = (tags: string[]): string[] => {
+  const normalized = tags
+    .map((tag) => tag.trim())
+    .map((tag) => tag.toLowerCase())
+    .filter((tag) => tag.length > 0);
+
+  return Array.from(new Set(normalized));
+};
+
+export const createMemory = mutation({
+  args: createMemoryInput,
+  handler: async (ctx, args) => {
+    const now = nowMs();
+
+    const candidates = await ctx.db
+      .query("vexclawMemories")
+      .withIndex("by_store_category", (q) =>
+        q.eq("store", args.store).eq("category", args.category).eq("archived", false)
+      )
+      .filter((q) => q.eq("title", args.title))
+      .take(5);
+
+    const duplicate = candidates.find(
+      (memory) =>
+        memory.content === args.content &&
+        (args.channel === undefined || args.channel === memory.channel) &&
+        memory.source === (args.source ?? "conversation")
+    );
+
+    if (duplicate) {
+      const existingTags = dedupeTags((duplicate.tags ?? []).concat(args.tags ?? []));
+      await ctx.db.patch(duplicate._id, {
+        lastAccessedAt: now,
+        confidence: args.confidence ?? duplicate.confidence,
+        strength: Math.max(duplicate.strength, args.strength ?? duplicate.strength),
+        valence: args.valence ?? duplicate.valence,
+        arousal: args.arousal ?? duplicate.arousal,
+        tags: existingTags,
+        channel: args.channel ?? duplicate.channel,
+      });
+      return duplicate._id;
+    }
+
+    const memoryId = await ctx.db.insert("vexclawMemories", {
+      store: args.store,
+      category: args.category,
+      title: args.title,
+      content: args.content,
+      embedding: args.embedding,
+      strength: args.strength ?? 1,
+      confidence: args.confidence ?? 0.7,
+      valence: args.valence ?? 0,
+      arousal: args.arousal ?? 0.3,
+      accessCount: 0,
+      lastAccessedAt: now,
+      createdAt: now,
+      source: args.source ?? "conversation",
+      sessionId: args.sessionId,
+      channel: args.channel,
+      tags: dedupeTags(args.tags ?? []),
+      archived: args.archived ?? false,
+      archivedAt: args.archivedAt,
+      promotedFrom: args.promotedFrom,
+      checkpointId: args.checkpointId,
+    });
+
+    return memoryId;
+  },
+});
+
+export const listMemories = query({
+  args: memoryListInput,
+  handler: async (ctx, args) => {
+    const requestedLimit = args.limit ?? 50;
+    const normalizedLimit = Math.min(Math.max(requestedLimit, 1), 200);
+    const hasStore = args.store !== undefined;
+    const hasCategory = args.category !== undefined;
+    const hasStrengthBounds = args.minStrength !== undefined || args.maxStrength !== undefined;
+
+    const query =
+      hasStore
+        ? ctx.db.query("vexclawMemories").withIndex("by_store_category", (q: any) => {
+          let queryBuilder = q;
+
+          if (hasStore) {
+            queryBuilder = queryBuilder.eq("store", args.store as never);
+          }
+
+          if (hasCategory) {
+            queryBuilder = queryBuilder.eq("category", args.category as never);
+          }
+
+          return queryBuilder;
+        })
+      : hasStrengthBounds
+      ? ctx.db.query("vexclawMemories").withIndex("by_strength", (q: any) => {
+          let queryBuilder = q;
+
+          if (args.minStrength !== undefined) {
+            queryBuilder = queryBuilder.gte("strength", args.minStrength);
+          }
+
+          if (args.maxStrength !== undefined) {
+            queryBuilder = queryBuilder.lte("strength", args.maxStrength);
+          }
+
+          return queryBuilder;
+        })
+      : ctx.db.query("vexclawMemories").withIndex("by_last_accessed", (q) => q.gte("lastAccessedAt", 0));
+
+    // Fetch a larger buffer to account for post-query filtering (channel, tags, archived, strength).
+    // Without this, take(limit) may exhaust before enough rows survive the filter.
+    const fetchBuffer = Math.min(normalizedLimit * 4, 800);
+    const memories = await query.take(fetchBuffer);
+
+    const filtered = memories.filter((memory) => {
+      if (args.store !== undefined && memory.store !== args.store) {
+        return false;
+      }
+
+      if (args.category !== undefined && memory.category !== args.category) {
+        return false;
+      }
+
+      if (args.channel !== undefined && memory.channel !== args.channel) {
+        return false;
+      }
+
+      if (args.tags?.length && !args.tags.every((tag) => memory.tags.includes(tag))) {
+        return false;
+      }
+
+      if (args.archived !== undefined && memory.archived !== args.archived) {
+        return false;
+      }
+
+      if (args.minStrength !== undefined && memory.strength < args.minStrength) {
+        return false;
+      }
+
+      if (args.maxStrength !== undefined && memory.strength > args.maxStrength) {
+        return false;
+      }
+
+      return true;
+    });
+
+    return filtered.sort((a, b) => b.lastAccessedAt - a.lastAccessedAt).slice(0, normalizedLimit);
+  },
+});
+
+export const getMemory = query({
+  args: { memoryId: v.id("vexclawMemories") },
+  handler: async (ctx, args) => {
+    return ctx.db.get(args.memoryId);
+  },
+});
+
+export const updateMemoryAccess = mutation({
+  args: { memoryId: v.id("vexclawMemories") },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.memoryId);
+    if (!existing) {
+      return null;
+    }
+
+    const now = Date.now();
+    await ctx.db.patch(args.memoryId, {
+      accessCount: existing.accessCount + 1,
+      lastAccessedAt: now,
+    });
+
+    return ctx.db.get(args.memoryId);
+  },
+});
+
+export const updateMemory = mutation({
+  args: updateMemoryInput,
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.memoryId);
+    if (!existing) {
+      return null;
+    }
+
+    const patch: Record<string, unknown> = {};
+
+    if (args.store !== undefined) patch.store = args.store;
+    if (args.category !== undefined) patch.category = args.category;
+    if (args.title !== undefined) patch.title = args.title;
+    if (args.content !== undefined) patch.content = args.content;
+    if (args.strength !== undefined) patch.strength = args.strength;
+    if (args.confidence !== undefined) patch.confidence = args.confidence;
+    if (args.valence !== undefined) patch.valence = args.valence;
+    if (args.arousal !== undefined) patch.arousal = args.arousal;
+    if (args.tags !== undefined) patch.tags = dedupeTags(args.tags);
+    if (args.source !== undefined) patch.source = args.source;
+    if (args.channel !== undefined) patch.channel = args.channel;
+    if (args.archived !== undefined) patch.archived = args.archived;
+    if (args.archivedAt !== undefined) patch.archivedAt = args.archivedAt;
+    if (args.promotedFrom !== undefined) patch.promotedFrom = args.promotedFrom;
+    if (args.checkpointId !== undefined) patch.checkpointId = args.checkpointId;
+
+    await ctx.db.patch(args.memoryId, patch);
+    return ctx.db.get(args.memoryId);
+  },
+});
+
+export const forgetMemory = mutation({
+  args: forgetMemoryInput,
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.memoryId);
+    if (!existing) {
+      return null;
+    }
+
+    await ctx.db.patch(args.memoryId, {
+      archived: true,
+      archivedAt: nowMs(),
+    });
+
+    return {
+      memoryId: args.memoryId,
+      title: existing.title,
+      reason: args.reason ?? "forgotten",
+      archived: true,
+    };
+  },
+});

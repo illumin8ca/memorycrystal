@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "id": "vexclaw",
+  "name": "VexClaw",
+  "version": "0.1.0",
+  "description": "Drop-in OpenClaw memory plugin using Convex + MCP tools.",
+  "entry": "./handler.js",
+  "hooks": {
+    "postTurn": {
+      "enabled": false,
+      "description": "Reserved for future memory auto-write flows."
+    },
+    "startup": {
+      "enabled": true,
+      "description": "Load plugin metadata on OpenClaw startup."
+    }
+  },
+  "capabilities": {
+    "tools": [
+      "vexclaw_remember",
+      "vexclaw_recall",
+      "vexclaw_what_do_i_know",
+      "vexclaw_why_did_we",
+      "vexclaw_forget",
+      "vexclaw_stats",
+      "vexclaw_checkpoint",
+      "vexclaw_wake"
+    ],
+    "mcpCommand": "/Users/gerald/.nvm/versions/node/v22.22.0/bin/node",
+    "mcpArgs": [
+      "/Users/gerald/projects/openclaw-vexclaw/mcp-server/dist/index.js"
+    ]
+  },
+  "commands": {
+    "vexclaw-capture": {
+      "command": "/Users/gerald/.nvm/versions/node/v22.22.0/bin/node",
+      "args": [
+        "/Users/gerald/projects/openclaw-vexclaw/plugin/capture-hook.js"
+      ],
+      "env": {
+        "CONVEX_URL": "https://rightful-mockingbird-389.convex.cloud",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}",
+        "OBSIDIAN_VAULT_PATH": "/Users/gerald/Documents/Gerald/Memory",
+        "VEXCLAW_MCP_HOST": "127.0.0.1",
+        "VEXCLAW_MCP_PORT": "8788",
+        "VEXCLAW_ENV_FILE": "/Users/gerald/projects/openclaw-vexclaw/mcp-server/.env",
+        "VEXCLAW_NODE": "/Users/gerald/.nvm/versions/node/v22.22.0/bin/node",
+        "VEXCLAW_PLUGIN_DIR": "/Users/gerald/projects/openclaw-vexclaw/plugin",
+        "VEXCLAW_ROOT": "/Users/gerald/projects/openclaw-vexclaw",
+        "VEXCLAW_MCP_MODE": "stdio"
+      }
+    },
+    "vexclaw-recall": {
+      "command": "/Users/gerald/.nvm/versions/node/v22.22.0/bin/node",
+      "args": [
+        "/Users/gerald/projects/openclaw-vexclaw/plugin/recall-hook.js"
+      ],
+      "env": {
+        "CONVEX_URL": "https://rightful-mockingbird-389.convex.cloud",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}",
+        "OBSIDIAN_VAULT_PATH": "/Users/gerald/Documents/Gerald/Memory",
+        "VEXCLAW_MCP_HOST": "127.0.0.1",
+        "VEXCLAW_MCP_PORT": "8788",
+        "VEXCLAW_ENV_FILE": "/Users/gerald/projects/openclaw-vexclaw/mcp-server/.env",
+        "VEXCLAW_NODE": "/Users/gerald/.nvm/versions/node/v22.22.0/bin/node",
+        "VEXCLAW_PLUGIN_DIR": "/Users/gerald/projects/openclaw-vexclaw/plugin",
+        "VEXCLAW_ROOT": "/Users/gerald/projects/openclaw-vexclaw",
+        "VEXCLAW_MCP_MODE": "stdio"
+      }
+    }
+  },
+  "env": {
+    "VEXCLAW_MCP_MODE": "sse",
+    "VEXCLAW_MCP_HOST": "127.0.0.1",
+    "VEXCLAW_MCP_PORT": "8788",
+    "VEXCLAW_ENV_FILE": "/Users/gerald/projects/openclaw-vexclaw/mcp-server/.env"
+  }
+}

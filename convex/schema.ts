@@ -1,0 +1,257 @@
+import { defineSchema, defineTable } from "convex/server";
+import { authTables } from "@convex-dev/auth/server";
+import { v } from "convex/values";
+
+const memoryStore = v.union(
+  v.literal("sensory"),
+  v.literal("episodic"),
+  v.literal("semantic"),
+  v.literal("procedural"),
+  v.literal("prospective")
+);
+
+const memoryCategory = v.union(
+  v.literal("decision"),
+  v.literal("lesson"),
+  v.literal("person"),
+  v.literal("rule"),
+  v.literal("event"),
+  v.literal("fact"),
+  v.literal("goal"),
+  v.literal("workflow")
+);
+
+const memorySource = v.union(
+  v.literal("conversation"),
+  v.literal("cron"),
+  v.literal("observation"),
+  v.literal("inference"),
+  v.literal("external")
+);
+
+const graphNodeType = v.union(
+  v.literal("person"),
+  v.literal("project"),
+  v.literal("goal"),
+  v.literal("decision"),
+  v.literal("concept"),
+  v.literal("tool"),
+  v.literal("event"),
+  v.literal("resource"),
+  v.literal("channel")
+);
+
+const graphNodeStatus = v.union(v.literal("active"), v.literal("deprecated"));
+
+const graphRelationType = v.union(
+  v.literal("mentions"),
+  v.literal("decided_in"),
+  v.literal("leads_to"),
+  v.literal("depends_on"),
+  v.literal("owns"),
+  v.literal("uses"),
+  v.literal("conflicts_with"),
+  v.literal("supports"),
+  v.literal("occurs_with"),
+  v.literal("assigned_to")
+);
+
+const graphLinkRole = v.union(v.literal("subject"), v.literal("object"), v.literal("topic"));
+
+export default defineSchema({
+  ...authTables,
+
+  vexclawMemories: defineTable({
+    store: memoryStore,
+    category: memoryCategory,
+    title: v.string(),
+    content: v.string(),
+    embedding: v.array(v.float64()),
+    strength: v.float64(),
+    confidence: v.float64(),
+    valence: v.float64(),
+    arousal: v.float64(),
+    accessCount: v.number(),
+    lastAccessedAt: v.number(),
+    createdAt: v.number(),
+    source: memorySource,
+    sessionId: v.optional(v.id("vexclawSessions")),
+    channel: v.optional(v.string()),
+    tags: v.array(v.string()),
+    archived: v.boolean(),
+    archivedAt: v.optional(v.number()),
+    promotedFrom: v.optional(v.id("vexclawMemories")),
+    checkpointId: v.optional(v.id("vexclawCheckpoints")),
+  })
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536,
+      filterFields: ["store", "category", "archived"],
+    })
+    .index("by_store_category", ["store", "category", "archived"])
+    .index("by_strength", ["strength", "archived"])
+    .index("by_last_accessed", ["lastAccessedAt"])
+    .index("by_session", ["sessionId"]),
+
+  vexclawAssociations: defineTable({
+    fromMemoryId: v.id("vexclawMemories"),
+    toMemoryId: v.id("vexclawMemories"),
+    relationshipType: v.union(
+      v.literal("supports"),
+      v.literal("contradicts"),
+      v.literal("derives_from"),
+      v.literal("co_occurred"),
+      v.literal("generalizes"),
+      v.literal("precedes")
+    ),
+    weight: v.float64(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_from", ["fromMemoryId"])
+    .index("by_to", ["toMemoryId"]),
+
+  vexclawNodes: defineTable({
+    label: v.string(),
+    nodeType: graphNodeType,
+    alias: v.array(v.string()),
+    canonicalKey: v.string(),
+    description: v.string(),
+    strength: v.float64(),
+    confidence: v.float64(),
+    tags: v.array(v.string()),
+    metadata: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    sourceMemoryIds: v.array(v.id("vexclawMemories")),
+    status: graphNodeStatus,
+  })
+    .index("by_canonical_key", ["canonicalKey"])
+    .index("by_node_type", ["nodeType"])
+    .index("by_status", ["status"]),
+
+  vexclawRelations: defineTable({
+    fromNodeId: v.id("vexclawNodes"),
+    toNodeId: v.id("vexclawNodes"),
+    relationType: graphRelationType,
+    weight: v.float64(),
+    evidenceMemoryIds: v.array(v.id("vexclawMemories")),
+    evidenceWindow: v.optional(
+      v.object({
+        from: v.optional(v.number()),
+        to: v.optional(v.number()),
+      })
+    ),
+    channels: v.array(v.string()),
+    proofNote: v.optional(v.string()),
+    confidence: v.float64(),
+    confidenceReason: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    promotedFrom: v.optional(v.id("vexclawRelations")),
+  })
+    .index("by_from_node", ["fromNodeId"])
+    .index("by_to_node", ["toNodeId"])
+    .index("by_relation", ["relationType", "fromNodeId", "toNodeId"])
+    .index("by_from_to_relation", ["fromNodeId", "toNodeId", "relationType"]),
+
+  vexclawMemoryNodeLinks: defineTable({
+    memoryId: v.id("vexclawMemories"),
+    nodeId: v.id("vexclawNodes"),
+    role: graphLinkRole,
+    linkConfidence: v.float64(),
+    createdAt: v.number(),
+  })
+    .index("by_memory", ["memoryId"])
+    .index("by_node", ["nodeId"]),
+
+  vexclawSessions: defineTable({
+    channel: v.string(),
+    channelId: v.optional(v.string()),
+    startedAt: v.number(),
+    lastActiveAt: v.number(),
+    endedAt: v.optional(v.number()),
+    messageCount: v.number(),
+    memoryCount: v.number(),
+    summary: v.optional(v.string()),
+    participants: v.array(v.string()),
+    model: v.optional(v.string()),
+    checkpointId: v.optional(v.id("vexclawCheckpoints")),
+  }).index("by_channel", ["channel", "lastActiveAt"]),
+
+  vexclawCheckpoints: defineTable({
+    label: v.string(),
+    description: v.optional(v.string()),
+    createdAt: v.number(),
+    createdBy: v.union(v.literal("gerald"), v.literal("andy")),
+    sessionId: v.optional(v.id("vexclawSessions")),
+    memorySnapshot: v.array(
+      v.object({
+        memoryId: v.id("vexclawMemories"),
+        strength: v.float64(),
+        content: v.string(),
+        store: v.string(),
+      })
+    ),
+    semanticSummary: v.string(),
+    tags: v.array(v.string()),
+  }).index("by_created", ["createdAt"]),
+
+  vexclawWakeState: defineTable({
+    sessionId: v.id("vexclawSessions"),
+    injectedMemoryIds: v.array(v.id("vexclawMemories")),
+    wakePrompt: v.string(),
+    createdAt: v.number(),
+  }).index("by_session", ["sessionId"]),
+
+  vexclawMessages: defineTable({
+    role: v.union(v.literal("user"), v.literal("assistant"), v.literal("system")),
+    content: v.string(),
+    channel: v.optional(v.string()),
+    sessionKey: v.optional(v.string()),
+    timestamp: v.number(),
+    embedding: v.optional(v.array(v.float64())),
+    embedded: v.boolean(),
+    expiresAt: v.number(),
+    metadata: v.optional(v.string()),
+  })
+    .index("by_timestamp", ["timestamp"])
+    .index("by_channel_time", ["channel", "timestamp"])
+    .index("by_session_time", ["sessionKey", "timestamp"])
+    .index("by_embedded", ["embedded", "timestamp"])
+    .index("by_expires", ["expiresAt"])
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536,
+      filterFields: ["channel", "role"],
+    }),
+
+  vexclawUserProfiles: defineTable({
+    userId: v.string(),
+    polarSubscriptionId: v.optional(v.string()),
+    polarCustomerId: v.optional(v.string()),
+    subscriptionStatus: v.union(
+      v.literal("active"),
+      v.literal("inactive"),
+      v.literal("cancelled"),
+      v.literal("trialing")
+    ),
+    plan: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_polar_subscription", ["polarSubscriptionId"])
+    .index("by_polar_customer", ["polarCustomerId"]),
+
+  vexclawApiKeys: defineTable({
+    userId: v.string(),
+    keyHash: v.string(),
+    label: v.optional(v.string()),
+    lastUsedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    active: v.boolean(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_key_hash", ["keyHash"]),
+});

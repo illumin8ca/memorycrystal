@@ -1,0 +1,15 @@
+{
+  "name": "vexclaw",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "mcp-server"
+  ],
+  "scripts": {
+    "dev": "cd apps/web && npm run dev",
+    "build": "cd apps/web && npm run build"
+  },
+  "devDependencies": {
+    "convex": "^1.32.0"
+  }
+}
