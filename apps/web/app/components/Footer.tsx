@@ -22,8 +22,13 @@ export default function Footer() {
             </a>
           </div>
         </div>
-        <div className="mt-6 text-secondary text-xs">
+        <div className="mt-6 flex flex-wrap items-center gap-4 text-secondary text-xs">
           <span>&copy; {new Date().getFullYear()} Memory Crystal</span>
+          <span className="hidden sm:inline">·</span>
+          <Link href="/privacy" className="hover:text-accent">Privacy</Link>
+          <Link href="/terms" className="hover:text-accent">Terms</Link>
+          <Link href="/cookies" className="hover:text-accent">Cookies</Link>
+          <Link href="/acceptable-use" className="hover:text-accent">Acceptable Use</Link>
         </div>
       </div>
     </footer>

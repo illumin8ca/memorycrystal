@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Oxanium, Audiowide } from "next/font/google";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import ConvexClientProvider from "./ConvexClientProvider";
+import CookieBanner from "./components/CookieBanner";
 import "./globals.css";
 
 const oxanium = Oxanium({
@@ -34,7 +35,10 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${oxanium.variable} ${audiowide.variable} bg-void text-primary antialiased`}>
         <ConvexAuthNextjsServerProvider>
-          <ConvexClientProvider>{children}</ConvexClientProvider>
+          <ConvexClientProvider>
+            {children}
+            <CookieBanner />
+          </ConvexClientProvider>
         </ConvexAuthNextjsServerProvider>
       </body>
     </html>

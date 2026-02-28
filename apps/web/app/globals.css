@@ -35,6 +35,38 @@ body {
 
 button {
   font-family: var(--font-button);
+  transition: all 0.2s ease;
+}
+
+/* Subtle lift + glow on interactive buttons */
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+button:not(:disabled):active {
+  transform: translateY(0px);
+}
+
+/* Accent-filled buttons get a glow bloom on hover */
+button.bg-accent:not(:disabled):hover,
+a.bg-accent:not(:disabled):hover {
+  box-shadow: 0 0 20px rgba(33, 128, 214, 0.4), 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Border buttons get an accent border glow */
+button[class*="border"]:not(.bg-accent):not(:disabled):hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 10px rgba(33, 128, 214, 0.15);
+}
+
+/* Links styled as buttons */
+a.bg-accent {
+  transition: all 0.2s ease;
+}
+
+a.bg-accent:hover {
+  box-shadow: 0 0 20px rgba(33, 128, 214, 0.4), 0 4px 12px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
 }
 
 button,
