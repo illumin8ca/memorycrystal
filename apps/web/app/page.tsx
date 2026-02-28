@@ -7,6 +7,7 @@ const navItems = [
   { href: "/docs", label: "Docs" },
   { href: "/pricing", label: "Pricing" },
   { href: "/changelog", label: "Changelog" },
+  { href: "/roadmap", label: "Roadmap" },
 ];
 
 const problemCards = [
