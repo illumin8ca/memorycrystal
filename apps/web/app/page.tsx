@@ -8,16 +8,16 @@ import Footer from "./components/Footer";
 
 const problemCards = [
   {
-    title: "Context Compaction Kills",
-    copy: "Claude Code compacts. Codex resets. Your hard-won context vanishes.",
+    title: "Compaction Erases Everything",
+    copy: "You spend an hour building shared context — naming conventions, architecture decisions, open questions. Then Claude Code compacts. It's gone. You're back to square one.",
   },
   {
-    title: "Every Session Starts Cold",
-    copy: "Your AI knows nothing about past decisions, preferences, or work.",
+    title: "Every Session Is Groundhog Day",
+    copy: "\"We use pnpm, not npm.\" \"The auth lives in /lib/auth.ts.\" \"We decided against Redux last month.\" You've said it ten times. Your AI has no idea.",
   },
   {
-    title: "Repeat Yourself Forever",
-    copy: "Explaining the same architecture choices, preferences, and constraints. Again.",
+    title: "You're Training Your AI Every Day",
+    copy: "Instead of moving fast, you spend the first 10 minutes of every session re-briefing your AI. That's not a workflow. That's a tax on your productivity.",
   },
 ];
 
@@ -25,50 +25,50 @@ const workflowSteps = [
   {
     number: "01",
     title: "CAPTURE",
-    copy: "Every message, decision, fact automatically extracted and stored.",
+    copy: "Memory Crystal hooks into your AI agent and automatically extracts facts, decisions, and context from every session. No manual note-taking. No CLAUDE.md maintenance. It just works.",
   },
   {
     number: "02",
     title: "CRYSTALLIZE",
-    copy: "Semantic indexing, spreading activation builds memory connections.",
+    copy: "Extracted memories are semantically indexed and linked using spreading activation — the same mechanism your brain uses. Related memories cluster together. Context builds on itself.",
   },
   {
     number: "03",
     title: "RECALL",
-    copy: "Relevant memories surface before you ask. Context always available.",
+    copy: "Before your AI responds, Memory Crystal surfaces the most relevant memories for that moment. Your agent walks into every session already briefed. Compaction becomes irrelevant.",
   },
 ];
 
 const platformCards = [
   {
     name: "OpenClaw",
-    copy: "Native plugin, deepest integration. Wake briefings, auto-capture.",
+    copy: "Native plugin with the deepest integration. Auto-capture, wake briefings, full memory lifecycle. Memory Crystal was built here first.",
   },
   {
     name: "Claude Code",
-    copy: "MCP server. Persistent memory across compactions. Never lose context.",
+    copy: "Connect via MCP server in under 5 minutes. Memory persists across compactions, session resets, and restarts. Your context survives everything Claude Code throws at it.",
   },
   {
     name: "Codex / Codex CLI",
-    copy: "MCP server. Full memory layer for your coding agent.",
+    copy: "Full persistent memory for OpenAI Codex via MCP. Your coding agent remembers your codebase, your conventions, your decisions — across every run.",
   },
 ];
 
 const featureCards = [
-  { icon: "◈", title: "Semantic Search", copy: "Find anything by meaning, not keywords" },
-  { icon: "◈", title: "Spreading Activation", copy: "Related memories surface automatically" },
-  { icon: "◈", title: "5 Memory Stores", copy: "Episodic, semantic, procedural, prospective, sensory" },
-  { icon: "◈", title: "Knowledge Graph", copy: "Typed entities, relations, graph traversal (Ultra)" },
-  { icon: "◈", title: "Wake Briefings", copy: "Session kickoffs with your most relevant context" },
-  { icon: "◈", title: "Obsidian Sync", copy: "Human-readable vault, always in sync (Pro+)" },
+  { icon: "◈", title: "Semantic Search", copy: "Ask \"what did we decide about the auth flow?\" and get the answer. Memory Crystal searches by meaning, not keywords — so you find what you meant, not just what you typed." },
+  { icon: "◈", title: "Spreading Activation", copy: "Pull one memory and related context surfaces automatically. Ask about your database schema and your migration decisions come with it. Memory works in clusters, not isolation." },
+  { icon: "◈", title: "5 Memory Stores", copy: "Not all memory is equal. Episodic (what happened), semantic (what you know), procedural (how you work), prospective (what you planned), sensory (recent messages). Each stored and recalled appropriately." },
+  { icon: "◈", title: "Knowledge Graph", copy: "Typed entities and relationships — people, projects, decisions, concepts — stored as a queryable graph. Ask \"what decisions did we make about Project X?\" and get a real answer. (Ultra)" },
+  { icon: "◈", title: "Wake Briefings", copy: "Every session starts with a memory briefing: what you were working on, what decisions are pending, what changed. Your AI is already up to speed before you type a word." },
+  { icon: "◈", title: "Obsidian Sync", copy: "Every memory synced to a human-readable Obsidian vault. You own your memory. Browse it, edit it, search it without touching the app. (Pro+)" },
 ];
 
 const roadmapItems = [
-  "Q1 2026 — Launch: OpenClaw, Claude Code, Codex. 3 tiers.",
-  "Q2 2026 — Memory Caching: warm cache of top memories per session (like prompt caching, for memory)",
-  "Q3 2026 — True Knowledge Graph: entity resolution, relation inference, graph queries",
-  "Q4 2026 — Team Memory: shared memory spaces across agents and users",
-  "2027 — Memory Marketplace: share skill packs, policy packs, persona bundles",
+  "Q1 2026 — Launch. OpenClaw, Claude Code, and Codex support. Free, Pro, and Ultra tiers. The memory layer your AI was missing.",
+  "Q2 2026 — Memory Caching. Hot memories pre-loaded before your session starts. Sub-100ms recall. Like prompt caching, but for everything your AI knows about you.",
+  "Q3 2026 — True Knowledge Graph. Typed entity resolution. Relation inference from conversation patterns. Ask \"what did we decide about X?\" and get the real answer.",
+  "Q4 2026 — Team Memory. Shared memory spaces across agents and collaborators. One team, one context, no repeated explanations.",
+  "2027 — Memory Marketplace. Share skill packs, policy bundles, persona configs. The ecosystem for AI memory.",
 ];
 
 const pricingPlans = [
@@ -265,26 +265,26 @@ export default function HomePage() {
           </div>
 
           <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 h-[calc(100vh-4rem)] flex flex-col justify-center">
-            <p className="text-xs font-mono tracking-[0.24em] text-accent">[ MEMORY CRYSTAL ]</p>
+            <p className="text-xs font-mono tracking-[0.24em] text-accent">[ PERSISTENT MEMORY FOR AI AGENTS ]</p>
             <h1 className="mt-3 text-[clamp(2.5rem,10vw,5.2rem)] leading-tight tracking-wide">
               Say Goodbye to<br />
               <span className="font-bold">Forgetful AI</span>
             </h1>
             <p className="mt-6 max-w-2xl text-primary text-lg">
-              Persistent semantic memory for OpenClaw, Claude Code, and Codex. Never lose context when compacting.
+              Memory Crystal is the MCP server that gives Claude Code, Codex, and OpenClaw agents persistent memory across every session, compaction, and restart. No more re-explaining your codebase. No more lost context. Your AI picks up exactly where you left off.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row gap-4">
               <Link
                 href="/signup"
                 className="inline-flex items-center justify-center px-6 py-3 text-xs font-mono bg-accent text-white shadow-[0_0_30px_rgba(33,128,214,0.35)] hover:shadow-[0_0_46px_rgba(33,128,214,0.55)] transition-all"
               >
-                GET STARTED FREE
+                START FOR FREE
               </Link>
               <Link
                 href="/docs"
                 className="inline-flex items-center justify-center px-6 py-3 text-xs font-mono glass-card neon-border text-accent hover:bg-accent/8 transition-colors"
               >
-                VIEW DOCS
+                SEE HOW IT WORKS
               </Link>
             </div>
           </div>
@@ -294,8 +294,8 @@ export default function HomePage() {
         <section className="border-y border-border/25 py-20">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <BracketHeading children="THE PROBLEM" />
-            <h2 className="mt-2 font-heading text-3xl md:text-5xl">Context dies. Every. Single. Session.</h2>
-            <p className="mt-4 text-secondary max-w-2xl">No matter how smart your model gets, compaction still erases the thread.</p>
+            <h2 className="mt-2 font-heading text-3xl md:text-5xl">Your AI is brilliant in the moment.<br/>And completely amnesiac the next.</h2>
+            <p className="mt-4 text-secondary max-w-2xl">Context compaction, session resets, workspace switches — every one of them erases the shared understanding you built. The model hasn't gotten dumber. It just can't remember. Memory Crystal fixes that.</p>
             <div className="mt-10 grid gap-4 md:grid-cols-3">
               {problemCards.map((card) => (
                 <article key={card.title} className="glass-card border-border p-7">
@@ -314,7 +314,7 @@ export default function HomePage() {
           </div>
           <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
             <BracketHeading children="HOW IT WORKS" />
-            <h2 className="mt-2 font-heading text-3xl md:text-5xl">Memory that works like a brain.</h2>
+            <h2 className="mt-2 font-heading text-3xl md:text-5xl">Persistent memory that survives everything.</h2>
             <div className="mt-10 relative">
               <div className="hidden md:block absolute left-24 right-24 top-11 h-[1px] bg-[rgba(33,128,214,0.28)]" />
               <div className="grid gap-4 md:grid-cols-3 relative">
@@ -342,7 +342,7 @@ export default function HomePage() {
         <section className="border-y border-border/25 py-20">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <BracketHeading children="SUPPORTED PLATFORMS" />
-            <h2 className="mt-2 font-heading text-3xl md:text-5xl">Works where you work.</h2>
+            <h2 className="mt-2 font-heading text-3xl md:text-5xl">One memory layer. Every AI coding agent.</h2>
             <div className="mt-10 grid gap-4 md:grid-cols-3">
               {platformCards.map((platform) => (
                 <article key={platform.name} className="glass-card border-border/40 p-6">
@@ -351,7 +351,7 @@ export default function HomePage() {
                 </article>
               ))}
             </div>
-            <p className="mt-6 text-sm font-mono text-secondary">More integrations coming. Any MCP-compatible agent supported.</p>
+            <p className="mt-6 text-sm font-mono text-secondary">Any MCP-compatible agent is supported. More native integrations shipping in Q2 2026.</p>
           </div>
         </section>
 
@@ -361,7 +361,7 @@ export default function HomePage() {
           </div>
           <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
             <BracketHeading children="WHAT YOU GET" />
-            <h2 className="mt-2 font-heading text-3xl md:text-5xl">Everything memory should be.</h2>
+            <h2 className="mt-2 font-heading text-3xl md:text-5xl">Not just storage — a complete memory system.</h2>
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {featureCards.map((feature) => (
                 <article key={feature.title} className="glass-card border-border/45 p-6">

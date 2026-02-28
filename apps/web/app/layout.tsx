@@ -24,8 +24,34 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Memory Crystal — Persistent Memory for AI",
-  description: "Persistent memory for your AI assistant",
+  title: "Memory Crystal — Persistent Memory for Claude Code, Codex & AI Agents",
+  description: "Memory Crystal is the MCP server that gives Claude Code, Codex, and OpenClaw persistent memory across sessions and compactions. Never lose context again. Free plan available.",
+  keywords: [
+    "Claude Code persistent memory",
+    "MCP server for AI memory",
+    "AI agent persistent memory",
+    "Claude Code context compaction solution",
+    "Codex persistent memory MCP",
+    "OpenClaw memory plugin",
+    "AI memory across sessions",
+    "persistent context for AI coding assistants",
+    "MCP memory server",
+    "Claude Code memory loss fix",
+  ],
+  openGraph: {
+    title: "Memory Crystal — Persistent Memory for Claude Code & AI Agents",
+    description: "The MCP server that gives Claude Code, Codex, and OpenClaw persistent memory. Never lose context when compacting. Free plan available.",
+    type: "website",
+    url: "https://memorycrystal.ai",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Memory Crystal — Persistent Memory for Claude Code & AI Agents",
+    description: "The MCP server that gives Claude Code, Codex, and OpenClaw persistent memory. Never lose context when compacting.",
+  },
+  alternates: {
+    canonical: "https://memorycrystal.ai",
+  },
   icons: {
     icon: "/icon.svg",
     apple: "/apple-icon.png",
