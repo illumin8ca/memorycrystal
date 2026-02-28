@@ -130,7 +130,7 @@ export default function PricingPage() {
                   RECOMMENDED
                 </span>
               ) : null}
-              <h3 className="font-heading text-2xl">{plan.name}</h3>
+              <h3 className="font-logo text-2xl">{plan.name}</h3>
               <div className="mt-5">
                 <p className="text-4xl font-mono neon-text">
                   {annualBilling ? plan.priceAnnual ?? plan.price : plan.price}

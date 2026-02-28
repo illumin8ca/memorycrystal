@@ -12,7 +12,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/25 bg-[#131E26]">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-heading text-lg tracking-wide neon-text">
+        <Link href="/" className="flex items-center gap-2 font-logo text-lg tracking-wide neon-text">
           <CrystalIcon size={22} glow />
           MEMORY CRYSTAL
         </Link>

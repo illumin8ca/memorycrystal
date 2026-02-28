@@ -53,6 +53,19 @@ const parseRecallResult = (rawOutput) => {
   return { injectionBlock: "", memories: [] };
 };
 
+const captureHooks = new Set([
+  "message",
+  "turn",
+  "postTurn",
+  "post_turn",
+  "message_received",
+  "llm_output",
+  "llm-output",
+  "llmOutput",
+]);
+
+const recallHooks = new Set(["pre-response", "before_model_resolve", "beforeModelResolve"]);
+
 const runCaptureHook = (payload = {}) => {
   const input = JSON.stringify({
     userMessage: payload.userMessage ?? "",
@@ -128,6 +141,14 @@ const runRecallHook = (payload = {}) => {
 };
 
 const runHook = async (hookName, payload = {}) => {
+  if (captureHooks.has(hookName)) {
+    return runCaptureHook(payload);
+  }
+
+  if (recallHooks.has(hookName)) {
+    return runRecallHook(payload);
+  }
+
   if (hookName === "startup") {
     return {
       ok: true,
@@ -136,18 +157,25 @@ const runHook = async (hookName, payload = {}) => {
     };
   }
 
-  if (hookName === "message" || hookName === "turn" || hookName === "postTurn") {
-    return runCaptureHook(payload);
-  }
-
-  if (hookName === "pre-response") {
-    return runRecallHook(payload);
-  }
-
+  console.error(`[crystal-handler] Unsupported hook name: ${hookName}`);
   return {
-    ok: true,
-    message: `Memory Crystal hook '${hookName}' is not yet implemented.`,
-    payload,
+    ok: false,
+    message: `Memory Crystal hook '${hookName}' is not recognized. Expected: startup, message, turn, postTurn, pre-response, message_received, llm_output, before_model_resolve.`,
+    payload: {
+      ...payload,
+      supportedHooks: [
+        "startup",
+        "message",
+        "turn",
+        "postTurn",
+        "pre-response",
+        "message_received",
+        "llm_output",
+        "before_model_resolve",
+      ],
+    },
+    stderr: `Unsupported hook name: ${hookName}`,
+    error: true,
   };
 };
 
@@ -159,6 +187,12 @@ module.exports = {
   message: async (payload) => runHook("message", payload),
   turn: async (payload) => runHook("turn", payload),
   "pre-response": async (payload) => runHook("pre-response", payload),
+  before_model_resolve: async (payload) => runHook("before_model_resolve", payload),
+  message_received: async (payload) => runHook("message_received", payload),
+  llm_output: async (payload) => runHook("llm_output", payload),
+  "llm-output": async (payload) => runHook("llm_output", payload),
+  llmOutput: async (payload) => runHook("llmOutput", payload),
+  beforeModelResolve: async (payload) => runHook("beforeModelResolve", payload),
 };
 
 if (require.main === module) {

@@ -1,8 +1,6 @@
 @import "tailwindcss";
 
 :root {
-  --font-body: "Oxanium", system-ui, sans-serif;
-  --font-heading: "Audiowide", system-ui, sans-serif;
   --font-button: "Google Sans", "Product Sans", system-ui, sans-serif;
   --bg-primary: #1C272F;
   --bg-surface: #1E2F3D;
@@ -88,6 +86,10 @@ h6,
 .font-heading,
 .text-heading {
   font-family: var(--font-heading), system-ui, sans-serif;
+}
+
+.font-logo {
+  font-family: var(--font-logo), system-ui, sans-serif;
 }
 
 .bg-dot-grid {

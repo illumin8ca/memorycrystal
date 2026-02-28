@@ -66,7 +66,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm border border-border bg-surface p-10">
         <div className="flex items-center justify-center gap-2 mb-8">
           <CrystalIcon size={26} glow />
-          <span className="font-heading text-lg tracking-wide neon-text">MEMORY CRYSTAL</span>
+          <span className="font-logo text-lg tracking-wide neon-text">MEMORY CRYSTAL</span>
         </div>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>

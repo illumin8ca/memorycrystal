@@ -134,7 +134,16 @@ async function runSse() {
         return;
       }
 
-      await activeTransport.handlePostMessage(req, res);
+      try {
+        await activeTransport.handlePostMessage(req, res);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("[mcp-sse] Failed to process /messages request", err);
+        if (!res.writableEnded) {
+          res.writeHead(500, { "Content-Type": "text/plain" });
+          res.end("Failed to process MCP message");
+        }
+      }
       return;
     }
 

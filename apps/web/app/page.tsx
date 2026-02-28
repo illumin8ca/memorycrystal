@@ -266,8 +266,9 @@ export default function HomePage() {
 
           <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 h-[calc(100vh-4rem)] flex flex-col justify-center">
             <p className="text-xs font-mono tracking-[0.24em] text-accent">[ MEMORY CRYSTAL ]</p>
-            <h1 className="mt-3 font-heading text-[clamp(2.5rem,10vw,5.2rem)] leading-tight tracking-wide">
-              Say Goodbye to Forgetful AI
+            <h1 className="mt-3 text-[clamp(2.5rem,10vw,5.2rem)] leading-tight tracking-wide">
+              Say Goodbye to<br />
+              <span className="font-bold">Forgetful AI</span>
             </h1>
             <p className="mt-6 max-w-2xl text-primary text-lg">
               Persistent semantic memory for OpenClaw, Claude Code, and Codex. Never lose context when compacting.
@@ -323,7 +324,7 @@ export default function HomePage() {
                     className="glass-card border-border/40 p-7 relative"
                   >
                     <div className="text-xs font-mono neon-text">{step.number}</div>
-                    <h3 className="mt-3 font-heading text-2xl">{step.title}</h3>
+                    <h3 className="mt-3 font-logo text-2xl">{step.title}</h3>
                     <p className="mt-3 text-secondary">{step.copy}</p>
                     {index < workflowSteps.length - 1 ? (
                       <span className="hidden md:block absolute -right-5 top-8 w-5 h-px bg-[rgba(33,128,214,0.28)]" />
@@ -414,7 +415,7 @@ export default function HomePage() {
                       RECOMMENDED
                     </span>
                   ) : null}
-                  <h3 className="font-heading text-2xl">{plan.name}</h3>
+                  <h3 className="font-logo text-2xl">{plan.name}</h3>
                   <div className="mt-5">
                     <p className="text-4xl font-mono neon-text">{annualBilling ? plan.priceAnnual ?? plan.price : plan.price}</p>
                   </div>
