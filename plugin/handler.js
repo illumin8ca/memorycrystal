@@ -160,7 +160,7 @@ const runHook = async (hookName, payload = {}) => {
   console.error(`[crystal-handler] Unsupported hook name: ${hookName}`);
   return {
     ok: false,
-    message: `Memory Crystal hook '${hookName}' is not recognized. Expected: startup, message, turn, postTurn, pre-response, message_received, llm_output, before_model_resolve.`,
+    message: `Memory Crystal hook '${hookName}' is not recognized. Expected: startup, message, turn, postTurn, post_turn, pre-response, message_received, llm_output, llm-output, llmOutput, before_model_resolve, beforeModelResolve.`,
     payload: {
       ...payload,
       supportedHooks: [
@@ -168,10 +168,14 @@ const runHook = async (hookName, payload = {}) => {
         "message",
         "turn",
         "postTurn",
+        "post_turn",
         "pre-response",
         "message_received",
         "llm_output",
+        "llm-output",
+        "llmOutput",
         "before_model_resolve",
+        "beforeModelResolve",
       ],
     },
     stderr: `Unsupported hook name: ${hookName}`,
@@ -184,6 +188,7 @@ module.exports = {
   status,
   startup: async (payload) => runHook("startup", payload),
   postTurn: async (payload) => runHook("postTurn", payload),
+  post_turn: async (payload) => runHook("postTurn", payload),
   message: async (payload) => runHook("message", payload),
   turn: async (payload) => runHook("turn", payload),
   "pre-response": async (payload) => runHook("pre-response", payload),
