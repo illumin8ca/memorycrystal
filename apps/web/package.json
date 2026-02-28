@@ -14,6 +14,7 @@
     "react-dom": "19.2.4",
     "convex": "^1.24.1",
     "@convex-dev/auth": "0.0.91",
+    "@auth/core": "^0.37.0",
     "react-icons": "*",
     "@polar-sh/sdk": "^0.45.1"
   },
