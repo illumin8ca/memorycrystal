@@ -1,40 +1,40 @@
-# VexClaw Operations
+# Memory Crystal Operations
 
 ## Health checks
 
 Run from repo root:
 
-- `scripts/vexclaw-doctor.sh --dry-run` (safe mode, no writes)
-- `scripts/vexclaw-doctor.sh` (full check)
+- `scripts/crystal-doctor.sh --dry-run` (safe mode, no writes)
+- `scripts/crystal-doctor.sh` (full check)
 - `npm run test:smoke` (alias of doctor smoke mode)
-- `npm run vexclaw:bootstrap` (fresh install flow)
-- `npm run vexclaw:e2e` (full bootstrap + enable + wiring verification)
+- `npm run crystal:bootstrap` (fresh install flow)
+- `npm run crystal:e2e` (full bootstrap + enable + wiring verification)
 
 ## Enable / disable
 
 Enable:
 
 ```bash
-npm run vexclaw:enable
+npm run crystal:enable
 ```
 
 Fresh install:
 
 ```bash
-npm run vexclaw:bootstrap
+npm run crystal:bootstrap
 ```
 
 Disable:
 
 ```bash
-npm run vexclaw:disable
+npm run crystal:disable
 ```
 
 If you need a preview:
 
 ```bash
-scripts/vexclaw-enable.sh --dry-run
-scripts/vexclaw-disable.sh --dry-run
+scripts/crystal-enable.sh --dry-run
+scripts/crystal-disable.sh --dry-run
 ```
 
 ## File checklist
@@ -47,7 +47,7 @@ scripts/vexclaw-disable.sh --dry-run
 
 ## Troubleshooting
 
-- If doctor fails because dependencies are missing, run `npm run vexclaw:init`.
+- If doctor fails because dependencies are missing, run `npm run crystal:init`.
 - If MCP tools fail at runtime, rebuild with:
 
 ```bash
@@ -63,8 +63,8 @@ npm run build
 Graph foundation status:
 
 ```bash
-cd /path/to/openclaw-vexclaw
-npx convex run vexclaw/graph:getKnowledgeGraphFoundationStatus
+cd /path/to/openclaw-crystal
+npx convex run crystal/graph:getKnowledgeGraphFoundationStatus
 ```
 
 ## Roadmap and future upgrades
@@ -77,7 +77,7 @@ For the typed graph implementation plan, see `PRD_TYPED_KNOWLEDGE_GRAPH.md`.
 
 - Keep `.env` out of source control.
 - Keep `.env.example` tracked for onboarding.
-- Plugin state is stored in `.vexclaw/` and included in gitignore.
+- Plugin state is stored in `.crystal/` and included in gitignore.
 
 ## Canonical docs
 

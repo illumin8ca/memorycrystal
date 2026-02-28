@@ -1,25 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --font-inter: "Inter";
-  --font-heading: "Syne", "Playfair Display";
-  --bg-primary: #050508;
-  --bg-surface: #0d0d14;
-  --bg-elevated: #12121f;
-  --accent: #00aaff;
-  --accent-hover: #0088dd;
-  --text-primary: #f0f4ff;
-  --text-secondary: #8899bb;
-  --border: rgba(255, 255, 255, 0.08);
-  --accent-glow: rgba(0, 170, 255, 0.15);
-  --crystal-highlight: rgba(255, 255, 255, 0.12);
-  --tone-111: #111111;
-  --tone-1a: #12121f;
-  --tone-22: #1e1e2a;
-  --tone-33: #2a2a3a;
-  --tone-55: #555555;
-  --tone-88: #8899bb;
-  --tone-ff: #f0f4ff;
+  --font-body: "Oxanium", system-ui, sans-serif;
+  --font-heading: "Audiowide", system-ui, sans-serif;
+  --font-button: "Google Sans", "Product Sans", system-ui, sans-serif;
+  --bg-primary: #1C272F;
+  --bg-surface: #1E2F3D;
+  --bg-elevated: #213A4D;
+  --accent: #2180D6;
+  --accent-dim: #1C549F;
+  --accent-hover: #4CC1E9;
+  --accent-glow: #97F0F7;
+  --text-primary: #E8F0F8;
+  --text-secondary: #7A9AB5;
+  --border: #1C549F;
+  --border-subtle: rgba(28, 84, 159, 0.3);
+  --crystal-highlight: rgba(151, 240, 247, 0.12);
 }
 
 * {
@@ -34,7 +30,11 @@ body {
 }
 
 body {
-  font-family: var(--font-inter), Inter, system-ui, -apple-system, Segoe UI, sans-serif;
+  font-family: var(--font-body), system-ui, -apple-system, Segoe UI, sans-serif;
+}
+
+button {
+  font-family: var(--font-button);
 }
 
 button,
@@ -55,14 +55,14 @@ h5,
 h6,
 .font-heading,
 .text-heading {
-  font-family: var(--font-heading), "Playfair Display", "Times New Roman", serif;
+  font-family: var(--font-heading), system-ui, sans-serif;
 }
 
 .bg-dot-grid {
   background-color: var(--bg-primary);
   background-image:
-    linear-gradient(rgba(0, 170, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 170, 255, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(33, 128, 214, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(33, 128, 214, 0.04) 1px, transparent 1px);
   background-size: 60px 60px;
 }
 
@@ -74,23 +74,57 @@ h6,
   pointer-events: none;
 }
 
+/* Crystal lattice pattern — diamond grid */
+.crystal-lattice {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpath d='M30 0L60 30L30 60L0 30Z' fill='none' stroke='rgba(33,128,214,0.08)' stroke-width='0.5'/%3E%3Cline x1='30' y1='0' x2='30' y2='60' stroke='rgba(33,128,214,0.04)' stroke-width='0.5'/%3E%3Cline x1='0' y1='30' x2='60' y2='30' stroke='rgba(33,128,214,0.04)' stroke-width='0.5'/%3E%3Ccircle cx='30' cy='0' r='1.5' fill='rgba(33,128,214,0.12)'/%3E%3Ccircle cx='60' cy='30' r='1.5' fill='rgba(33,128,214,0.12)'/%3E%3Ccircle cx='30' cy='60' r='1.5' fill='rgba(33,128,214,0.12)'/%3E%3Ccircle cx='0' cy='30' r='1.5' fill='rgba(33,128,214,0.12)'/%3E%3C/svg%3E");
+  background-size: 60px 60px;
+}
+
+/* Gradient pulse — radial glow that shifts position */
+@keyframes gradientPulse {
+  0%, 100% {
+    background-position: 30% 40%;
+    background-size: 120% 120%;
+    opacity: 1;
+  }
+  33% {
+    background-position: 70% 30%;
+    background-size: 140% 140%;
+    opacity: 0.85;
+  }
+  66% {
+    background-position: 40% 60%;
+    background-size: 130% 130%;
+    opacity: 0.95;
+  }
+}
+
+.gradient-pulse {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 30% 40%, rgba(33,128,214,0.22) 0%, rgba(28,84,159,0.10) 35%, rgba(28,39,47,0.95) 70%);
+  animation: gradientPulse 12s ease-in-out infinite;
+}
+
 /* Glassmorphism cards */
 .glass-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(28, 84, 159, 0.08);
+  border: 1px solid rgba(28, 84, 159, 0.25);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 
 /* Neon glow effects */
 .neon-text {
-  color: #00aaff;
-  text-shadow: 0 0 20px rgba(0, 170, 255, 0.5), 0 0 40px rgba(0, 170, 255, 0.2);
+  color: #2180D6;
+  text-shadow: 0 0 20px rgba(33, 128, 214, 0.5), 0 0 40px rgba(33, 128, 214, 0.2);
 }
 
 .neon-border {
-  border-color: #00aaff;
-  box-shadow: 0 0 12px rgba(0, 170, 255, 0.3), inset 0 0 12px rgba(0, 170, 255, 0.05);
+  border-color: #2180D6;
+  box-shadow: 0 0 12px rgba(33, 128, 214, 0.3), inset 0 0 12px rgba(33, 128, 214, 0.05);
 }
 
 /* Parallax crystal shards */
@@ -163,15 +197,15 @@ h6,
   left: 0;
   width: 25%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, #00aaff, transparent);
+  background: linear-gradient(90deg, transparent, #2180D6, transparent);
   animation: shimmer 3s linear infinite;
 }
 
 /* Crystal grid */
 .crystal-grid {
   background-image:
-    linear-gradient(rgba(0, 170, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 170, 255, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(33, 128, 214, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(33, 128, 214, 0.04) 1px, transparent 1px);
   background-size: 60px 60px;
 }
 
@@ -179,15 +213,69 @@ h6,
 @keyframes glowPulse {
   0%,
   100% {
-    box-shadow: 0 0 20px rgba(0, 170, 255, 0.2);
+    box-shadow: 0 0 20px rgba(33, 128, 214, 0.2);
   }
   50% {
-    box-shadow: 0 0 40px rgba(0, 170, 255, 0.5), 0 0 80px rgba(0, 170, 255, 0.2);
+    box-shadow: 0 0 40px rgba(33, 128, 214, 0.5), 0 0 80px rgba(151, 240, 247, 0.2);
   }
 }
 
 .glow-pulse {
   animation: glowPulse 4s ease-in-out infinite;
+}
+
+/* Hero crystal — slow 3D float + rotation */
+@keyframes crystalFloat {
+  0%, 100% {
+    transform: perspective(1200px) rotateY(-12deg) rotateZ(-1deg) translateY(0px);
+    filter: drop-shadow(0 0 40px rgba(33, 128, 214, 0.25));
+  }
+  25% {
+    transform: perspective(1200px) rotateY(0deg) rotateZ(0.5deg) translateY(-14px);
+    filter: drop-shadow(0 0 50px rgba(76, 193, 233, 0.35));
+  }
+  50% {
+    transform: perspective(1200px) rotateY(12deg) rotateZ(1deg) translateY(-8px);
+    filter: drop-shadow(0 0 60px rgba(151, 240, 247, 0.3));
+  }
+  75% {
+    transform: perspective(1200px) rotateY(0deg) rotateZ(-0.5deg) translateY(-18px);
+    filter: drop-shadow(0 0 50px rgba(33, 128, 214, 0.3));
+  }
+}
+
+.hero-crystal {
+  animation: crystalFloat 24s ease-in-out infinite;
+}
+
+/* Crystal glow aura behind the hero crystal */
+@keyframes auraBreath {
+  0%, 100% {
+    opacity: 0.15;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(1.08);
+  }
+}
+
+.crystal-aura {
+  animation: auraBreath 8s ease-in-out infinite;
+}
+
+/* Small decorative crystal float */
+@keyframes crystalDrift {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(3deg);
+  }
+}
+
+.crystal-drift {
+  animation: crystalDrift 12s ease-in-out infinite;
 }
 
 @keyframes fadeInUp {

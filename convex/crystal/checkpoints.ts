@@ -6,15 +6,15 @@ const snapshotInput = v.object({
   label: v.string(),
   description: v.optional(v.string()),
   createdBy: v.optional(v.union(v.literal("gerald"), v.literal("andy"))),
-  sessionId: v.optional(v.id("vexclawSessions")),
-  memoryIds: v.optional(v.array(v.id("vexclawMemories"))),
+  sessionId: v.optional(v.id("crystalSessions")),
+  memoryIds: v.optional(v.array(v.id("crystalMemories"))),
   semanticSummary: v.optional(v.string()),
   tags: v.optional(v.array(v.string())),
   maxMemories: v.optional(v.number()),
 });
 
 const listInput = v.object({
-  sessionId: v.optional(v.id("vexclawSessions")),
+  sessionId: v.optional(v.id("crystalSessions")),
   limit: v.optional(v.number()),
 });
 
@@ -28,7 +28,7 @@ const listMemoryIds = async (ctx: any, memoryIds: string[]) => {
     }
 
     snapshots.push({
-      memoryId: memoryId as Id<"vexclawMemories">,
+      memoryId: memoryId as Id<"crystalMemories">,
       strength: memory.strength,
       content: memory.content,
       store: memory.store,
@@ -46,7 +46,7 @@ export const createCheckpoint = mutation({
       ? args.memoryIds
       : (
           await ctx.db
-            .query("vexclawMemories")
+            .query("crystalMemories")
             .withIndex("by_last_accessed", (q) => q.gte("lastAccessedAt", 0))
             .filter((q) => q.eq("archived", false as unknown as never))
             .take(requestedLimit)
@@ -61,7 +61,7 @@ export const createCheckpoint = mutation({
       .map((entry) => `${entry.store}: ${entry.content.slice(0, 80)}`)
       .join("\n");
 
-    const checkpointId = await ctx.db.insert("vexclawCheckpoints", {
+    const checkpointId = await ctx.db.insert("crystalCheckpoints", {
       label: args.label,
       description: args.description,
       createdAt: Date.now(),
@@ -78,7 +78,7 @@ export const createCheckpoint = mutation({
 
 export const getCheckpoint = query({
   args: {
-    checkpointId: v.id("vexclawCheckpoints"),
+    checkpointId: v.id("crystalCheckpoints"),
   },
   handler: async (ctx, args) => {
     return ctx.db.get(args.checkpointId);
@@ -91,12 +91,12 @@ export const listCheckpoints = query({
     const requestedLimit = Math.min(Math.max(args.limit ?? 20, 1), 100);
     const checkpoints = args.sessionId
       ? await ctx.db
-          .query("vexclawCheckpoints")
+          .query("crystalCheckpoints")
           .filter((q) => q.eq("sessionId", args.sessionId as unknown as never))
           .order("desc")
           .take(requestedLimit)
       : await ctx.db
-          .query("vexclawCheckpoints")
+          .query("crystalCheckpoints")
           .withIndex("by_created", (q) => q.gte("createdAt", 0))
           .order("desc")
           .take(requestedLimit);

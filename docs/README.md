@@ -1,6 +1,6 @@
-# VexClaw Documentation
+# Memory Crystal Documentation
 
-Canonical documentation entry for the VexClaw repo.
+Canonical documentation entry for the Memory Crystal repo.
 
 ## Structure
 

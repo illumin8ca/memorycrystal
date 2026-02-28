@@ -7,8 +7,8 @@ Tests, smoke checks, and validation commands.
 ## Test checks
 
 - `npm run test:smoke` (doctor smoke mode)
-- `npm run vexclaw:e2e`
-- `npm run vexclaw:doctor`
+- `npm run crystal:e2e`
+- `npm run crystal:doctor`
 
 ## Notes
 

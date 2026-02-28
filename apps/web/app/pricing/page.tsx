@@ -1,10 +1,16 @@
-import Link from "next/link";
+"use client";
 
-const tiers = [
+import { useState } from "react";
+import Link from "next/link";
+import CrystalIcon from "../components/CrystalIcon";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
+
+const pricingPlans = [
   {
-    name: "Free",
-    price: "$0",
-    note: "Permanent plan",
+    name: "FREE",
+    price: "$0 forever",
+    button: "START FREE",
     features: [
       "500 memories stored",
       "7-day message history",
@@ -12,34 +18,39 @@ const tiers = [
       "Community support",
       "OpenClaw plugin access",
     ],
+    borderClass: "border-border/25",
   },
   {
-    name: "Pro",
-    price: "$20",
-    note: "Recommended for teams",
+    name: "PRO",
+    price: "$20/mo",
+    priceAnnual: "$168/yr",
+    button: "START PRO",
+    isFeatured: true,
     features: [
       "Unlimited memories",
       "90-day message history",
       "All channels (Discord, Telegram, Signal, etc.)",
       "Spreading activation recall",
       "API access + API keys",
+      "Obsidian vault sync",
       "Priority support",
     ],
-    badge: "RECOMMENDED",
+    borderClass: "neon-border glow-pulse",
   },
   {
-    name: "Ultra",
-    price: "$100",
-    note: "For operators and AI platforms",
+    name: "ULTRA",
+    price: "$100/mo",
+    priceAnnual: "$840/yr",
+    button: "START ULTRA",
     features: [
       "Everything in Pro",
       "Multi-agent memory isolation",
       "Knowledge graph (typed entities + relations)",
       "Wake briefings + prospective memory",
-      "Obsidian vault sync",
       "Custom retention policies",
       "Dedicated support + SLA",
     ],
+    borderClass: "border-border/50",
   },
 ];
 
@@ -65,100 +76,98 @@ const faqs = [
 
 function BracketHeading({ children }: { children: string }) {
   return (
-    <p className="text-xs font-mono text-[#8899bb] tracking-[0.28em] uppercase mb-4">
-      <span className="text-[#00aaff]">[ </span>
+    <p className="text-xs font-mono text-secondary tracking-[0.28em] uppercase mb-4">
+      <span className="text-accent">[ </span>
       {children}
-      <span className="text-[#00aaff]"> ]</span>
+      <span className="text-accent"> ]</span>
     </p>
   );
 }
 
-function PricingHeader() {
-  return (
-    <header className="border-b border-[rgba(255,255,255,0.08)] bg-[#050508]">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
-        <Link href="/" className="font-heading text-lg tracking-wide neon-text">
-          MEMORY CRYSTAL
-        </Link>
-        <nav className="flex items-center gap-6 text-sm text-[#8899bb]">
-          <Link href="/docs" className="hover:text-[#00aaff]">
-            Docs
-          </Link>
-          <Link href="/changelog" className="hover:text-[#00aaff]">
-            Changelog
-          </Link>
-        </nav>
-      </div>
-    </header>
-  );
-}
-
 export default function PricingPage() {
+  const [annualBilling, setAnnualBilling] = useState(true);
+
   return (
-    <div className="min-h-screen bg-[#050508] text-[#f0f4ff]">
-      <PricingHeader />
+    <div className="min-h-screen bg-void text-primary">
+      <Header />
       <main className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
-        <BracketHeading children="PRICING" />
-        <h1 className="font-heading text-5xl md:text-6xl">Everything you need to scale memory infrastructure.</h1>
-        <p className="mt-5 max-w-3xl text-[#8899bb]">
-          Choose the level of memory depth that fits your environment. Upgrade at any time, no migration required.
-        </p>
+        <BracketHeading>PRICING</BracketHeading>
+        <div className="flex flex-wrap items-center gap-5 justify-between">
+          <h1 className="font-heading text-5xl md:text-6xl">Start free. Scale when ready.</h1>
+          <div className="inline-flex border border-border/45">
+            <button
+              type="button"
+              onClick={() => setAnnualBilling(true)}
+              className={`px-4 py-2 text-[11px] font-mono ${
+                annualBilling ? "bg-accent text-white" : "text-secondary"
+              }`}
+            >
+              ANNUAL
+            </button>
+            <button
+              type="button"
+              onClick={() => setAnnualBilling(false)}
+              className={`px-4 py-2 text-[11px] font-mono ${
+                !annualBilling ? "bg-accent text-white" : "text-secondary"
+              }`}
+            >
+              MONTHLY
+            </button>
+          </div>
+        </div>
+        <div className="mt-3 text-xs font-mono text-accent">
+          {annualBilling ? "Save ~30% by going annual" : "Monthly billing"}
+        </div>
 
         <section className="mt-10 grid gap-4 lg:grid-cols-3">
-          {tiers.map((tier) => (
-            <article key={tier.name} className={`glass-card border border-[rgba(255,255,255,0.16)] p-8 relative ${
-              tier.badge ? "neon-border glow-pulse" : ""
-            }`}>
-              {tier.badge ? (
-                <span className="absolute top-0 right-0 px-3 py-1 bg-[#00aaff] text-[#050508] text-xs font-mono -translate-y-1/2">
-                  {tier.badge}
+          {pricingPlans.map((plan) => (
+            <article
+              key={plan.name}
+              className={`glass-card p-8 border ${plan.borderClass} flex flex-col relative`}
+            >
+              {plan.isFeatured ? (
+                <span className="absolute top-0 right-0 -translate-y-1/2 bg-accent px-3 py-1 text-[10px] font-mono text-white">
+                  RECOMMENDED
                 </span>
               ) : null}
-              <p className="font-mono text-xs tracking-[0.2em] text-[#00aaff]">{tier.name.toUpperCase()}</p>
-              <p className="mt-2 text-5xl font-mono">
-                {tier.price}
-                <span className="text-sm text-[#8899bb]">/month</span>
-              </p>
-              <p className="mt-2 text-[#00aaff] font-mono text-sm">{tier.note}</p>
-              <ul className="mt-6 space-y-3 text-[#8899bb]">
-                {tier.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-3">
-                    <span className="text-[#00aaff] mt-1">◈</span>
+              <h3 className="font-heading text-2xl">{plan.name}</h3>
+              <div className="mt-5">
+                <p className="text-4xl font-mono neon-text">
+                  {annualBilling ? plan.priceAnnual ?? plan.price : plan.price}
+                </p>
+              </div>
+              <ul className="mt-7 space-y-3 text-sm text-secondary flex-1">
+                {plan.features.map((feature) => (
+                  <li key={feature} className="flex gap-3">
+                    <CrystalIcon size={14} glow className="shrink-0 mt-0.5" />
                     <span>{feature}</span>
                   </li>
                 ))}
               </ul>
               <Link
                 href="/signup"
-                className="mt-8 inline-flex px-5 py-3 font-mono glass-card border border-[rgba(255,255,255,0.12)] text-[#00aaff] hover:border-[#00aaff] transition-colors"
+                className="mt-7 inline-flex items-center justify-center px-5 py-3 text-xs font-mono border border-border/50 bg-border/5 hover:bg-accent/12 hover:border-accent transition-colors"
               >
-                Get started
+                {plan.button}
               </Link>
             </article>
           ))}
         </section>
 
-        <section className="mt-16 glass-card border border-[rgba(255,255,255,0.16)] p-8">
-          <BracketHeading children="FAQ" />
+        <section className="mt-16 glass-card border border-border/45 p-8">
+          <BracketHeading>FAQ</BracketHeading>
           <h2 className="font-heading text-3xl">Answers to common questions.</h2>
           <div className="mt-8 space-y-6">
             {faqs.map((faq) => (
-              <article key={faq.question} className="border-l-2 border-[rgba(0,170,255,0.45)] pl-6">
+              <article key={faq.question} className="border-l-2 border-accent/45 pl-6">
                 <h3 className="font-heading text-xl">{faq.question}</h3>
-                <p className="mt-2 text-[#8899bb] leading-relaxed">{faq.answer}</p>
+                <p className="mt-2 text-secondary leading-relaxed">{faq.answer}</p>
               </article>
             ))}
           </div>
         </section>
       </main>
-
-      <footer className="border-t border-[rgba(255,255,255,0.08)] py-8">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 flex justify-between text-[#8899bb] text-sm">
-          <p className="font-heading text-lg neon-text">MEMORY CRYSTAL</p>
-          <p>Built on OpenClaw</p>
-          <p>© {new Date().getFullYear()} MEMORY CRYSTAL</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

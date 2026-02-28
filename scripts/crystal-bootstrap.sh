@@ -11,10 +11,10 @@ run_step() {
   "$@"
 }
 
-run_step "Initialize and install dependencies" bash "$SCRIPT_DIR/vexclaw-init.sh"
-run_step "Validate environment and integration prerequisites" bash "$SCRIPT_DIR/vexclaw-doctor.sh" --dry-run
-run_step "Enable VexClaw plugin wiring" bash "$SCRIPT_DIR/vexclaw-enable.sh"
-run_step "Verify final wiring" bash "$SCRIPT_DIR/vexclaw-doctor.sh"
+run_step "Initialize and install dependencies" bash "$SCRIPT_DIR/crystal-init.sh"
+run_step "Validate environment and integration prerequisites" bash "$SCRIPT_DIR/crystal-doctor.sh" --dry-run
+run_step "Enable Memory Crystal plugin wiring" bash "$SCRIPT_DIR/crystal-enable.sh"
+run_step "Verify final wiring" bash "$SCRIPT_DIR/crystal-doctor.sh"
 
 cat <<'EOF'
 Bootstrap complete.

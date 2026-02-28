@@ -13,69 +13,69 @@
 
 Primary table families are in `convex/schema.ts`:
 
-- `vexclawMemories`
-- `vexclawAssociations`
-- `vexclawNodes`
-- `vexclawRelations`
-- `vexclawMemoryNodeLinks`
-- `vexclawSessions`
-- `vexclawCheckpoints`
-- `vexclawWakeState`
+- `crystalMemories`
+- `crystalAssociations`
+- `crystalNodes`
+- `crystalRelations`
+- `crystalMemoryNodeLinks`
+- `crystalSessions`
+- `crystalCheckpoints`
+- `crystalWakeState`
 
 ## Entity definitions
 
-### `vexclawMemories`
+### `crystalMemories`
 
 Primary recall document with embeddings and operational metadata.
 
-### `vexclawAssociations`
+### `crystalAssociations`
 
 Legacy association graph using memory-memory relation edges.
 
-### `vexclawNodes`
+### `crystalNodes`
 
 Typed node entities for graph foundation (`person`, `project`, `goal`, etc.).
 
-### `vexclawRelations`
+### `crystalRelations`
 
 Typed relations between nodes with confidence, channels, and evidence.
 
-### `vexclawMemoryNodeLinks`
+### `crystalMemoryNodeLinks`
 
 Bridge between raw memories and typed graph nodes.
 
-### `vexclawSessions`
+### `crystalSessions`
 
 Conversation/session context and counters.
 
-### `vexclawCheckpoints`
+### `crystalCheckpoints`
 
 Saved checkpoint snapshots and semantic summaries.
 
-### `vexclawWakeState`
+### `crystalWakeState`
 
 State for injected wake prompts.
 
 ## Relationships
 
-- `vexclawAssociations.fromMemoryId` and `.toMemoryId` -> `vexclawMemories`
-- `vexclawMemoryNodeLinks.memoryId` -> `vexclawMemories`
-- `vexclawMemoryNodeLinks.nodeId` -> `vexclawNodes`
-- `vexclawRelations.fromNodeId` and `.toNodeId` -> `vexclawNodes`
-- `vexclawRelations.evidenceMemoryIds` -> `vexclawMemories[]`
-- `vexclawSessions` referenced by `vexclawMemories`, `vexclawCheckpoints`, `vexclawWakeState`
+- `crystalAssociations.fromMemoryId` and `.toMemoryId` -> `crystalMemories`
+- `crystalMemoryNodeLinks.memoryId` -> `crystalMemories`
+- `crystalMemoryNodeLinks.nodeId` -> `crystalNodes`
+- `crystalRelations.fromNodeId` and `.toNodeId` -> `crystalNodes`
+- `crystalRelations.evidenceMemoryIds` -> `crystalMemories[]`
+- `crystalSessions` referenced by `crystalMemories`, `crystalCheckpoints`, `crystalWakeState`
 
 ## Performance indexes
 
-- `vexclawMemories`: vector index `by_embedding`
-- `vexclawMemories`: `by_store_category`, `by_strength`, `by_last_accessed`, `by_session`
-- `vexclawAssociations`: `by_from`, `by_to`
-- `vexclawNodes`: `by_canonical_key`, `by_node_type`, `by_status`
-- `vexclawRelations`: `by_from_node`, `by_to_node`, `by_relation`, `by_from_to_relation`
-- `vexclawMemoryNodeLinks`: `by_memory`, `by_node`
-- `vexclawSessions`: `by_channel`
-- `vexclawCheckpoints`: `by_created`
-- `vexclawWakeState`: `by_session`
+- `crystalMemories`: vector index `by_embedding`
+- `crystalMemories`: `by_store_category`, `by_strength`, `by_last_accessed`, `by_session`
+- `crystalAssociations`: `by_from`, `by_to`
+- `crystalNodes`: `by_canonical_key`, `by_node_type`, `by_status`
+- `crystalRelations`: `by_from_node`, `by_to_node`, `by_relation`, `by_from_to_relation`
+- `crystalMemoryNodeLinks`: `by_memory`, `by_node`
+- `crystalSessions`: `by_channel`
+- `crystalCheckpoints`: `by_created`
+- `crystalWakeState`: `by_session`
 
 ## Example payload
 
@@ -83,8 +83,8 @@ State for injected wake prompts.
 {
   "store": "semantic",
   "category": "fact",
-  "title": "VexClaw is MCP-first",
-  "content": "VexClaw persists memory into Convex and exposes MCP tools for recall and write."
+  "title": "Memory Crystal is MCP-first",
+  "content": "Memory Crystal persists memory into Convex and exposes MCP tools for recall and write."
 }
 ```
 
@@ -92,14 +92,14 @@ State for injected wake prompts.
 
 ```mermaid
 erDiagram
-    VexclawMemories ||--o{ VexclawAssociations : source
-    VexclawMemories ||--o{ VexclawAssociations : target
-    VexclawMemories ||--o{ VexclawMemoryNodeLinks : linkedBy
-    VexclawNodes ||--o{ VexclawMemoryNodeLinks : bridgesTo
-    VexclawNodes ||--o{ VexclawRelations : from
-    VexclawNodes ||--o{ VexclawRelations : to
-    VexclawMemories ||--o{ VexclawSessions : session
-    VexclawSessions ||--o{ VexclawCheckpoints : snapshots
-    VexclawSessions ||--o{ VexclawWakeState : wake
-    VexclawMemories ||--o{ VexclawWakeState : injected
-    VexclawCheckpoints ||--o{ VexclawMemories : memorySnapshot
+    CrystalMemories ||--o{ CrystalAssociations : source
+    CrystalMemories ||--o{ CrystalAssociations : target
+    CrystalMemories ||--o{ CrystalMemoryNodeLinks : linkedBy
+    CrystalNodes ||--o{ CrystalMemoryNodeLinks : bridgesTo
+    CrystalNodes ||--o{ CrystalRelations : from
+    CrystalNodes ||--o{ CrystalRelations : to
+    CrystalMemories ||--o{ CrystalSessions : session
+    CrystalSessions ||--o{ CrystalCheckpoints : snapshots
+    CrystalSessions ||--o{ CrystalWakeState : wake
+    CrystalMemories ||--o{ CrystalWakeState : injected
+    CrystalCheckpoints ||--o{ CrystalMemories : memorySnapshot

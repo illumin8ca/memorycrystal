@@ -12,19 +12,19 @@ export const createSession = mutation({
     participants: v.array(v.string()),
   },
   handler: async (ctx, args) => {
-    return ctx.db.insert("vexclawSessions", args);
+    return ctx.db.insert("crystalSessions", args);
   },
 });
 
 export const createWakeState = mutation({
   args: {
-    sessionId: v.id("vexclawSessions"),
-    injectedMemoryIds: v.array(v.id("vexclawMemories")),
+    sessionId: v.id("crystalSessions"),
+    injectedMemoryIds: v.array(v.id("crystalMemories")),
     wakePrompt: v.string(),
     createdAt: v.number(),
   },
   handler: async (ctx, args) => {
-    return ctx.db.insert("vexclawWakeState", args);
+    return ctx.db.insert("crystalWakeState", args);
   },
 });
 
@@ -32,7 +32,7 @@ export const getActiveMemories = query({
   args: { channel: v.optional(v.string()), limit: v.number() },
   handler: async (ctx, args) => {
     let q = ctx.db
-      .query("vexclawMemories")
+      .query("crystalMemories")
       .withIndex("by_last_accessed", (q) => q.gte("lastAccessedAt", 0))
       .filter((q) => q.eq("archived", false as unknown as never));
     if (args.channel) {

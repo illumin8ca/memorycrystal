@@ -9,7 +9,7 @@ export const getMemoryStats = query({
   handler: async (ctx) => {
     const sampleLimit = 500;
     const sample = await ctx.db
-      .query("vexclawMemories")
+      .query("crystalMemories")
       .withIndex("by_last_accessed", (q) => q.gte("lastAccessedAt", 0))
       .take(sampleLimit + 1);
 

@@ -118,30 +118,30 @@ const commandEnv = {
   CONVEX_URL: stripQuotes(env.CONVEX_URL),
   OPENAI_API_KEY: stripQuotes(env.OPENAI_API_KEY),
   OBSIDIAN_VAULT_PATH: stripQuotes(env.OBSIDIAN_VAULT_PATH),
-  VEXCLAW_MCP_HOST: stripQuotes(env.VEXCLAW_MCP_HOST || "127.0.0.1"),
-  VEXCLAW_MCP_PORT: stripQuotes(env.VEXCLAW_MCP_PORT || "8788"),
-  VEXCLAW_ENV_FILE: MCP_ENV_FILE,
+  CRYSTAL_MCP_HOST: stripQuotes(env.CRYSTAL_MCP_HOST || "127.0.0.1"),
+  CRYSTAL_MCP_PORT: stripQuotes(env.CRYSTAL_MCP_PORT || "8788"),
+  CRYSTAL_ENV_FILE: MCP_ENV_FILE,
   // Portability vars — injected so hooks/manifest can resolve paths without hardcoding
-  VEXCLAW_NODE: NODE_PATH,
-  VEXCLAW_PLUGIN_DIR: PLUGIN_DIR,
-  VEXCLAW_ROOT: REPO_ROOT,
+  CRYSTAL_NODE: NODE_PATH,
+  CRYSTAL_PLUGIN_DIR: PLUGIN_DIR,
+  CRYSTAL_ROOT: REPO_ROOT,
 };
 
 const pluginManifestTools = [
-  "vexclaw_remember",
-  "vexclaw_recall",
-  "vexclaw_what_do_i_know",
-  "vexclaw_why_did_we",
-  "vexclaw_forget",
-  "vexclaw_stats",
-  "vexclaw_checkpoint",
-  "vexclaw_wake",
+  "crystal_remember",
+  "crystal_recall",
+  "crystal_what_do_i_know",
+  "crystal_why_did_we",
+  "crystal_forget",
+  "crystal_stats",
+  "crystal_checkpoint",
+  "crystal_wake",
 ];
 
 const pluginConfig = {
   schemaVersion: 1,
-  id: "vexclaw",
-  name: "VexClaw",
+  id: "crystal",
+  name: "Memory Crystal",
   version: "0.1.0",
   description: "Drop-in OpenClaw memory plugin using Convex + MCP tools.",
   entry: "./handler.js",
@@ -161,55 +161,55 @@ const pluginConfig = {
     mcpArgs: [MCP_DIST],
   },
   commands: {
-    "vexclaw-capture": {
+    "crystal-capture": {
       command: NODE_PATH,
       args: [captureHookPath],
       env: {
         ...commandEnv,
-        VEXCLAW_MCP_MODE: "stdio",
+        CRYSTAL_MCP_MODE: "stdio",
       },
     },
-    "vexclaw-recall": {
+    "crystal-recall": {
       command: NODE_PATH,
       args: [recallHookPath],
       env: {
         ...commandEnv,
-        VEXCLAW_MCP_MODE: "stdio",
+        CRYSTAL_MCP_MODE: "stdio",
       },
     },
   },
   env: {
-    VEXCLAW_MCP_MODE: stripQuotes(env.VEXCLAW_MCP_MODE || "sse"),
-    VEXCLAW_MCP_HOST: commandEnv.VEXCLAW_MCP_HOST,
-    VEXCLAW_MCP_PORT: commandEnv.VEXCLAW_MCP_PORT,
-    VEXCLAW_ENV_FILE: MCP_ENV_FILE,
+    CRYSTAL_MCP_MODE: stripQuotes(env.CRYSTAL_MCP_MODE || "sse"),
+    CRYSTAL_MCP_HOST: commandEnv.CRYSTAL_MCP_HOST,
+    CRYSTAL_MCP_PORT: commandEnv.CRYSTAL_MCP_PORT,
+    CRYSTAL_ENV_FILE: MCP_ENV_FILE,
   },
 };
 
 const internalHookConfig = {
   commands: {
-    "vexclaw-memory": {
+    "crystal-memory": {
       command: NODE_PATH,
       args: [MCP_DIST],
       env: {
         ...commandEnv,
-        VEXCLAW_MCP_MODE: "stdio",
+        CRYSTAL_MCP_MODE: "stdio",
       },
     },
-    "vexclaw-capture": {
+    "crystal-capture": {
       command: NODE_PATH,
       args: [captureHookPath],
       env: {
         ...commandEnv,
-        VEXCLAW_MCP_MODE: "stdio",
+        CRYSTAL_MCP_MODE: "stdio",
       },
     },
-    "vexclaw-recall": {
+    "crystal-recall": {
       command: NODE_PATH,
       args: [recallHookPath],
       env: {
         ...commandEnv,
-        VEXCLAW_MCP_MODE: "stdio",
+        CRYSTAL_MCP_MODE: "stdio",
       },
     },
   },

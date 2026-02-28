@@ -33,13 +33,17 @@ DETECT_OPENCLAW_DIR() {
 }
 
 OPENCLAW_DIR="$(DETECT_OPENCLAW_DIR)"
-PLUGIN_PATH="${OPENCLAW_PLUGIN_DIR:-$OPENCLAW_DIR/extensions/vexclaw-memory}"
+PLUGIN_PATH="${OPENCLAW_PLUGIN_DIR:-$OPENCLAW_DIR/extensions/crystal-memory}"
 OPENCLAW_CONFIG="$OPENCLAW_DIR/openclaw.json"
 HOOK_MAP_PATH="$OPENCLAW_DIR/extensions/internal-hooks/openclaw-hook.json"
-REQUIRED_ENV_KEYS=(CONVEX_URL OPENAI_API_KEY OBSIDIAN_VAULT_PATH VEXCLAW_MCP_MODE VEXCLAW_MCP_HOST VEXCLAW_MCP_PORT)
+REQUIRED_ENV_KEYS=(CONVEX_URL OPENAI_API_KEY OBSIDIAN_VAULT_PATH CRYSTAL_MCP_MODE CRYSTAL_MCP_HOST CRYSTAL_MCP_PORT)
 REQUIRED_RUNTIME_ENV_KEYS=(CONVEX_URL OPENAI_API_KEY)
 MCP_DIST="$REPO_ROOT/mcp-server/dist/index.js"
 NODE_PATH="${NODE_PATH:-$(command -v node || true)}"
+MCP_ENV_FILE="$REPO_ROOT/mcp-server/.env"
+if [ ! -f "$MCP_ENV_FILE" ]; then
+  MCP_ENV_FILE="$REPO_ROOT/.env"
+fi
 
 DRY_RUN=false
 if [[ "${1-}" == "--dry-run" ]]; then
@@ -47,7 +51,7 @@ if [[ "${1-}" == "--dry-run" ]]; then
 fi
 
 if [[ "$DRY_RUN" == "true" ]]; then
-  echo "⚙️  VexClaw enable (dry-run)."
+  echo "⚙️  Memory Crystal enable (dry-run)."
   echo "Would copy plugin bundle:"
   echo "  $REPO_ROOT/plugin -> $PLUGIN_PATH"
   echo "Would merge hook entry into:"
@@ -82,7 +86,7 @@ fi
 mkdir -p "$OPENCLAW_DIR"
 mkdir -p "$OPENCLAW_DIR/extensions/internal-hooks"
 
-python3 - "$OPENCLAW_CONFIG" "$REPO_ROOT/.env" "${OPENCLAW_DIR}" "$MCP_DIST" "$NODE_PATH" "${REQUIRED_ENV_KEYS[*]}" "${REQUIRED_RUNTIME_ENV_KEYS[*]}" <<'PY'
+python3 - "$OPENCLAW_CONFIG" "$REPO_ROOT/.env" "${OPENCLAW_DIR}" "${REPO_ROOT}" "$MCP_DIST" "$NODE_PATH" "$PLUGIN_PATH" "$MCP_ENV_FILE" "${REQUIRED_ENV_KEYS[*]}" "${REQUIRED_RUNTIME_ENV_KEYS[*]}" <<'PY'
 import json
 import os
 import re
@@ -112,7 +116,7 @@ def load_env(path):
     return values
 
 
-config_path, env_path, openclaw_dir, mcp_dist, node_path, keys_csv, runtime_keys_csv = sys.argv[1:8]
+config_path, env_path, openclaw_dir, repo_root, mcp_dist, node_path, plugin_path, mcp_env_path, keys_csv, runtime_keys_csv = sys.argv[1:11]
 required_keys = keys_csv.split()
 required_runtime_keys = runtime_keys_csv.split()
 env_values = load_env(env_path)
@@ -135,7 +139,7 @@ if not isinstance(entries, dict):
     entries = {}
     internal["entries"] = entries
 
-entry = entries.get("vexclaw-memory", {})
+entry = entries.get("crystal-memory", {})
 if not isinstance(entry, dict):
     entry = {}
 
@@ -150,53 +154,106 @@ for key in required_keys:
 
 entry["enabled"] = True
 entry["env"] = entry_env
-entries["vexclaw-memory"] = entry
+entries["crystal-memory"] = entry
 
 with open(config_path, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2)
 
 hook_path = os.path.join(openclaw_dir, "extensions", "internal-hooks", "openclaw-hook.json")
+plugin_hook_path = os.path.join(plugin_path, "openclaw-hook.json")
 hook_data = load_tolerant_json(hook_path)
 commands = hook_data.setdefault("commands", {})
 if not isinstance(commands, dict):
     commands = {}
     hook_data["commands"] = commands
 
-commands["vexclaw-memory"] = {
+capture_script = os.path.join(plugin_path, "capture-hook.js")
+recall_script = os.path.join(plugin_path, "recall-hook.js")
+command_env = {
+    "CRYSTAL_MCP_MODE": "stdio",
+    "CRYSTAL_MCP_HOST": env_values.get("CRYSTAL_MCP_HOST", "127.0.0.1"),
+    "CRYSTAL_MCP_PORT": env_values.get("CRYSTAL_MCP_PORT", "8788"),
+    "CRYSTAL_NODE": node_path,
+    "CRYSTAL_PLUGIN_DIR": plugin_path,
+    "CRYSTAL_ROOT": repo_root,
+    "CRYSTAL_ENV_FILE": mcp_env_path,
+}
+for key in required_keys:
+    value = env_values.get(key)
+    if value:
+        if key == "CRYSTAL_MCP_MODE":
+            continue
+        command_env[key] = value
+
+commands["crystal-memory"] = {
     "command": node_path,
     "args": [mcp_dist],
     "env": {
-        "VEXCLAW_MCP_MODE": "stdio",
+        **command_env,
     },
 }
-commands["vexclaw-memory"]["env"].update(entry_env)
 
-repo_root = os.path.dirname(os.path.dirname(mcp_dist))
-capture_script = os.path.join(repo_root, "plugin", "capture-hook.js")
-recall_script = os.path.join(repo_root, "plugin", "recall-hook.js")
-
-commands["vexclaw-capture"] = {
+commands["crystal-capture"] = {
     "command": node_path,
     "args": [capture_script],
     "env": {
-        "VEXCLAW_MCP_MODE": "stdio",
+        **command_env,
     },
 }
-commands["vexclaw-capture"]["env"].update(entry_env)
 
-commands["vexclaw-recall"] = {
+commands["crystal-recall"] = {
     "command": node_path,
     "args": [recall_script],
     "env": {
-        "VEXCLAW_MCP_MODE": "stdio",
+        **command_env,
     },
 }
-commands["vexclaw-recall"]["env"].update(entry_env)
 
 with open(hook_path, "w", encoding="utf-8") as f:
     json.dump(hook_data, f, indent=2)
+
+plugin_hook = load_tolerant_json(plugin_hook_path)
+plugin_capabilities = plugin_hook.setdefault("capabilities", {})
+plugin_commands = plugin_hook.setdefault("commands", {})
+plugin_env = plugin_hook.setdefault("env", {})
+if not isinstance(plugin_capabilities, dict):
+    plugin_capabilities = {}
+    plugin_hook["capabilities"] = plugin_capabilities
+if not isinstance(plugin_commands, dict):
+    plugin_commands = {}
+    plugin_hook["commands"] = plugin_commands
+if not isinstance(plugin_env, dict):
+    plugin_env = {}
+    plugin_hook["env"] = plugin_env
+
+plugin_capabilities["mcpCommand"] = node_path
+plugin_capabilities["mcpArgs"] = [mcp_dist]
+
+plugin_commands["crystal-capture"] = {
+    "command": node_path,
+    "args": [capture_script],
+    "env": {
+        **command_env,
+    },
+}
+
+plugin_commands["crystal-recall"] = {
+    "command": node_path,
+    "args": [recall_script],
+    "env": {
+        **command_env,
+    },
+}
+
+plugin_env["CRYSTAL_MCP_MODE"] = env_values.get("CRYSTAL_MCP_MODE", "sse")
+plugin_env["CRYSTAL_MCP_HOST"] = command_env["CRYSTAL_MCP_HOST"]
+plugin_env["CRYSTAL_MCP_PORT"] = command_env["CRYSTAL_MCP_PORT"]
+plugin_env["CRYSTAL_ENV_FILE"] = mcp_env_path
+
+with open(plugin_hook_path, "w", encoding="utf-8") as f:
+    json.dump(plugin_hook, f, indent=2)
 PY
 
 echo "Skipping auto-restart — caller is responsible for restarting the gateway."
 
-echo "Enabled VexClaw wiring for $OPENCLAW_DIR"
+echo "Enabled Memory Crystal wiring for $OPENCLAW_DIR"

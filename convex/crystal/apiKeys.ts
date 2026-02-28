@@ -17,7 +17,7 @@ export const createApiKey = mutation({
   handler: async (ctx, { userId, label }) => {
     const rawKey = generateKey();
     const keyHash = await sha256Hex(rawKey);
-    await ctx.db.insert("vexclawApiKeys", {
+    await ctx.db.insert("crystalApiKeys", {
       userId,
       keyHash,
       label,
@@ -32,7 +32,7 @@ export const listApiKeys = query({
   args: { userId: v.string() },
   handler: async (ctx, { userId }) => {
     const keys = await ctx.db
-      .query("vexclawApiKeys")
+      .query("crystalApiKeys")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
     return keys.map(({ keyHash: _kh, ...rest }) => rest);
@@ -40,7 +40,7 @@ export const listApiKeys = query({
 });
 
 export const revokeApiKey = mutation({
-  args: { userId: v.string(), keyId: v.id("vexclawApiKeys") },
+  args: { userId: v.string(), keyId: v.id("crystalApiKeys") },
   handler: async (ctx, { userId, keyId }) => {
     const key = await ctx.db.get(keyId);
     if (!key || key.userId !== userId) throw new Error("Not found");
@@ -52,7 +52,7 @@ export const validateApiKey = query({
   args: { keyHash: v.string() },
   handler: async (ctx, { keyHash }) => {
     const key = await ctx.db
-      .query("vexclawApiKeys")
+      .query("crystalApiKeys")
       .withIndex("by_key_hash", (q) => q.eq("keyHash", keyHash))
       .first();
     if (!key || !key.active) return null;

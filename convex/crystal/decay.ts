@@ -23,13 +23,13 @@ const computeDecay = (
 export const getMemoriesForDecay = query({
   args: { limit: v.number() },
   handler: async (ctx, args) => {
-    return ctx.db.query("vexclawMemories").filter((q) => q.eq("archived", false as unknown as never)).take(args.limit);
+    return ctx.db.query("crystalMemories").filter((q) => q.eq("archived", false as unknown as never)).take(args.limit);
   },
 });
 
 export const applyDecayPatch = mutation({
   args: {
-    memoryId: v.id("vexclawMemories"),
+    memoryId: v.id("crystalMemories"),
     strength: v.float64(),
     archived: v.boolean(),
     archivedAt: v.optional(v.number()),
@@ -50,7 +50,7 @@ export const applyDecay = action({
   },
   handler: async (ctx, { ageOverrideDays }) => {
     const now = nowMs();
-    const memoryBatch = await ctx.runQuery("vexclaw/decay:getMemoriesForDecay" as any, {
+    const memoryBatch = await ctx.runQuery("crystal/decay:getMemoriesForDecay" as any, {
       limit: MAX_BATCH + 1,
     });
     const ageCap = ageOverrideDays ?? 30;
@@ -86,7 +86,7 @@ export const applyDecay = action({
         }
 
         if (nextStrength < 0.1) {
-          await ctx.runMutation("vexclaw/decay:applyDecayPatch" as any, {
+          await ctx.runMutation("crystal/decay:applyDecayPatch" as any, {
             memoryId: memory._id,
             strength: nextStrength,
             archived: true,
@@ -97,7 +97,7 @@ export const applyDecay = action({
           continue;
         }
 
-        await ctx.runMutation("vexclaw/decay:applyDecayPatch" as any, {
+        await ctx.runMutation("crystal/decay:applyDecayPatch" as any, {
           memoryId: memory._id,
           strength: nextStrength,
           archived: false,

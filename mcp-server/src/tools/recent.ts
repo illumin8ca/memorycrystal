@@ -11,7 +11,7 @@ type STMMessage = {
   sinceMs?: number;
 };
 
-export type VexClawRecentInput = {
+export type CrystalRecentInput = {
   limit?: number;
   channel?: string;
   sessionKey?: string;
@@ -19,7 +19,7 @@ export type VexClawRecentInput = {
 };
 
 export const recentTool: Tool = {
-  name: "vexclaw_recent",
+  name: "crystal_recent",
   description: "Fetch the most recent short-term messages.",
   inputSchema: {
     type: "object",
@@ -60,7 +60,7 @@ const trimText = (value: string, maxChars: number): string => {
   return text.length > maxChars ? text.slice(0, maxChars) : text;
 };
 
-const ensureRecentInput = (value: unknown): VexClawRecentInput => {
+const ensureRecentInput = (value: unknown): CrystalRecentInput => {
   if (typeof value !== "object" || value === null) {
     return {};
   }
@@ -95,7 +95,7 @@ export const handleRecentTool = async (args: unknown): Promise<CallToolResult> =
     const parsed = ensureRecentInput(args);
     const limit = parsed.limit ?? 20;
     const response = (await getConvexClient().query(
-      "vexclaw/messages:getRecentMessages" as any,
+      "crystal/messages:getRecentMessages" as any,
       {
         limit,
         channel: parsed.channel,

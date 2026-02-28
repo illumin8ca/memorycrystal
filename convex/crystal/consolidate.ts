@@ -75,7 +75,7 @@ export const getSensoryMemories = query({
   args: { limit: v.number() },
   handler: async (ctx, args) => {
     return ctx.db
-      .query("vexclawMemories")
+      .query("crystalMemories")
       .filter((q: any) => q.eq("store", "sensory"))
       .filter((q: any) => q.eq("archived", false))
       .take(args.limit);
@@ -83,14 +83,14 @@ export const getSensoryMemories = query({
 });
 
 export const getMemoryForConsolidation = query({
-  args: { memoryId: v.id("vexclawMemories") },
+  args: { memoryId: v.id("crystalMemories") },
   handler: async (ctx, args) => {
     return ctx.db.get(args.memoryId);
   },
 });
 
 export const archiveConsolidatedMemory = mutation({
-  args: { memoryId: v.id("vexclawMemories"), archivedAt: v.number() },
+  args: { memoryId: v.id("crystalMemories"), archivedAt: v.number() },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.memoryId, { archived: true, archivedAt: args.archivedAt });
   },
@@ -113,10 +113,10 @@ export const insertConsolidatedMemory = mutation({
     source: v.string(),
     tags: v.array(v.string()),
     archived: v.boolean(),
-    promotedFrom: v.optional(v.id("vexclawMemories")),
+    promotedFrom: v.optional(v.id("crystalMemories")),
   },
   handler: async (ctx, args) => {
-    return ctx.db.insert("vexclawMemories", args as any);
+    return ctx.db.insert("crystalMemories", args as any);
   },
 });
 
@@ -130,7 +130,7 @@ export const runConsolidation = action({
     const clusterThreshold = Math.min(Math.max(args.clusterThreshold ?? 0.75, 0.65), 0.98);
     const neighborWindow = 8;
 
-    const sensory = (await ctx.runQuery("vexclaw/consolidate:getSensoryMemories" as any, {
+    const sensory = (await ctx.runQuery("crystal/consolidate:getSensoryMemories" as any, {
       limit: MAX_BATCH + 1,
     })) as MemoryRecord[];
 
@@ -162,7 +162,7 @@ export const runConsolidation = action({
       stats.processed += 1;
 
       try {
-        const nearest = (await ctx.vectorSearch("vexclawMemories", "by_embedding", {
+        const nearest = (await ctx.vectorSearch("crystalMemories", "by_embedding", {
           vector: memory.embedding,
           limit: neighborWindow + 1,
           filter: (q: any) =>
@@ -189,7 +189,7 @@ export const runConsolidation = action({
         const docs = (
           await Promise.all(
             cluster.map(async (memoryId) =>
-              ctx.runQuery("vexclaw/consolidate:getMemoryForConsolidation" as any, {
+              ctx.runQuery("crystal/consolidate:getMemoryForConsolidation" as any, {
                 memoryId,
               }) as Promise<MemoryRecord | null>
             )
@@ -218,7 +218,7 @@ export const runConsolidation = action({
           summarizeMemories(docs),
         ].join("\n\n");
 
-        const episodicId = await ctx.runMutation("vexclaw/consolidate:insertConsolidatedMemory" as any, {
+        const episodicId = await ctx.runMutation("crystal/consolidate:insertConsolidatedMemory" as any, {
           store: "episodic",
           category: "event",
           title,
@@ -238,7 +238,7 @@ export const runConsolidation = action({
         });
 
         for (const item of docs) {
-          await ctx.runMutation("vexclaw/consolidate:archiveConsolidatedMemory" as any, {
+          await ctx.runMutation("crystal/consolidate:archiveConsolidatedMemory" as any, {
             memoryId: item._id,
             archivedAt: now,
           });
@@ -253,7 +253,7 @@ export const runConsolidation = action({
 
     for (const episodicId of createdEpisodic) {
       try {
-        const episodic = (await ctx.runQuery("vexclaw/consolidate:getMemoryForConsolidation" as any, {
+        const episodic = (await ctx.runQuery("crystal/consolidate:getMemoryForConsolidation" as any, {
           memoryId: episodicId,
         })) as (MemoryRecord & { _id: string }) | null;
         if (!episodic) {
@@ -265,7 +265,7 @@ export const runConsolidation = action({
           continue;
         }
 
-        const semanticCandidates = (await ctx.vectorSearch("vexclawMemories", "by_embedding", {
+        const semanticCandidates = (await ctx.vectorSearch("crystalMemories", "by_embedding", {
           vector: episodic.embedding,
           limit: 3,
           filter: (q: any) =>
@@ -277,7 +277,7 @@ export const runConsolidation = action({
           continue;
         }
 
-        await ctx.runMutation("vexclaw/consolidate:insertConsolidatedMemory" as any, {
+        await ctx.runMutation("crystal/consolidate:insertConsolidatedMemory" as any, {
           store: "semantic",
           category: episodic.category,
           title: `Semantic: ${episodic.title}`,

@@ -1,4 +1,4 @@
-# [SUPERSCEEDED] VexClaw Operations
+# [SUPERSCEEDED] Memory Crystal Operations
 
 This document is superseded.
 

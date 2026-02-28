@@ -35,7 +35,7 @@ DETECT_OPENCLAW_DIR() {
 OPENCLAW_DIR="$(DETECT_OPENCLAW_DIR)"
 OPENCLAW_CONFIG="$OPENCLAW_DIR/openclaw.json"
 HOOK_MAP_PATH="$OPENCLAW_DIR/extensions/internal-hooks/openclaw-hook.json"
-REQ_KEYS=(CONVEX_URL OPENAI_API_KEY OBSIDIAN_VAULT_PATH VEXCLAW_MCP_MODE VEXCLAW_MCP_HOST VEXCLAW_MCP_PORT)
+REQ_KEYS=(CONVEX_URL OPENAI_API_KEY OBSIDIAN_VAULT_PATH CRYSTAL_MCP_MODE CRYSTAL_MCP_HOST CRYSTAL_MCP_PORT)
 
 DRY_RUN=false
 SMOKE=false
@@ -58,7 +58,7 @@ for arg in "$@"; do
 done
 
 if [[ "${DRY_RUN}" == "true" ]]; then
-  echo "🩺 VexClaw doctor running in dry-run mode."
+  echo "🩺 Memory Crystal doctor running in dry-run mode."
 fi
 
 fail() {
@@ -107,10 +107,10 @@ check_file "$REPO_ROOT/plugin/handler.js"
 check_file "$REPO_ROOT/docs/INSTALL.md"
 check_file "$REPO_ROOT/docs/OPERATIONS.md"
 
-check_executable "$REPO_ROOT/scripts/vexclaw-init.sh"
-check_executable "$REPO_ROOT/scripts/vexclaw-doctor.sh"
-check_executable "$REPO_ROOT/scripts/vexclaw-enable.sh"
-check_executable "$REPO_ROOT/scripts/vexclaw-disable.sh"
+check_executable "$REPO_ROOT/scripts/crystal-init.sh"
+check_executable "$REPO_ROOT/scripts/crystal-doctor.sh"
+check_executable "$REPO_ROOT/scripts/crystal-enable.sh"
+check_executable "$REPO_ROOT/scripts/crystal-disable.sh"
 
 if [ -f "$REPO_ROOT/.env" ]; then
   echo "Checking runtime env..."
@@ -126,11 +126,11 @@ if [ -f "$REPO_ROOT/.env" ]; then
   if [ -z "${OPENAI_API_KEY:-}" ] || [ "$OPENAI_API_KEY" = "sk-..." ]; then
     warn "OPENAI_API_KEY is missing or still set to a placeholder."
   fi
-  if [ -z "${VEXCLAW_MCP_MODE:-}" ] || [ -z "${VEXCLAW_MCP_HOST:-}" ] || [ -z "${VEXCLAW_MCP_PORT:-}" ]; then
-    warn "VEXCLAW_MCP_* is not configured in .env."
+  if [ -z "${CRYSTAL_MCP_MODE:-}" ] || [ -z "${CRYSTAL_MCP_HOST:-}" ] || [ -z "${CRYSTAL_MCP_PORT:-}" ]; then
+    warn "CRYSTAL_MCP_* is not configured in .env."
   fi
 else
-  warn ".env file missing. Run scripts/vexclaw-init.sh to generate from .env.example."
+  warn ".env file missing. Run scripts/crystal-init.sh to generate from .env.example."
 fi
 
 if [ ! -f "$REPO_ROOT/.env.example" ]; then
@@ -138,7 +138,7 @@ if [ ! -f "$REPO_ROOT/.env.example" ]; then
 fi
 
 if [ ! -d "$REPO_ROOT/node_modules" ]; then
-  warn "Root node_modules missing. Run npm install or scripts/vexclaw-init.sh."
+  warn "Root node_modules missing. Run npm install or scripts/crystal-init.sh."
 fi
 
 if [ ! -d "$REPO_ROOT/mcp-server/node_modules" ]; then
@@ -180,22 +180,22 @@ openclaw = load_tolerant_json(config_path)
 hooks = openclaw.get("hooks", {})
 internal = hooks.get("internal", {}) if isinstance(hooks, dict) else {}
 entries = internal.get("entries", {}) if isinstance(internal, dict) else {}
-entry = entries.get("vexclaw-memory") if isinstance(entries, dict) else None
+entry = entries.get("crystal-memory") if isinstance(entries, dict) else None
 if not isinstance(entry, dict):
-    print("ERROR: hooks.internal.entries.vexclaw-memory is missing.")
+    print("ERROR: hooks.internal.entries.crystal-memory is missing.")
     raise SystemExit(1)
 if not entry.get("enabled"):
-    print("ERROR: hooks.internal.entries.vexclaw-memory is not enabled.")
+    print("ERROR: hooks.internal.entries.crystal-memory is not enabled.")
     raise SystemExit(1)
 
 entry_env = entry.get("env", {})
 if not isinstance(entry_env, dict):
-    print("ERROR: hooks.internal.entries.vexclaw-memory.env is missing.")
+    print("ERROR: hooks.internal.entries.crystal-memory.env is missing.")
     raise SystemExit(1)
 
 missing = [key for key in required if not entry_env.get(key)]
 if missing:
-    print("ERROR: hooks.internal.entries.vexclaw-memory.env missing: " + ", ".join(missing))
+    print("ERROR: hooks.internal.entries.crystal-memory.env missing: " + ", ".join(missing))
     raise SystemExit(1)
 
 hook_map = load_tolerant_json(hook_map_path)
@@ -204,34 +204,34 @@ if not isinstance(commands, dict):
     print("ERROR: openclaw-hook.json commands block missing.")
     raise SystemExit(1)
 
-command_entry = commands.get("vexclaw-memory")
+command_entry = commands.get("crystal-memory")
 if not isinstance(command_entry, dict):
-    print("ERROR: command map entry for vexclaw-memory is missing.")
+    print("ERROR: command map entry for crystal-memory is missing.")
     raise SystemExit(1)
 
 if not command_entry.get("command"):
-    print("ERROR: command map entry for vexclaw-memory missing command field.")
+    print("ERROR: command map entry for crystal-memory missing command field.")
     raise SystemExit(1)
 
 if not command_entry.get("args"):
-    print("ERROR: command map entry for vexclaw-memory missing args.")
+    print("ERROR: command map entry for crystal-memory missing args.")
     raise SystemExit(1)
 
 entry_env = command_entry.get("env", {})
 if isinstance(entry_env, dict):
-    print("MODE=" + entry_env.get("VEXCLAW_MCP_MODE", "sse"))
-    print("HOST=" + entry_env.get("VEXCLAW_MCP_HOST", "127.0.0.1"))
-    print("PORT=" + entry_env.get("VEXCLAW_MCP_PORT", "8788"))
+    print("MODE=" + entry_env.get("CRYSTAL_MCP_MODE", "sse"))
+    print("HOST=" + entry_env.get("CRYSTAL_MCP_HOST", "127.0.0.1"))
+    print("PORT=" + entry_env.get("CRYSTAL_MCP_PORT", "8788"))
 else:
     print("MODE=sse")
     print("HOST=127.0.0.1")
     print("PORT=8788")
 PY
   then
-    warn "OpenClaw integration is not fully configured. Run scripts/vexclaw-enable.sh to wire hooks."
+    warn "OpenClaw integration is not fully configured. Run scripts/crystal-enable.sh to wire hooks."
   fi
 else
-  warn "OpenClaw runtime wiring files not present yet. Run vexclaw-enable.sh when ready."
+  warn "OpenClaw runtime wiring files not present yet. Run crystal-enable.sh when ready."
 fi
 
 read -r MCP_MODE MCP_HOST MCP_PORT < <(
@@ -251,15 +251,15 @@ raw = re.sub(r",(\s*[}\]])", r"\1", raw)
 payload = json.loads(raw or "{}")
 env = {}
 if isinstance(payload.get("commands"), dict):
-    command = payload["commands"].get("vexclaw-memory", {})
+    command = payload["commands"].get("crystal-memory", {})
     if isinstance(command, dict):
         env = command.get("env", {})
 if not isinstance(env, dict):
     env = {}
 print(
-    env.get("VEXCLAW_MCP_MODE", "sse"),
-    env.get("VEXCLAW_MCP_HOST", "127.0.0.1"),
-    env.get("VEXCLAW_MCP_PORT", "8788"),
+    env.get("CRYSTAL_MCP_MODE", "sse"),
+    env.get("CRYSTAL_MCP_HOST", "127.0.0.1"),
+    env.get("CRYSTAL_MCP_PORT", "8788"),
 )
 PY
 )
@@ -298,4 +298,4 @@ if [ -n "${OPENCLAW_DIR:-}" ] && [ -d "$OPENCLAW_DIR" ]; then
   echo "OPENCLAW_DIR found: $OPENCLAW_DIR"
 fi
 
-echo "✅ VexClaw doctor finished."
+echo "✅ Memory Crystal doctor finished."

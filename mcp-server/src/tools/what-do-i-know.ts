@@ -14,7 +14,7 @@ type MemoryRecord = {
   strength: number;
 };
 
-export type VexClawWhatDoIKnowInput = {
+export type CrystalWhatDoIKnowInput = {
   topic: string;
   stores?: string[];
   limit?: number;
@@ -22,8 +22,8 @@ export type VexClawWhatDoIKnowInput = {
 };
 
 export const whatDoIKnowTool: Tool = {
-  name: "vexclaw_what_do_i_know",
-  description: "Broad topic scan over VexClaw memories.",
+  name: "crystal_what_do_i_know",
+  description: "Broad topic scan over Memory Crystal memories.",
   inputSchema: {
     type: "object",
     properties: {
@@ -66,7 +66,7 @@ const buildBlock = (summary: string, records: MemoryRecord[]) => [
     : ["No matches"]),
 ].join("\n");
 
-const ensureInput = (value: unknown): VexClawWhatDoIKnowInput => {
+const ensureInput = (value: unknown): CrystalWhatDoIKnowInput => {
   if (typeof value !== "object" || value === null) {
     throw new Error("Invalid arguments");
   }
@@ -136,7 +136,7 @@ export const handleWhatDoIKnowTool = async (args: unknown): Promise<CallToolResu
         content: [
           {
             type: "text",
-            text: "⚠️ VexClaw recall degraded: embedding service unavailable. Please retry.",
+            text: "⚠️ Memory Crystal recall degraded: embedding service unavailable. Please retry.",
           },
         ],
         isError: true,
@@ -148,14 +148,14 @@ export const handleWhatDoIKnowTool = async (args: unknown): Promise<CallToolResu
         content: [
           {
             type: "text",
-            text: "⚠️ VexClaw recall degraded: embedding service unavailable. Please retry.",
+            text: "⚠️ Memory Crystal recall degraded: embedding service unavailable. Please retry.",
           },
         ],
         isError: true,
       };
     }
 
-    const result = (await getConvexClient().action("vexclaw/recall:recallMemories" as any, {
+    const result = (await getConvexClient().action("crystal/recall:recallMemories" as any, {
       embedding,
       stores: parsed.stores,
       tags: parsed.tags,

@@ -10,7 +10,7 @@ Operations, monitoring, and troubleshooting docs.
 
 ## Related runtime files
 
-- `../../scripts/vexclaw-doctor.sh`
-- `../../scripts/vexclaw-e2e.sh`
-- `../../scripts/vexclaw-enable.sh`
-- `../../scripts/vexclaw-disable.sh`
+- `../../scripts/crystal-doctor.sh`
+- `../../scripts/crystal-e2e.sh`
+- `../../scripts/crystal-enable.sh`
+- `../../scripts/crystal-disable.sh`

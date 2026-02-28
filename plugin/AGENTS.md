@@ -2,15 +2,15 @@
 
 ## Package Identity
 
-- Purpose: OpenClaw plugin manifest and lifecycle hooks for loading VexClaw MCP.
+- Purpose: OpenClaw plugin manifest and lifecycle hooks for loading Memory Crystal MCP.
 - Scope: plugin runtime metadata and hook handler code.
 
 ## Setup Commands
 
-- Install plugin wiring: `npm run vexclaw:enable`
+- Install plugin wiring: `npm run crystal:enable`
 - Verify plugin runtime: `npm run test:smoke`
-- Full install path: `npm run vexclaw:bootstrap`
-- Disable wiring: `npm run vexclaw:disable`
+- Full install path: `npm run crystal:bootstrap`
+- Disable wiring: `npm run crystal:disable`
 
 ## Conventions
 
@@ -31,14 +31,14 @@
 - `./openclaw-hook.json`
 - `./handler.js`
 - `./HOOK.md`
-- `./../scripts/vexclaw-enable.sh`
-- `./../scripts/vexclaw-disable.sh`
+- `./../scripts/crystal-enable.sh`
+- `./../scripts/crystal-disable.sh`
 
 ## JIT Index Hints
 
 - Find hook fields: `cat plugin/openclaw-hook.json`
 - Validate handler entrypoints: `rg -n "startup|postTurn|status" plugin/handler.js`
-- Confirm bootstrap paths: `rg -n "openclaw-hook.json|handler.js|capabilities|mcpCommand" plugin/openclaw-hook.json scripts/vexclaw-enable.sh`
+- Confirm bootstrap paths: `rg -n "openclaw-hook.json|handler.js|capabilities|mcpCommand" plugin/openclaw-hook.json scripts/crystal-enable.sh`
 
 ## Common Gotchas
 
@@ -47,5 +47,5 @@
 
 ## Pre-PR Checks
 
-- `npm run vexclaw:enable -- --dry-run`
-- `npm run vexclaw:disable -- --dry-run`
+- `npm run crystal:enable -- --dry-run`
+- `npm run crystal:disable -- --dry-run`

@@ -4,8 +4,8 @@ import { v } from "convex/values";
 export const getStats = query({
   args: { userId: v.optional(v.string()) },
   handler: async (ctx, { userId }) => {
-    const allMemories = await ctx.db.query("vexclawMemories").collect();
-    const totalMessages = await ctx.db.query("vexclawMessages").collect();
+    const allMemories = await ctx.db.query("crystalMemories").collect();
+    const totalMessages = await ctx.db.query("crystalMessages").collect();
     const recent = [...allMemories]
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, 5)
@@ -33,7 +33,7 @@ export const listMemories = query({
   },
   handler: async (ctx, { limit = 50, store, archived = false }) => {
     const all = await ctx.db
-      .query("vexclawMemories")
+      .query("crystalMemories")
       .take(Math.min((limit ?? 50) * 4, 800));
     const filtered = all
       .filter((m) => m.archived === archived)
@@ -51,7 +51,7 @@ export const listMessages = query({
   },
   handler: async (ctx, { limit = 100, sinceMs }) => {
     const msgs = await ctx.db
-      .query("vexclawMessages")
+      .query("crystalMessages")
       .withIndex("by_timestamp")
       .order("desc")
       .take(limit);

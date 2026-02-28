@@ -1,4 +1,7 @@
 import Link from "next/link";
+import CrystalIcon from "../components/CrystalIcon";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 
 type Status = "SHIPPED" | "IN PROGRESS" | "PLANNED";
 
@@ -78,10 +81,10 @@ const roadmapItems: RoadmapItem[] = [
 
 function BracketLabel({ label }: { label: string }) {
   return (
-    <p className="text-xs font-mono text-[#8899bb] tracking-[0.25em] uppercase">
-      <span className="text-[#00aaff]">[ </span>
+    <p className="text-xs font-mono text-secondary tracking-[0.25em] uppercase">
+      <span className="text-accent">[ </span>
       {label}
-      <span className="text-[#00aaff]"> ]</span>
+      <span className="text-accent"> ]</span>
     </p>
   );
 }
@@ -96,31 +99,32 @@ function statusClasses(status: Status) {
 
   if (status === "IN PROGRESS") {
     return {
-      badge: "bg-[#00aaff]/15 text-[#00aaff] border border-[#00aaff]/40",
-      card: "border-l border-l-[#00aaff] glow-pulse",
+      badge: "bg-accent/15 text-accent border border-accent/40",
+      card: "border-l border-l-accent glow-pulse",
     };
   }
 
   return {
-    badge: "bg-[#555]/25 text-[#9aa3b8] border border-[#555]",
+    badge: "bg-secondary/25 text-secondary border border-secondary",
     card: "",
   };
 }
 
 export default function RoadmapPage() {
   return (
-    <div className="min-h-screen bg-[#050508] text-[#f0f4ff]">
+    <div className="min-h-screen bg-void text-primary">
+      <Header />
       <main className="mx-auto max-w-7xl px-6 py-16 md:py-24 lg:px-8">
         <header className="max-w-3xl">
           <BracketLabel label="ROADMAP" />
           <h1 className="mt-3 font-heading text-[clamp(2.25rem,7vw,4.5rem)] leading-tight">
             Where Memory Crystal is going.
           </h1>
-          <p className="mt-4 text-lg text-[#8899bb]">Built in public. Shipping fast.</p>
+          <p className="mt-4 text-lg text-secondary">Built in public. Shipping fast.</p>
         </header>
 
         <section className="relative mt-16 md:mt-20">
-          <div className="absolute top-0 bottom-0 left-4 w-px bg-[rgba(0,170,255,0.2)] md:left-1/2 md:-translate-x-1/2" />
+          <div className="absolute top-0 bottom-0 left-4 w-px bg-accent/20 md:left-1/2 md:-translate-x-1/2" />
 
           <div className="space-y-10 md:space-y-14">
             {roadmapItems.map((item, index) => {
@@ -133,26 +137,26 @@ export default function RoadmapPage() {
 
               return (
                 <article key={`${item.quarter}-${item.title}`} className={`relative flex ${sideClass}`}>
-                  <div className="absolute left-4 top-8 h-3 w-3 rotate-45 bg-[#00aaff] shadow-[0_0_20px_rgba(0,170,255,0.3)] md:left-1/2 md:top-10 md:-translate-x-1/2" />
+                  <div className="absolute left-4 top-8 h-3 w-3 rotate-45 bg-accent shadow-[0_0_20px_rgba(33,128,214,0.3)] md:left-1/2 md:top-10 md:-translate-x-1/2" />
 
                   <div
-                    className={`w-full md:max-w-[calc(50%-2rem)] ${animationClass} glass-card border border-[rgba(255,255,255,0.08)] p-6 md:p-7 ${statusStyle.card}`}
+                    className={`w-full md:max-w-[calc(50%-2rem)] ${animationClass} glass-card border border-border/25 p-6 md:p-7 ${statusStyle.card}`}
                     style={{ animationDelay: `${index * 90}ms` }}
                   >
                     <div className="flex flex-wrap items-center gap-3">
-                      <p className="font-mono text-xs uppercase tracking-[0.2em] text-[#00aaff]">{item.quarter}</p>
+                      <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">{item.quarter}</p>
                       <span className={`px-2 py-1 text-[10px] font-mono uppercase tracking-[0.12em] ${statusStyle.badge}`}>
                         {item.status}
                       </span>
                     </div>
 
                     <h2 className="mt-4 font-heading text-2xl">{item.title}</h2>
-                    <p className="mt-3 text-[#8899bb] leading-relaxed">{item.description}</p>
+                    <p className="mt-3 text-secondary leading-relaxed">{item.description}</p>
 
-                    <ul className="mt-5 space-y-2 text-sm text-[#f0f4ff]">
+                    <ul className="mt-5 space-y-2 text-sm text-primary">
                       {item.features.map((feature) => (
                         <li key={feature} className="flex gap-3">
-                          <span className="text-[#00aaff]">◈</span>
+                          <CrystalIcon size={14} glow className="shrink-0 mt-0.5" />
                           <span>{feature}</span>
                         </li>
                       ))}
@@ -164,20 +168,20 @@ export default function RoadmapPage() {
           </div>
         </section>
 
-        <section className="mt-20 border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-8 backdrop-blur-[12px] md:mt-24 md:p-10">
+        <section className="mt-20 border border-border/25 bg-border/8 p-8 backdrop-blur-[12px] md:mt-24 md:p-10">
           <h2 className="font-heading text-3xl">Have a feature request?</h2>
-          <p className="mt-3 text-[#8899bb]">We build in public. Join our Discord to shape what we ship next.</p>
+          <p className="mt-3 text-secondary">We build in public. Join our Discord to shape what we ship next.</p>
           <Link
             href="https://discord.com"
             target="_blank"
             rel="noreferrer"
-            className="mt-6 inline-flex px-6 py-3 font-mono text-xs tracking-[0.16em] text-[#050508] bg-[#00aaff] shadow-[0_0_20px_rgba(0,170,255,0.3)] hover:brightness-110 transition"
+            className="mt-6 inline-flex px-6 py-3 font-mono text-xs tracking-[0.16em] text-white bg-accent shadow-[0_0_20px_rgba(33,128,214,0.3)] hover:brightness-110 transition"
           >
             JOIN DISCORD
           </Link>
         </section>
       </main>
-
+      <Footer />
     </div>
   );
 }

@@ -3,11 +3,11 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="${SCRIPT_DIR%/scripts}"
-STATE_DIR="$REPO_ROOT/.vexclaw"
+STATE_DIR="$REPO_ROOT/.crystal"
 ENV_FILE="$REPO_ROOT/.env"
 ENV_EXAMPLE="$REPO_ROOT/.env.example"
 
-echo "🦾 VexClaw init starting in $REPO_ROOT"
+echo "🦾 Memory Crystal init starting in $REPO_ROOT"
 
 if [ ! -f "$ENV_FILE" ]; then
   cp "$ENV_EXAMPLE" "$ENV_FILE"
@@ -66,9 +66,9 @@ readonly REQUIRED_KEYS=(
   CONVEX_URL
   OPENAI_API_KEY
   OBSIDIAN_VAULT_PATH
-  VEXCLAW_MCP_MODE
-  VEXCLAW_MCP_HOST
-  VEXCLAW_MCP_PORT
+  CRYSTAL_MCP_MODE
+  CRYSTAL_MCP_HOST
+  CRYSTAL_MCP_PORT
 )
 
 for key in "${REQUIRED_KEYS[@]}"; do
@@ -110,11 +110,11 @@ fi
 echo "Building MCP server..."
 (cd "$REPO_ROOT/mcp-server" && npm run build)
 
-if [ ! -x "$REPO_ROOT/scripts/start-vexclaw-mcp.sh" ]; then
-  echo "Warning: start-vexclaw-mcp.sh is not executable."
+if [ ! -x "$REPO_ROOT/scripts/start-crystal-mcp.sh" ]; then
+  echo "Warning: start-crystal-mcp.sh is not executable."
 fi
 
-echo "VexClaw init complete. Run:"
-echo "  scripts/vexclaw-doctor.sh --dry-run"
-echo "  scripts/vexclaw-enable.sh"
+echo "Memory Crystal init complete. Run:"
+echo "  scripts/crystal-doctor.sh --dry-run"
+echo "  scripts/crystal-enable.sh"
 echo "  (cd mcp-server && npm run build)"

@@ -12,7 +12,7 @@ type STMMessage = {
   score?: number;
 };
 
-export type VexClawSearchMessagesInput = {
+export type CrystalSearchMessagesInput = {
   query: string;
   limit?: number;
   channel?: string;
@@ -20,7 +20,7 @@ export type VexClawSearchMessagesInput = {
 };
 
 export const searchMessagesTool: Tool = {
-  name: "vexclaw_search_messages",
+  name: "crystal_search_messages",
   description: "Semantic search over short-term memory messages.",
   inputSchema: {
     type: "object",
@@ -57,7 +57,7 @@ const clampLimit = (value: unknown): number => {
 const trimText = (value: string, maxChars: number): string =>
   value.length > maxChars ? value.slice(0, maxChars) : value;
 
-const ensureSearchMessagesInput = (value: unknown): VexClawSearchMessagesInput => {
+const ensureSearchMessagesInput = (value: unknown): CrystalSearchMessagesInput => {
   if (typeof value !== "object" || value === null) {
     throw new Error("query is required");
   }
@@ -102,7 +102,7 @@ const handleSearchMessages = async (args: unknown): Promise<CallToolResult> => {
       content: [
         {
           type: "text",
-          text: "⚠️ VexClaw recall degraded: embedding service unavailable. Please retry.",
+          text: "⚠️ Memory Crystal recall degraded: embedding service unavailable. Please retry.",
         },
       ],
     };
@@ -114,14 +114,14 @@ const handleSearchMessages = async (args: unknown): Promise<CallToolResult> => {
       content: [
         {
           type: "text",
-          text: "⚠️ VexClaw recall degraded: embedding service unavailable. Please retry.",
+          text: "⚠️ Memory Crystal recall degraded: embedding service unavailable. Please retry.",
         },
       ],
     };
   }
 
   const response = (await getConvexClient().action(
-    "vexclaw/messages:searchMessages" as any,
+    "crystal/messages:searchMessages" as any,
     {
       embedding,
       limit: parsed.limit,

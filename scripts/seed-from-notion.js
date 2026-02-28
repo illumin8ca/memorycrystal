@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * seed-from-notion.js
- * Pulls Notion databases and seeds into VexClaw (Convex + Obsidian).
+ * Pulls Notion databases and seeds into Memory Crystal (Convex + Obsidian).
  * Usage:
  *   node scripts/seed-from-notion.js           # full run
  *   node scripts/seed-from-notion.js --dry-run  # preview only
@@ -22,7 +22,7 @@ const EXTRACTION_MODEL = "gpt-4o-mini";
 const EMBEDDING_MODEL = "text-embedding-3-small";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_EMBED_URL = "https://api.openai.com/v1/embeddings";
-const CONVEX_MUTATION_PATH = "vexclaw/memories:createMemory";
+const CONVEX_MUTATION_PATH = "crystal/memories:createMemory";
 const NOTION_API_VERSION = "2025-09-03";
 const DEDUPE_THRESHOLD = 0.92;
 
@@ -51,7 +51,7 @@ function readEnvFile(fp) {
 const env = { ...readEnvFile(ENV_FILE), ...process.env };
 const CONVEX_URL = env.CONVEX_URL;
 const OPENAI_API_KEY = (env.OPENAI_API_KEY || "").replace(/^"+|"+$/g, "");
-const OBSIDIAN_VAULT = env.OBSIDIAN_VAULT_PATH || path.join(HOME, "Documents", "Gerald", "Memory");
+const OBSIDIAN_VAULT = env.OBSIDIAN_VAULT_PATH || path.join(HOME, "Documents", "Memory");
 const NOTION_KEY = (() => {
   const keyFile = path.join(HOME, ".config/notion/api_key");
   if (fs.existsSync(keyFile)) return fs.readFileSync(keyFile, "utf8").trim();
@@ -218,7 +218,7 @@ function cosine(a, b) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log(`\n🧠 VexClaw Notion Seed${DRY_RUN ? " [DRY RUN]" : ""}`);
+  console.log(`\n🧠 Memory Crystal Notion Seed${DRY_RUN ? " [DRY RUN]" : ""}`);
   console.log(`   Convex: ${CONVEX_URL}`);
   console.log(`   Obsidian: ${OBSIDIAN_VAULT}\n`);
 

@@ -1,12 +1,12 @@
-# AGENTS.md — VexClaw Development Context
+# AGENTS.md — Memory Crystal Development Context
 
 Read this before touching anything in this repo.
 
 ---
 
-## What VexClaw Is
+## What Memory Crystal Is
 
-VexClaw is two things:
+Memory Crystal is two things:
 
 1. **A memory plugin for OpenClaw** — captures conversations, extracts facts, recalls context before each AI response. Hooks into OpenClaw via two mechanisms (internal hooks for recall, JavaScript plugin API for capture).
 
@@ -19,11 +19,11 @@ The long-term vision is universal AI memory — not limited to OpenClaw. Browser
 ## Repo Structure
 
 ```
-openclaw-vexclaw/         ← monorepo root
+openclaw-crystal/         ← monorepo root
   apps/web/               ← Next.js 15 SaaS dashboard
   convex/                 ← Convex backend (shared)
     schema.ts             ← source of truth for all tables
-    vexclaw/              ← all Convex functions
+    crystal/              ← all Convex functions
   mcp-server/             ← MCP server (port 8788)
     src/index.ts
     .env                  ← CONVEX_URL, OPENAI_API_KEY, OBSIDIAN_VAULT_PATH
@@ -39,8 +39,8 @@ openclaw-vexclaw/         ← monorepo root
 
 **Live plugin files** (deployed copies):
 ```
-~/.openclaw/extensions/vexclaw-memory/    ← internal hooks (recall)
-~/.openclaw/extensions/vexclaw-capture/   ← JavaScript plugin API (capture)
+~/.openclaw/extensions/crystal-memory/    ← internal hooks (recall)
+~/.openclaw/extensions/crystal-capture/   ← JavaScript plugin API (capture)
 ```
 
 After editing `plugin/`, always copy to both extension dirs and restart the gateway.
@@ -53,16 +53,16 @@ After editing `plugin/`, always copy to both extension dirs and restart the gate
 User sends message
   → recall-hook.js fires (before_model_resolve)
       → embeds the query
-      → searches vexclawMessages (STM) + vexclawMemories (LTM)
+      → searches crystalMessages (STM) + crystalMemories (LTM)
       → injects top results into system prompt
 
 AI responds
   → capture-hook.js fires (llm_output event)
       → logs user message + AI response to Obsidian/logs/YYYY-MM-DD.md
-      → saves both messages to vexclawMessages (STM, 14-day TTL)
+      → saves both messages to crystalMessages (STM, 14-day TTL)
       → calls GPT-4o-mini to extract up to 3 memories from the turn
       → embeds and dedupes extracted memories
-      → saves new memories to vexclawMemories (LTM, permanent)
+      → saves new memories to crystalMemories (LTM, permanent)
       → writes each memory as a .md file to Obsidian/<store>/
 ```
 
@@ -72,12 +72,12 @@ AI responds
 
 | Table | Purpose | TTL |
 |---|---|---|
-| `vexclawMemories` | Long-term distilled facts | Permanent |
-| `vexclawMessages` | Raw verbatim messages | 14 days |
-| `vexclawSessions` | Session tracking | Manual |
-| `vexclawCheckpoints` | Memory snapshots | Manual |
-| `vexclawUserProfiles` | SaaS subscription data | Permanent |
-| `vexclawApiKeys` | Hashed API keys | Until revoked |
+| `crystalMemories` | Long-term distilled facts | Permanent |
+| `crystalMessages` | Raw verbatim messages | 14 days |
+| `crystalSessions` | Session tracking | Manual |
+| `crystalCheckpoints` | Memory snapshots | Manual |
+| `crystalUserProfiles` | SaaS subscription data | Permanent |
+| `crystalApiKeys` | Hashed API keys | Until revoked |
 
 Deployment: `rightful-mockingbird-389.convex.cloud`
 
@@ -98,16 +98,16 @@ The safe workflow:
 4. Verify with `jq empty ~/.openclaw/openclaw.json` and `openclaw doctor`
 
 Plugin registration in `openclaw.json`:
-- Recall: `hooks.internal.entries.vexclaw-memory` (entry point: `handler.js`)
-- Capture: `plugins.entries.vexclaw-capture` + `plugins.allow` (entry point: `index.js`)
+- Recall: `hooks.internal.entries.crystal-memory` (entry point: `handler.js`)
+- Capture: `plugins.entries.crystal-capture` + `plugins.allow` (entry point: `index.js`)
 
 Valid plugin entry fields: `{ "enabled": true }` — no `source`, no `path`.
 
 ## Session startup protocol
 
-At the start of every new session, Gerald must call `vexclaw_wake` before doing anything else.
+At the start of every new session, Gerald must call `crystal_wake` before doing anything else.
 
-- Send `vexclaw_wake` as the very first action in the session flow.
+- Send `crystal_wake` as the very first action in the session flow.
 - Continue only after wake succeeds.
 - If wake fails, pause and resolve before running other workflow steps.
 
@@ -142,13 +142,13 @@ Non-negotiable rules for `apps/web/`:
 - Convex multi-tenant schema (userProfiles, apiKeys)
 
 **Not yet working:**
-- Capture plugin (`vexclaw-capture`) — needs Codex to apply the config patch to `openclaw.json` outside runtime (see instructions in `docs/02-setup-guides/CONFIG.md`)
+- Capture plugin (`crystal-capture`) — needs Codex to apply the config patch to `openclaw.json` outside runtime (see instructions in `docs/02-setup-guides/CONFIG.md`)
 - Convex Auth wired to web UI (forms are static HTML)
 - Polar.sh billing integrated
 - Railway deployment
 
 **Next priority:**
-Apply the capture plugin config, verify `[vexclaw] capture hooks registered` in gateway log, confirm daily logs are writing.
+Apply the capture plugin config, verify `[crystal] capture hooks registered` in gateway log, confirm daily logs are writing.
 
 ---
 
@@ -165,10 +165,10 @@ cd mcp-server && npm run start
 cd apps/web && npm run dev
 
 # Copy plugin files to live extensions (after editing plugin/)
-cp plugin/capture-hook.js ~/.openclaw/extensions/vexclaw-memory/
-cp plugin/capture-hook.js ~/.openclaw/extensions/vexclaw-capture/  # same file
-cp plugin/recall-hook.js ~/.openclaw/extensions/vexclaw-memory/
-cp plugin/handler.js ~/.openclaw/extensions/vexclaw-memory/
+cp plugin/capture-hook.js ~/.openclaw/extensions/crystal-memory/
+cp plugin/capture-hook.js ~/.openclaw/extensions/crystal-capture/  # same file
+cp plugin/recall-hook.js ~/.openclaw/extensions/crystal-memory/
+cp plugin/handler.js ~/.openclaw/extensions/crystal-memory/
 
 # Restart gateway (do NOT run from within a session)
 openclaw gateway restart
@@ -181,5 +181,5 @@ openclaw gateway restart
 - Do not run `openclaw gateway restart` from inside an exec session — it kills the session
 - Do not edit `~/.openclaw/openclaw.json` directly from within the AI runtime
 - Do not add `source` or `path` keys to `plugins.entries` — they are not valid schema fields
-- Do not publish to ClaWHub — VexClaw is proprietary
+- Do not publish to ClaWHub — Memory Crystal is proprietary
 - Do not commit API keys or the `.env` file

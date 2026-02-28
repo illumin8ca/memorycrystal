@@ -38,7 +38,7 @@ export const embedUnprocessedMessages = action({
     const apiKey = process.env.OPENAI_API_KEY;
     const stats = { processed: 0, succeeded: 0, failed: 0, skipped: 0 };
 
-    const messages = await ctx.runQuery("vexclaw/messages:getUnembeddedMessages" as any, { limit });
+    const messages = await ctx.runQuery("crystal/messages:getUnembeddedMessages" as any, { limit });
 
     if (!apiKey) {
       return { ...stats, processed: messages.length, skipped: messages.length };
@@ -58,7 +58,7 @@ export const embedUnprocessedMessages = action({
           continue;
         }
 
-        await ctx.runMutation("vexclaw/messages:updateMessageEmbedding" as any, {
+        await ctx.runMutation("crystal/messages:updateMessageEmbedding" as any, {
           messageId: message._id,
           embedding,
         });

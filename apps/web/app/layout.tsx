@@ -1,18 +1,28 @@
 import type { Metadata } from "next";
-import { Syne } from "next/font/google";
+import { Oxanium, Audiowide } from "next/font/google";
 import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 import ConvexClientProvider from "./ConvexClientProvider";
 import "./globals.css";
 
-const syne = Syne({
+const oxanium = Oxanium({
   subsets: ["latin"],
-  weight: ["700", "800"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-body",
+});
+
+const audiowide = Audiowide({
+  subsets: ["latin"],
+  weight: ["400"],
   variable: "--font-heading",
 });
 
 export const metadata: Metadata = {
   title: "Memory Crystal — Persistent Memory for AI",
   description: "Persistent memory for your AI assistant",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({
@@ -22,7 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${syne.variable} bg-[#050508] text-[#f0f4ff] antialiased`}>
+      <body className={`${oxanium.variable} ${audiowide.variable} bg-void text-primary antialiased`}>
         <ConvexAuthNextjsServerProvider>
           <ConvexClientProvider>{children}</ConvexClientProvider>
         </ConvexAuthNextjsServerProvider>

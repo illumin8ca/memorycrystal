@@ -18,7 +18,7 @@ const memoryCategories = [
 export type MemoryStore = (typeof memoryStores)[number];
 export type MemoryCategory = (typeof memoryCategories)[number];
 
-export type VexClawRememberInput = {
+export type CrystalRememberInput = {
   store: MemoryStore;
   category: MemoryCategory;
   title: string;
@@ -31,8 +31,8 @@ export type VexClawRememberInput = {
 };
 
 export const rememberTool: Tool = {
-  name: "vexclaw_remember",
-  description: "Create a VexClaw memory using semantic embedding + vector storage.",
+  name: "crystal_remember",
+  description: "Create a Memory Crystal memory using semantic embedding + vector storage.",
   inputSchema: {
     type: "object",
     properties: {
@@ -80,7 +80,7 @@ export const rememberTool: Tool = {
   },
 };
 
-const ensureMemoryInput = (value: unknown): VexClawRememberInput => {
+const ensureMemoryInput = (value: unknown): CrystalRememberInput => {
   if (typeof value !== "object" || value === null) {
     throw new Error("Invalid arguments");
   }
@@ -141,14 +141,14 @@ export const handleRememberTool = async (args: unknown): Promise<CallToolResult>
         content: [
           {
             type: "text",
-            text: "⚠️ VexClaw remember failed: embedding service unavailable or returned no vector. Check OPENAI_API_KEY and retry.",
+            text: "⚠️ Memory Crystal remember failed: embedding service unavailable or returned no vector. Check OPENAI_API_KEY and retry.",
           },
         ],
       };
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const memoryId = await getConvexClient().mutation("vexclaw/memories:createMemory" as any, {
+    const memoryId = await getConvexClient().mutation("crystal/memories:createMemory" as any, {
       store: parsed.store,
       category: parsed.category,
       title: parsed.title,

@@ -1,9 +1,10 @@
-import Link from "next/link";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 
 const docsSections = [
   {
     title: "Installation",
-    code: `npm run vexclaw:bootstrap`,
+    code: `npm run crystal:bootstrap`,
     details:
       "Bootstraps the plugin into your OpenClaw workspace and writes baseline captures and session hooks.",
   },
@@ -12,10 +13,10 @@ const docsSections = [
     code: `# mcp.json
 {
   "plugins": [
-    "vexclaw-memory",
-    "vexclaw-capture"
+    "crystal-memory",
+    "crystal-capture"
   ],
-  "vexclaw": {
+  "crystal": {
     "session_ttl_days": 14,
     "memory_limit": 500
   }
@@ -25,14 +26,14 @@ const docsSections = [
   },
   {
     title: "MCP Tools",
-    code: `vexclaw_remember
-vexclaw_recall
-vexclaw_wake
-vexclaw_checkpoint
-vexclaw_stats
-vexclaw_forget
-vexclaw_why_did_we
-vexclaw_what_do_i_know`,
+    code: `crystal_remember
+crystal_recall
+crystal_wake
+crystal_checkpoint
+crystal_stats
+crystal_forget
+crystal_why_did_we
+crystal_what_do_i_know`,
     details:
       "Tools are exposed through the MCP server and can be invoked by your orchestrators.",
   },
@@ -48,80 +49,49 @@ prospective`,
   },
   {
     title: "API Reference",
-    code: `POST /vexclaw/remember
-POST /vexclaw/recall
-GET  /vexclaw/stats
-POST /vexclaw/wake`,
+    code: `POST /crystal/remember
+POST /crystal/recall
+GET  /crystal/stats
+POST /crystal/wake`,
     details:
-      "Use token-authenticated requests with your project-specific MEMORY CRYSTAL API key.",
+      "Use token-authenticated requests with your project-specific Memory Crystal API key.",
   },
 ];
 
-function DocsNav() {
-  return (
-    <header className="border-b border-[rgba(255,255,255,0.08)] bg-[#050508]">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
-        <Link href="/" className="font-heading text-lg tracking-wide neon-text">
-          MEMORY CRYSTAL
-        </Link>
-        <nav className="flex items-center gap-6 text-sm text-[#8899bb]">
-          <Link href="/" className="hover:text-[#00aaff]">
-            Home
-          </Link>
-          <Link href="/pricing" className="hover:text-[#00aaff]">
-            Pricing
-          </Link>
-          <Link href="/changelog" className="hover:text-[#00aaff]">
-            Changelog
-          </Link>
-        </nav>
-      </div>
-    </header>
-  );
-}
-
 function BracketHeading({ children }: { children: string }) {
   return (
-    <p className="text-xs font-mono text-[#8899bb] tracking-[0.28em] uppercase mb-4">
-      <span className="text-[#00aaff]">[ </span>
+    <p className="text-xs font-mono text-secondary tracking-[0.28em] uppercase mb-4">
+      <span className="text-accent">[ </span>
       {children}
-      <span className="text-[#00aaff]"> ]</span>
+      <span className="text-accent"> ]</span>
     </p>
   );
 }
 
 export default function DocsPage() {
   return (
-    <div className="min-h-screen bg-[#050508] text-[#f0f4ff]">
-      <DocsNav />
-
+    <div className="min-h-screen bg-void text-primary">
+      <Header />
       <main className="max-w-5xl mx-auto px-6 lg:px-8 py-16">
-        <BracketHeading children="DOCUMENTATION" />
+        <BracketHeading>DOCUMENTATION</BracketHeading>
         <h1 className="font-heading text-5xl md:text-6xl">Get started in minutes.</h1>
-        <p className="mt-5 max-w-2xl text-[#8899bb]">
-          Deploy MEMORY CRYSTAL with the required pieces in place and start feeding persistent memory immediately.
+        <p className="mt-5 max-w-2xl text-secondary">
+          Deploy Memory Crystal with the required pieces in place and start feeding persistent memory immediately.
         </p>
 
         <section className="mt-10 space-y-6">
           {docsSections.map((section) => (
-            <article key={section.title} className="glass-card border border-[rgba(255,255,255,0.16)] p-7">
+            <article key={section.title} className="glass-card border border-border/45 p-7">
               <h2 className="font-heading text-3xl">{section.title}</h2>
-              <p className="mt-3 text-[#8899bb] max-w-3xl">{section.details}</p>
-              <pre className="mt-5 bg-[rgba(255,255,255,0.02)] border border-[rgba(255,255,255,0.1)] p-4 overflow-x-auto text-sm">
-                <code className="text-[#f0f4ff] font-mono leading-relaxed">{section.code}</code>
+              <p className="mt-3 text-secondary max-w-3xl">{section.details}</p>
+              <pre className="mt-5 bg-border/5 border border-border/30 p-4 overflow-x-auto text-sm">
+                <code className="text-primary font-mono leading-relaxed">{section.code}</code>
               </pre>
             </article>
           ))}
         </section>
       </main>
-
-      <footer className="border-t border-[rgba(255,255,255,0.08)] py-8">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-wrap justify-between text-[#8899bb] text-sm">
-          <p className="neon-text font-heading">MEMORY CRYSTAL</p>
-          <p>Built on OpenClaw</p>
-          <p>© {new Date().getFullYear()} MEMORY CRYSTAL</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

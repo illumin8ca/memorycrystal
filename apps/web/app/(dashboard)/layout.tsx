@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useAuthActions } from "@convex-dev/auth/react";
+import CrystalIcon from "../components/CrystalIcon";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 
@@ -14,7 +15,7 @@ const nav = [
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const currentUser = useQuery(api.vexclaw.userProfiles.getCurrentUser, {});
+  const currentUser = useQuery(api.crystal.userProfiles.getCurrentUser, {});
   const { signOut } = useAuthActions();
   const currentEmail = currentUser?.email ?? "Loading...";
 
@@ -23,26 +24,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="flex min-h-screen bg-[#090909]">
-      <aside className="fixed top-0 left-0 h-screen w-56 bg-[#141414] border-r border-[#2a2a2a] flex flex-col z-40">
-        <div className="px-6 py-5 border-b border-[#2a2a2a]">
-          <span className="font-mono font-bold tracking-widest text-[#0066ff] text-base">VEXCLAW</span>
+    <div className="flex min-h-screen bg-void">
+      <aside className="fixed top-0 left-0 h-screen w-56 bg-surface border-r border-border flex flex-col z-40">
+        <div className="px-6 py-5 border-b border-border">
+          <span className="flex items-center gap-2 font-mono font-bold tracking-widest neon-text text-base">
+            <CrystalIcon size={18} glow />
+            CRYSTAL
+          </span>
         </div>
         <nav className="flex-1 py-4">
           {nav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 px-6 py-3 text-[#888] hover:bg-[#1e1e1e] hover:text-[#f0f0f0] text-sm transition-colors"
+              className="flex items-center gap-3 px-6 py-3 text-secondary hover:bg-elevated hover:text-primary text-sm transition-colors"
             >
               <span className="text-base">{item.icon}</span>
               {item.label}
             </Link>
           ))}
         </nav>
-        <div className="px-6 py-4 border-t border-[#2a2a2a]">
-          <p className="text-[#888] text-xs truncate">{currentEmail}</p>
-          <button type="button" onClick={handleSignOut} className="text-[#0066ff] text-xs mt-1 hover:underline">
+        <div className="px-6 py-4 border-t border-border">
+          <p className="text-secondary text-xs truncate">{currentEmail}</p>
+          <button type="button" onClick={handleSignOut} className="text-accent text-xs mt-1 hover:underline">
             Sign out
           </button>
         </div>

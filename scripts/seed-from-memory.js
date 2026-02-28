@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * seed-from-memory.js
- * Ingests existing flat-file memory into VexClaw (Convex + Obsidian).
+ * Ingests existing flat-file memory into Memory Crystal (Convex + Obsidian).
  * Usage:
  *   node scripts/seed-from-memory.js           # full run
  *   node scripts/seed-from-memory.js --dry-run # preview only
@@ -23,8 +23,8 @@ const EXTRACTION_MODEL = "gpt-4o-mini";
 const EMBEDDING_MODEL = "text-embedding-3-small";
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_EMBED_URL = "https://api.openai.com/v1/embeddings";
-const CONVEX_MUTATION_PATH = "vexclaw/memories:createMemory";
-const CONVEX_RECALL_PATH = "vexclaw/recall:recallMemories";
+const CONVEX_MUTATION_PATH = "crystal/memories:createMemory";
+const CONVEX_RECALL_PATH = "crystal/recall:recallMemories";
 const DEDUPE_THRESHOLD = 0.92;
 
 // ── CLI args ──────────────────────────────────────────────────────────────────
@@ -53,7 +53,7 @@ function readEnvFile(filePath) {
 const env = { ...readEnvFile(ENV_FILE), ...process.env };
 const CONVEX_URL = env.CONVEX_URL;
 const OPENAI_API_KEY = (env.OPENAI_API_KEY || "").replace(/^"+|"+$/g, "");
-const OBSIDIAN_VAULT = env.OBSIDIAN_VAULT_PATH || path.join(HOME, "Documents", "Gerald", "Memory");
+const OBSIDIAN_VAULT = env.OBSIDIAN_VAULT_PATH || path.join(HOME, "Documents", "Memory");
 
 if (!CONVEX_URL || !OPENAI_API_KEY) {
   console.error("❌ Missing CONVEX_URL or OPENAI_API_KEY in mcp-server/.env");
@@ -215,7 +215,7 @@ function cosine(a, b) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log(`\n🧠 VexClaw Memory Seed${DRY_RUN ? " [DRY RUN]" : ""}`);
+  console.log(`\n🧠 Memory Crystal Memory Seed${DRY_RUN ? " [DRY RUN]" : ""}`);
   console.log(`   Convex: ${CONVEX_URL}`);
   console.log(`   Obsidian: ${OBSIDIAN_VAULT}`);
   if (SOURCE_FILTER) console.log(`   Source filter: ${SOURCE_FILTER}`);

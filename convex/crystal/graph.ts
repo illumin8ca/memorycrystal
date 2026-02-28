@@ -53,7 +53,7 @@ const ensureNode = async (
 ): Promise<{ nodeId: string; created: boolean }> => {
   const existing = (
     await ctx.db
-      .query("vexclawNodes")
+      .query("crystalNodes")
       .withIndex("by_canonical_key", (q: any) => q.eq("canonicalKey", canonicalKey))
       .take(1)
   )[0] as { _id: string; sourceMemoryIds: string[] } | undefined;
@@ -69,7 +69,7 @@ const ensureNode = async (
   }
 
   const now = nowMs();
-  const nodeId = await ctx.db.insert("vexclawNodes", {
+  const nodeId = await ctx.db.insert("crystalNodes", {
     label,
     nodeType,
     alias: [],
@@ -97,7 +97,7 @@ const upsertNodeLink = async (
 ) => {
   const existing = (
     await ctx.db
-      .query("vexclawMemoryNodeLinks")
+      .query("crystalMemoryNodeLinks")
       .withIndex("by_memory", (q: any) => q.eq("memoryId", memoryId as never))
       .filter((q: any) => q.eq("nodeId", nodeId as never))
       .take(1)
@@ -107,7 +107,7 @@ const upsertNodeLink = async (
     return existing._id;
   }
 
-  return ctx.db.insert("vexclawMemoryNodeLinks", {
+  return ctx.db.insert("crystalMemoryNodeLinks", {
     memoryId,
     nodeId,
     role,
@@ -128,7 +128,7 @@ const upsertRelation = async (
 ): Promise<{ created: number; updated: number }> => {
   const existing = (
     await ctx.db
-      .query("vexclawRelations")
+      .query("crystalRelations")
       .withIndex("by_from_to_relation", (q: any) =>
         q.eq("fromNodeId", fromNodeId as never).eq("toNodeId", toNodeId as never).eq("relationType", relationType)
       )
@@ -157,7 +157,7 @@ const upsertRelation = async (
     return { created: 0, updated: 1 };
   }
 
-  await ctx.db.insert("vexclawRelations", {
+  await ctx.db.insert("crystalRelations", {
     fromNodeId,
     toNodeId,
     relationType,
@@ -178,10 +178,10 @@ const upsertRelation = async (
 
 export const getKnowledgeGraphFoundationStatus = query({
   handler: async (ctx) => ({
-    memories: (await ctx.db.query("vexclawMemories").withIndex("by_last_accessed", (q) => q.gte("lastAccessedAt", 0)).take(200)).length,
-    nodes: (await ctx.db.query("vexclawNodes").take(200)).length,
-    relations: (await ctx.db.query("vexclawRelations").take(200)).length,
-    links: (await ctx.db.query("vexclawMemoryNodeLinks").take(200)).length,
+    memories: (await ctx.db.query("crystalMemories").withIndex("by_last_accessed", (q) => q.gte("lastAccessedAt", 0)).take(200)).length,
+    nodes: (await ctx.db.query("crystalNodes").take(200)).length,
+    relations: (await ctx.db.query("crystalRelations").take(200)).length,
+    links: (await ctx.db.query("crystalMemoryNodeLinks").take(200)).length,
     generatedAt: nowMs(),
   }),
 });
@@ -198,7 +198,7 @@ export const seedKnowledgeGraphFromMemory = mutation({
     const maxAssociations = Math.floor(clamp(args.maxAssociations ?? 400, 0, 10000));
 
     const memories = await ctx.db
-      .query("vexclawMemories")
+      .query("crystalMemories")
       .filter((q: any) => q.eq("archived", false))
       .take(maxMemories);
 
@@ -213,7 +213,7 @@ export const seedKnowledgeGraphFromMemory = mutation({
       const canonical = canonicalize("memory", memory._id);
       const existing = (
         await ctx.db
-          .query("vexclawNodes")
+          .query("crystalNodes")
           .withIndex("by_canonical_key", (q: any) => q.eq("canonicalKey", canonical))
           .take(1)
       )[0] as { _id: string } | undefined;
@@ -288,7 +288,7 @@ export const seedKnowledgeGraphFromMemory = mutation({
 
     if (includeAssociations) {
       const associations = await ctx.db
-        .query("vexclawAssociations")
+        .query("crystalAssociations")
         .filter((q: any) => q.gte("weight", 0))
         .take(maxAssociations);
 
@@ -321,10 +321,10 @@ export const seedKnowledgeGraphFromMemory = mutation({
           [
             normalizeChannel(sourceMemory.channel),
             normalizeChannel(targetMemory.channel),
-            "vexclaw-associate",
+            "crystal-associate",
           ],
           association.weight,
-          "Backfilled from vexclawAssociations during phase 0."
+          "Backfilled from crystalAssociations during phase 0."
         );
 
         created.relations += relation.created;
@@ -334,7 +334,7 @@ export const seedKnowledgeGraphFromMemory = mutation({
       }
     }
 
-    const associationTotal = includeAssociations ? (await ctx.db.query("vexclawAssociations").take(200)).length : 0;
+    const associationTotal = includeAssociations ? (await ctx.db.query("crystalAssociations").take(200)).length : 0;
 
     return {
       runAt: nowMs(),

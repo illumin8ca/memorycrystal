@@ -2,7 +2,7 @@
 
 ## Package Identity
 
-- Purpose: documentation and onboarding artifacts for the VexClaw plugin repo.
+- Purpose: documentation and onboarding artifacts for the Memory Crystal plugin repo.
 - Scope: standards for docs layout, references, and links.
 
 ## Setup Commands

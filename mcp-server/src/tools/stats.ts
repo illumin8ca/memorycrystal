@@ -2,8 +2,8 @@ import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { getConvexClient } from "../lib/convex-client.js";
 
 export const statsTool: Tool = {
-  name: "vexclaw_stats",
-  description: "Health and memory statistics from VexClaw.",
+  name: "crystal_stats",
+  description: "Health and memory statistics from Memory Crystal.",
   inputSchema: {
     type: "object",
     properties: {},
@@ -13,7 +13,7 @@ export const statsTool: Tool = {
 
 const buildBlock = (stats: Record<string, unknown>) =>
   [
-    "## VexClaw Stats",
+    "## Memory Crystal Stats",
     `- Total memories: ${stats.totalMemories}`,
     `- Archived memories: ${stats.archivedCount}`,
     `- Average strength: ${typeof stats.avgStrength === "number" ? stats.avgStrength.toFixed(3) : "n/a"}`,
@@ -35,7 +35,7 @@ const buildBlock = (stats: Record<string, unknown>) =>
 
 export const handleStatsTool = async (_args: unknown = null): Promise<CallToolResult> => {
   try {
-    const stats = (await getConvexClient().query("vexclaw/stats:getMemoryStats" as any, {})) as Record<
+    const stats = (await getConvexClient().query("crystal/stats:getMemoryStats" as any, {})) as Record<
       string,
       unknown
     >;

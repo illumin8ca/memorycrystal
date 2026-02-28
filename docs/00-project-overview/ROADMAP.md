@@ -1,4 +1,4 @@
-# VexClaw Roadmap
+# Memory Crystal Roadmap
 
 Primary roadmap lives at `ROADMAP.md` in the repository root.
 

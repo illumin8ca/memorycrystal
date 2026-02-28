@@ -1,14 +1,14 @@
 import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { getConvexClient } from "../lib/convex-client.js";
 
-export type VexClawForgetInput = {
+export type CrystalForgetInput = {
   memoryId: string;
   reason?: string;
 };
 
 export const forgetTool: Tool = {
-  name: "vexclaw_forget",
-  description: "Soft-delete a VexClaw memory by id.",
+  name: "crystal_forget",
+  description: "Soft-delete a Memory Crystal memory by id.",
   inputSchema: {
     type: "object",
     properties: {
@@ -24,7 +24,7 @@ export const forgetTool: Tool = {
   },
 };
 
-const ensureForgetInput = (value: unknown): VexClawForgetInput => {
+const ensureForgetInput = (value: unknown): CrystalForgetInput => {
   if (typeof value !== "object" || value === null) {
     throw new Error("Invalid arguments");
   }
@@ -48,7 +48,7 @@ export const handleForgetTool = async (args: unknown): Promise<CallToolResult> =
   try {
     const parsed = ensureForgetInput(args);
 
-    const result = (await getConvexClient().mutation("vexclaw/memories:forgetMemory" as any, {
+    const result = (await getConvexClient().mutation("crystal/memories:forgetMemory" as any, {
       memoryId: parsed.memoryId,
       reason: parsed.reason,
     })) as { memoryId?: string; archived?: boolean } | null;

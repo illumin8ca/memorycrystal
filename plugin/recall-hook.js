@@ -7,7 +7,7 @@ const OPENAI_URL = "https://api.openai.com/v1/embeddings";
 const CONVEX_ACTION = "/api/action";
 const CONVEX_QUERY = "/api/query";
 const DEFAULT_LIMIT = 8;
-const RECALL_PATHS = ["vexclaw/recall:recallMemories"];
+const RECALL_PATHS = ["crystal/recall:recallMemories"];
 
 const readFileEnv = (filePath) => {
   const values = {};
@@ -29,9 +29,9 @@ const readFileEnv = (filePath) => {
 
 const loadRuntimeEnv = () => {
   const envCandidates = [
-    process.env.VEXCLAW_ENV_FILE,
+    process.env.CRYSTAL_ENV_FILE,
     path.resolve(__dirname, "..", "mcp-server", ".env"),
-    process.env.VEXCLAW_ROOT ? path.resolve(process.env.VEXCLAW_ROOT, "mcp-server", ".env") : null,
+    process.env.CRYSTAL_ROOT ? path.resolve(process.env.CRYSTAL_ROOT, "mcp-server", ".env") : null,
   ].filter((entry) => typeof entry === "string" && entry.trim().length > 0);
 
   const envFile = envCandidates.find((entry) => fs.existsSync(entry));
@@ -126,10 +126,10 @@ const getEmbedding = async (query, env) => {
 
 const formatBlock = (memories) => {
   if (!Array.isArray(memories) || memories.length === 0) {
-    return "## 🧠 VexClaw Memory Recall\nNo matching memories found.";
+    return "## 🧠 Memory Crystal Memory Recall\nNo matching memories found.";
   }
 
-  const lines = ["## 🧠 VexClaw Memory Recall"];
+  const lines = ["## 🧠 Memory Crystal Memory Recall"];
   for (const memory of memories) {
     const store = typeof memory.store === "string" ? memory.store.toUpperCase() : "UNKNOWN";
     const title = typeof memory.title === "string" ? memory.title : "";
@@ -215,7 +215,7 @@ const fetchRecentMessages = async (channel, sessionKey, limit = 20, env) => {
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      path: "vexclaw/messages:getRecentMessages",
+      path: "crystal/messages:getRecentMessages",
       args: {
         limit,
         channel,

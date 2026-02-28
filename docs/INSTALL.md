@@ -1,4 +1,4 @@
-# [SUPERSCEEDED] VexClaw Installation
+# [SUPERSCEEDED] Memory Crystal Installation
 
 This document is superseded.
 

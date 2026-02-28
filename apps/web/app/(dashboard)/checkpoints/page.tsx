@@ -22,16 +22,16 @@ const checkpoints = [
 export default function CheckpointsPage() {
   return (
     <div>
-      <h1 className="font-mono font-bold text-2xl text-[#f0f0f0] mb-3 tracking-wide">
+      <h1 className="font-mono font-bold text-2xl text-primary mb-3 tracking-wide">
         CHECKPOINTS
       </h1>
-      <p className="text-[#888] text-sm mb-8">
+      <p className="text-secondary text-sm mb-8">
         Placeholder checkpoint view for now. Each checkpoint can later connect to Convex snapshots and restore
         actions.
       </p>
 
-      <div className="border border-[#2a2a2a]">
-        <div className="bg-[#1e1e1e] grid grid-cols-4 px-4 py-2 text-[#888] text-xs tracking-widest uppercase font-mono">
+      <div className="border border-border">
+        <div className="bg-elevated grid grid-cols-4 px-4 py-2 text-secondary text-xs tracking-widest uppercase font-mono">
           <span>Title</span>
           <span>Date</span>
           <span>Memory Count</span>
@@ -40,12 +40,12 @@ export default function CheckpointsPage() {
         {checkpoints.map((checkpoint) => (
           <div
             key={checkpoint.title}
-            className="grid grid-cols-4 px-4 py-3 border-t border-[#2a2a2a] bg-[#141414] text-sm"
+            className="grid grid-cols-4 px-4 py-3 border-t border-border bg-surface text-sm"
           >
-            <span className="text-[#f0f0f0] font-medium">{checkpoint.title}</span>
-            <span className="text-[#888]">{checkpoint.date}</span>
-            <span className="text-[#888]">{checkpoint.memoryCount}</span>
-            <span className="w-fit text-[#0066ff] text-xs font-mono border border-[#0066ff] px-2 py-0.5">
+            <span className="text-primary font-medium">{checkpoint.title}</span>
+            <span className="text-secondary">{checkpoint.date}</span>
+            <span className="text-secondary">{checkpoint.memoryCount}</span>
+            <span className="w-fit text-accent text-xs font-mono border border-accent px-2 py-0.5">
               {checkpoint.createdBy}
             </span>
           </div>

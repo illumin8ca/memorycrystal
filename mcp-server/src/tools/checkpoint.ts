@@ -1,7 +1,7 @@
 import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { getConvexClient } from "../lib/convex-client.js";
 
-export type VexClawCheckpointInput = {
+export type CrystalCheckpointInput = {
   mode?: "create" | "list";
   label?: string;
   description?: string;
@@ -14,8 +14,8 @@ export type VexClawCheckpointInput = {
 };
 
 export const checkpointTool: Tool = {
-  name: "vexclaw_checkpoint",
-  description: "Create or list VexClaw checkpoints.",
+  name: "crystal_checkpoint",
+  description: "Create or list Memory Crystal checkpoints.",
   inputSchema: {
     type: "object",
     properties: {
@@ -57,7 +57,7 @@ export const checkpointTool: Tool = {
   },
 };
 
-const ensureInput = (value: unknown): VexClawCheckpointInput => {
+const ensureInput = (value: unknown): CrystalCheckpointInput => {
   if (typeof value !== "object" || value === null) {
     throw new Error("Invalid arguments");
   }
@@ -109,7 +109,7 @@ export const handleCheckpointTool = async (args: unknown): Promise<CallToolResul
     const parsed = ensureInput(args);
 
     if (parsed.mode === "list") {
-      const checkpoints = await getConvexClient().query("vexclaw/checkpoints:listCheckpoints" as any, {
+      const checkpoints = await getConvexClient().query("crystal/checkpoints:listCheckpoints" as any, {
         sessionId: parsed.sessionId,
         limit: parsed.limit ?? 20,
       });
@@ -124,7 +124,7 @@ export const handleCheckpointTool = async (args: unknown): Promise<CallToolResul
       };
     }
 
-    const checkpointId = await getConvexClient().mutation("vexclaw/checkpoints:createCheckpoint" as any, {
+    const checkpointId = await getConvexClient().mutation("crystal/checkpoints:createCheckpoint" as any, {
       label: parsed.label ?? "checkpoint",
       description: parsed.description,
       createdBy: parsed.createdBy ?? "gerald",
@@ -134,7 +134,7 @@ export const handleCheckpointTool = async (args: unknown): Promise<CallToolResul
       tags: parsed.tags ?? [],
       maxMemories: parsed.limit,
     });
-    const checkpoint = (await getConvexClient().query("vexclaw/checkpoints:getCheckpoint" as any, {
+    const checkpoint = (await getConvexClient().query("crystal/checkpoints:getCheckpoint" as any, {
       checkpointId,
     })) as { memorySnapshot?: unknown[] } | null;
 

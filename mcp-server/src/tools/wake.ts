@@ -1,12 +1,12 @@
 import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { getConvexClient } from "../lib/convex-client.js";
 
-export type VexClawWakeInput = {
+export type CrystalWakeInput = {
   channel?: string;
 };
 
 export const wakeTool: Tool = {
-  name: "vexclaw_wake",
+  name: "crystal_wake",
   description: "Get an opening briefing for the current memory session.",
   inputSchema: {
     type: "object",
@@ -31,7 +31,7 @@ const buildBlock = (briefing: string, openGoals: unknown[], recentDecisions: unk
     : recentDecisions.map((memory) => `- ${(memory as { title: string }).title}`)),
 ].join("\n");
 
-const ensureInput = (value: unknown): VexClawWakeInput => {
+const ensureInput = (value: unknown): CrystalWakeInput => {
   if (typeof value !== "object" || value === null) {
     return {};
   }
@@ -50,7 +50,7 @@ export const handleWakeTool = async (args: unknown): Promise<CallToolResult> => 
   try {
     const parsed = ensureInput(args);
 
-    const response = (await getConvexClient().action("vexclaw/wake:getWakePrompt" as any, {
+    const response = (await getConvexClient().action("crystal/wake:getWakePrompt" as any, {
       channel: parsed.channel,
     })) as {
       briefing: string;

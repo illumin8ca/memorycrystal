@@ -1,6 +1,6 @@
-# VexClaw Installation Guide
+# Memory Crystal Installation Guide
 
-VexClaw is a drop-in OpenClaw memory plugin with a single-command bootstrap flow.
+Memory Crystal is a drop-in OpenClaw memory plugin with a single-command bootstrap flow.
 
 ## Fast path (recommended)
 
@@ -8,19 +8,19 @@ From repo root:
 
 ```bash
 npm install
-npm run vexclaw:bootstrap
+npm run crystal:bootstrap
 ```
 
-`vexclaw:bootstrap` performs:
+`crystal:bootstrap` performs:
 
 - `.env` initialization from `.env.example`
 - required key prompts for missing values:
   - `CONVEX_URL`
   - `OPENAI_API_KEY`
   - `OBSIDIAN_VAULT_PATH`
-  - `VEXCLAW_MCP_MODE`
-  - `VEXCLAW_MCP_HOST`
-  - `VEXCLAW_MCP_PORT`
+  - `CRYSTAL_MCP_MODE`
+  - `CRYSTAL_MCP_HOST`
+  - `CRYSTAL_MCP_PORT`
 - dependency installs (`npm install` at repo root and `mcp-server`)
 - `mcp-server` build
 - plugin wiring into detected OpenClaw layout
@@ -45,14 +45,14 @@ You can override plugin destination with `OPENCLAW_PLUGIN_DIR`.
 1. Run:
 
 ```bash
-npm run vexclaw:bootstrap
+npm run crystal:bootstrap
 ```
 
 2. Verify with:
 
 ```bash
 npm run test:smoke
-npm run vexclaw:e2e
+npm run crystal:e2e
 ```
 
 3. If OpenClaw is not restarted automatically, run:
@@ -70,17 +70,17 @@ openclaw gateway restart
 - Re-run:
 
 ```bash
-scripts/vexclaw-enable.sh --dry-run
-scripts/vexclaw-doctor.sh --dry-run
+scripts/crystal-enable.sh --dry-run
+scripts/crystal-doctor.sh --dry-run
 ```
 
 ## Uninstall
 
 ```bash
-npm run vexclaw:disable
+npm run crystal:disable
 ```
 
-Use `npm run vexclaw:disable -- --purge` to remove copied plugin files from OpenClaw plugin directory.
+Use `npm run crystal:disable -- --purge` to remove copied plugin files from OpenClaw plugin directory.
 
 ## Docs map
 

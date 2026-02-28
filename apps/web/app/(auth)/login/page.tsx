@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
+import CrystalIcon from "../../components/CrystalIcon";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -45,12 +46,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#090909] flex items-center justify-center px-4">
-      <div className="w-full max-w-sm border border-[#2a2a2a] bg-[#141414] p-10">
-        <p className="font-mono font-bold tracking-widest text-[#0066ff] text-lg mb-8">VEXCLAW</p>
+    <div className="min-h-screen bg-void flex items-center justify-center px-4">
+      <div className="w-full max-w-sm border border-border bg-surface p-10">
+        <p className="flex items-center gap-2 font-mono font-bold tracking-widest neon-text text-lg mb-8"><CrystalIcon size={22} glow />CRYSTAL</p>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-[#888] text-xs tracking-widest uppercase mb-2">Email</label>
+            <label className="block text-secondary text-xs tracking-widest uppercase mb-2">Email</label>
             <input
               type="email"
               placeholder="you@example.com"
@@ -58,12 +59,12 @@ export default function LoginPage() {
               onChange={(event) => setEmail(event.target.value)}
               required
               disabled={isLoading}
-              className="w-full bg-[#1e1e1e] border border-[#2a2a2a] text-[#f0f0f0] p-3 text-sm outline-none focus:border-[#0066ff] placeholder:text-[#888]"
+              className="w-full bg-elevated border border-border text-primary p-3 text-sm outline-none focus:border-accent placeholder:text-secondary"
               style={{ borderRadius: 0 }}
             />
           </div>
           <div>
-            <label className="block text-[#888] text-xs tracking-widest uppercase mb-2">Password</label>
+            <label className="block text-secondary text-xs tracking-widest uppercase mb-2">Password</label>
             <input
               type="password"
               placeholder="••••••••"
@@ -71,7 +72,7 @@ export default function LoginPage() {
               onChange={(event) => setPassword(event.target.value)}
               required
               disabled={isLoading}
-              className="w-full bg-[#1e1e1e] border border-[#2a2a2a] text-[#f0f0f0] p-3 text-sm outline-none focus:border-[#0066ff] placeholder:text-[#888]"
+              className="w-full bg-elevated border border-border text-primary p-3 text-sm outline-none focus:border-accent placeholder:text-secondary"
               style={{ borderRadius: 0 }}
             />
           </div>
@@ -79,28 +80,28 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-[#0066ff] hover:bg-[#0044cc] text-white p-3 font-semibold text-sm transition-colors disabled:opacity-60"
+            className="w-full bg-accent hover:bg-accent-dim text-white p-3 font-semibold text-sm transition-colors disabled:opacity-60"
             style={{ borderRadius: 0 }}
           >
             {loadingMode === "password" ? "Loading..." : "SIGN IN"}
           </button>
         </form>
         <div className="flex items-center gap-3 my-6">
-          <div className="flex-1 h-px bg-[#2a2a2a]" />
-          <span className="text-[#888] text-xs">or</span>
-          <div className="flex-1 h-px bg-[#2a2a2a]" />
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-secondary text-xs">or</span>
+          <div className="flex-1 h-px bg-border" />
         </div>
         <button
           type="button"
           onClick={handleGitHubSignIn}
           disabled={isLoading}
-          className="w-full bg-[#1e1e1e] border border-[#2a2a2a] text-[#f0f0f0] p-3 text-sm hover:bg-[#2a2a2a] transition-colors disabled:opacity-60"
+          className="w-full bg-elevated border border-border text-primary p-3 text-sm hover:bg-elevated transition-colors disabled:opacity-60"
           style={{ borderRadius: 0 }}
         >
           {loadingMode === "github" ? "Loading..." : "Continue with GitHub"}
         </button>
         <p className="text-center mt-6 text-sm">
-          <a href="/signup" className="text-[#0066ff] hover:underline">
+          <a href="/signup" className="text-accent hover:underline">
             No account? Get started →
           </a>
         </p>

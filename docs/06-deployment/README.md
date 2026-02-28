@@ -11,5 +11,5 @@ Build, deployment, and runtime release behavior.
 
 ## Runtime
 
-- OpenClaw wiring is enabled via `scripts/vexclaw-enable.sh`.
-- Plugin command wiring is configured by `scripts/vexclaw-enable.sh` and `scripts/vexclaw-doctor.sh`.
+- OpenClaw wiring is enabled via `scripts/crystal-enable.sh`.
+- Plugin command wiring is configured by `scripts/crystal-enable.sh` and `scripts/crystal-doctor.sh`.

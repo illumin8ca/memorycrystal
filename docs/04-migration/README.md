@@ -10,6 +10,6 @@ No mandatory migration is required for current plugin baseline. This folder is r
 
 ## Planned docs
 
-- Graph foundation migration notes (`convex/vexclaw/graph.ts` flow)
+- Graph foundation migration notes (`convex/crystal/graph.ts` flow)
 - OpenClaw config portability notes
 - Environment migration (new key additions)

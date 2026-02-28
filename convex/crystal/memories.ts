@@ -41,13 +41,13 @@ const createMemoryInput = v.object({
   valence: v.optional(v.float64()),
   arousal: v.optional(v.float64()),
   source: v.optional(memorySource),
-  sessionId: v.optional(v.id("vexclawSessions")),
+  sessionId: v.optional(v.id("crystalSessions")),
   channel: v.optional(v.string()),
   tags: v.optional(v.array(v.string())),
   archived: v.optional(v.boolean()),
   archivedAt: v.optional(v.number()),
-  promotedFrom: v.optional(v.id("vexclawMemories")),
-  checkpointId: v.optional(v.id("vexclawCheckpoints")),
+  promotedFrom: v.optional(v.id("crystalMemories")),
+  checkpointId: v.optional(v.id("crystalCheckpoints")),
 });
 
 const memoryListInput = v.object({
@@ -62,7 +62,7 @@ const memoryListInput = v.object({
 });
 
 const updateMemoryInput = v.object({
-  memoryId: v.id("vexclawMemories"),
+  memoryId: v.id("crystalMemories"),
   store: v.optional(memoryStore),
   category: v.optional(memoryCategory),
   title: v.optional(v.string()),
@@ -76,12 +76,12 @@ const updateMemoryInput = v.object({
   channel: v.optional(v.string()),
   archived: v.optional(v.boolean()),
   archivedAt: v.optional(v.number()),
-  promotedFrom: v.optional(v.id("vexclawMemories")),
-  checkpointId: v.optional(v.id("vexclawCheckpoints")),
+  promotedFrom: v.optional(v.id("crystalMemories")),
+  checkpointId: v.optional(v.id("crystalCheckpoints")),
 });
 
 const forgetMemoryInput = v.object({
-  memoryId: v.id("vexclawMemories"),
+  memoryId: v.id("crystalMemories"),
   reason: v.optional(v.string()),
 });
 
@@ -100,7 +100,7 @@ export const createMemory = mutation({
     const now = nowMs();
 
     const candidates = await ctx.db
-      .query("vexclawMemories")
+      .query("crystalMemories")
       .withIndex("by_store_category", (q) =>
         q.eq("store", args.store).eq("category", args.category).eq("archived", false)
       )
@@ -128,7 +128,7 @@ export const createMemory = mutation({
       return duplicate._id;
     }
 
-    const memoryId = await ctx.db.insert("vexclawMemories", {
+    const memoryId = await ctx.db.insert("crystalMemories", {
       store: args.store,
       category: args.category,
       title: args.title,
@@ -166,7 +166,7 @@ export const listMemories = query({
 
     const query =
       hasStore
-        ? ctx.db.query("vexclawMemories").withIndex("by_store_category", (q: any) => {
+        ? ctx.db.query("crystalMemories").withIndex("by_store_category", (q: any) => {
           let queryBuilder = q;
 
           if (hasStore) {
@@ -180,7 +180,7 @@ export const listMemories = query({
           return queryBuilder;
         })
       : hasStrengthBounds
-      ? ctx.db.query("vexclawMemories").withIndex("by_strength", (q: any) => {
+      ? ctx.db.query("crystalMemories").withIndex("by_strength", (q: any) => {
           let queryBuilder = q;
 
           if (args.minStrength !== undefined) {
@@ -193,7 +193,7 @@ export const listMemories = query({
 
           return queryBuilder;
         })
-      : ctx.db.query("vexclawMemories").withIndex("by_last_accessed", (q) => q.gte("lastAccessedAt", 0));
+      : ctx.db.query("crystalMemories").withIndex("by_last_accessed", (q) => q.gte("lastAccessedAt", 0));
 
     // Fetch a larger buffer to account for post-query filtering (channel, tags, archived, strength).
     // Without this, take(limit) may exhaust before enough rows survive the filter.
@@ -237,14 +237,14 @@ export const listMemories = query({
 });
 
 export const getMemory = query({
-  args: { memoryId: v.id("vexclawMemories") },
+  args: { memoryId: v.id("crystalMemories") },
   handler: async (ctx, args) => {
     return ctx.db.get(args.memoryId);
   },
 });
 
 export const updateMemoryAccess = mutation({
-  args: { memoryId: v.id("vexclawMemories") },
+  args: { memoryId: v.id("crystalMemories") },
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.memoryId);
     if (!existing) {

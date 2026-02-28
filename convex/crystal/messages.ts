@@ -33,7 +33,7 @@ export const logMessage = mutation({
     const ttlDays = Math.max(args.ttlDays ?? 14, 0);
     const ttlMs = ttlDays * 24 * 60 * 60 * 1000;
 
-    const messageId = await ctx.db.insert("vexclawMessages", {
+    const messageId = await ctx.db.insert("crystalMessages", {
       role: args.role,
       content: truncateContent(args.content),
       channel: normalizeText(args.channel),
@@ -51,7 +51,7 @@ export const logMessage = mutation({
 
 export const updateMessageEmbedding = mutation({
   args: {
-    messageId: v.id("vexclawMessages"),
+    messageId: v.id("crystalMessages"),
     embedding: v.array(v.float64()),
   },
   handler: async (ctx, args) => {
@@ -78,7 +78,7 @@ export const getRecentMessages = query({
     const sinceMs = args.sinceMs;
 
     const baseQuery = channel
-      ? ctx.db.query("vexclawMessages").withIndex("by_channel_time", (q: any) => {
+      ? ctx.db.query("crystalMessages").withIndex("by_channel_time", (q: any) => {
           let query = q.eq("channel", channel as never);
           if (sinceMs !== undefined) {
             query = query.gte("timestamp", sinceMs);
@@ -86,14 +86,14 @@ export const getRecentMessages = query({
           return query;
         })
       : sessionKey
-        ? ctx.db.query("vexclawMessages").withIndex("by_session_time", (q: any) => {
+        ? ctx.db.query("crystalMessages").withIndex("by_session_time", (q: any) => {
             let query = q.eq("sessionKey", sessionKey as never);
             if (sinceMs !== undefined) {
               query = query.gte("timestamp", sinceMs);
             }
             return query;
           })
-        : ctx.db.query("vexclawMessages").withIndex("by_timestamp", (q) =>
+        : ctx.db.query("crystalMessages").withIndex("by_timestamp", (q) =>
             q.gte("timestamp", sinceMs ?? 0)
           );
 
@@ -112,7 +112,7 @@ export const getUnembeddedMessages = query({
 
     return (
       await ctx.db
-        .query("vexclawMessages")
+        .query("crystalMessages")
         .withIndex("by_embedded", (q) => q.eq("embedded", false))
         .order("desc")
         .take(requestedLimit)
@@ -121,7 +121,7 @@ export const getUnembeddedMessages = query({
 });
 
 export const getMessage = query({
-  args: { messageId: v.id("vexclawMessages") },
+  args: { messageId: v.id("crystalMessages") },
   handler: async (ctx, args) => {
     return ctx.db.get(args.messageId);
   },
@@ -132,7 +132,7 @@ export const expireOldMessages = mutation({
   handler: async (ctx, _args) => {
     const now = Date.now();
     const expiredMessages = await ctx.db
-      .query("vexclawMessages")
+      .query("crystalMessages")
       .withIndex("by_expires", (q) => q.lte("expiresAt", now))
       .take(200);
 
@@ -161,7 +161,7 @@ export const searchMessages = action({
       ? (q: any) => q.eq("channel", channel)
       : undefined;
 
-    const vectorResults = (await ctx.vectorSearch("vexclawMessages", "by_embedding", {
+    const vectorResults = (await ctx.vectorSearch("crystalMessages", "by_embedding", {
       vector: args.embedding,
       limit,
       ...(filter ? { filter } : {}),
@@ -169,7 +169,7 @@ export const searchMessages = action({
 
     const messages = await Promise.all(
       vectorResults.map(async (result) => {
-        const message = await ctx.runQuery("vexclaw/messages:getMessage" as any, { messageId: result._id });
+        const message = await ctx.runQuery("crystal/messages:getMessage" as any, { messageId: result._id });
         if (!message) return null;
         // Apply sinceMs filter post-fetch (not a valid vector filterField)
         if (args.sinceMs !== undefined && message.timestamp < args.sinceMs) return null;

@@ -8,14 +8,14 @@ const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
 const OPENAI_URL = "https://api.openai.com/v1/embeddings";
 const CONVEX_MUTATION = "/api/mutation";
 const CONVEX_ACTION = "/api/action";
-const STM_LOG_MESSAGE_PATH = "vexclaw/messages:logMessage";
-const CONVEX_SEARCH_PATHS = ["vexclaw/recall:recallMemories"];
+const STM_LOG_MESSAGE_PATH = "crystal/messages:logMessage";
+const CONVEX_SEARCH_PATHS = ["crystal/recall:recallMemories"];
 const VALID_STORES = new Set(["sensory", "episodic", "semantic", "procedural", "prospective"]);
 const VALID_CATEGORIES = new Set(["decision", "lesson", "person", "rule", "event", "fact", "goal", "workflow"]);
 const RELATION_TAG = "related-existing";
 const DEDUPE_HIGH_SIMILARITY = 0.92;
 const DEDUPE_RELATED_THRESHOLD = 0.75;
-const DEFAULT_OBSIDIAN_VAULT = path.join(process.env.HOME || "", "Documents", "Gerald", "Memory");
+const DEFAULT_OBSIDIAN_VAULT = path.join(process.env.HOME || "", "Documents", "Memory");
 
 const clamp = (value, min, max, fallback) => {
   if (typeof value !== "number" || Number.isNaN(value)) {
@@ -66,9 +66,9 @@ const readFileEnv = (filePath) => {
 
 const loadRuntimeEnv = () => {
   const envCandidates = [
-    process.env.VEXCLAW_ENV_FILE,
+    process.env.CRYSTAL_ENV_FILE,
     path.resolve(__dirname, "..", "mcp-server", ".env"),
-    process.env.VEXCLAW_ROOT ? path.resolve(process.env.VEXCLAW_ROOT, "mcp-server", ".env") : null,
+    process.env.CRYSTAL_ROOT ? path.resolve(process.env.CRYSTAL_ROOT, "mcp-server", ".env") : null,
   ].filter((entry) => typeof entry === "string" && entry.trim().length > 0);
 
   const envFile = envCandidates.find((entry) => fs.existsSync(entry));
@@ -326,7 +326,7 @@ const logMessageToSTM = async (message, role, channel, sessionKey, env) => {
     const embedding = await getEmbedding(content.slice(0, 8000), env);
     if (embedding) {
       await postToConvexMutation({
-        path: "vexclaw/messages:updateMessageEmbedding",
+        path: "crystal/messages:updateMessageEmbedding",
         args: { messageId, embedding },
         env,
       }).catch(() => {}); // non-fatal if this fails
@@ -386,7 +386,7 @@ const saveMemory = async ({ memory, embedding, env, channel, sessionId }) => {
   }
 
   const body = {
-    path: "vexclaw/memories:createMemory",
+    path: "crystal/memories:createMemory",
     args: {
       store: memory.store,
       category: memory.category,
@@ -399,7 +399,7 @@ const saveMemory = async ({ memory, embedding, env, channel, sessionId }) => {
       source: "conversation",
       channel: typeof channel === "string" ? channel : undefined,
       // sessionId in hook payload is an OpenClaw session key, not a Convex document id.
-      // Do not pass it into Convex createMemory(sessionId:v.id("vexclawSessions")) unless explicitly mapped.
+      // Do not pass it into Convex createMemory(sessionId:v.id("crystalSessions")) unless explicitly mapped.
       sessionId: undefined,
       tags: memory.tags,
     },
@@ -545,7 +545,7 @@ const main = async () => {
     const userMessage = safeGetString(payload?.userMessage) || safeGetString(payload?.message?.content);
     const assistantMessage =
       safeGetString(payload?.assistantMessage) || safeGetString(payload?.response?.content) || safeGetString(payload?.agentResponse);
-    const channel = safeGetString(payload?.channel) || safeGetString(process.env.VEXCLAW_CHANNEL) || "unknown";
+    const channel = safeGetString(payload?.channel) || safeGetString(process.env.CRYSTAL_CHANNEL) || "unknown";
     const sessionKey = safeGetString(payload?.sessionKey) || safeGetString(payload?.sessionId);
 
     if (userMessage) {

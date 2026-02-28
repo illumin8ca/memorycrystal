@@ -1,14 +1,14 @@
-# VexClaw
+# Memory Crystal
 
 **Persistent cognitive memory for AI assistants.**
 
-VexClaw gives your AI a real memory — across every conversation, channel, and session. It captures what was said, extracts what matters, and makes it all searchable and recallable.
+Memory Crystal gives your AI a real memory — across every conversation, channel, and session. It captures what was said, extracts what matters, and makes it all searchable and recallable.
 
 ---
 
 ## What It Does
 
-Every time you talk to your AI assistant, VexClaw:
+Every time you talk to your AI assistant, Memory Crystal:
 
 1. **Logs the full conversation** to a daily transcript in your Obsidian vault (`logs/YYYY-MM-DD.md`)
 2. **Extracts durable memories** — decisions, facts, preferences, lessons — using GPT-4o-mini
@@ -21,8 +21,8 @@ Every time you talk to your AI assistant, VexClaw:
 
 | Layer | What it stores | Where | TTL |
 |---|---|---|---|
-| **Short-term (STM)** | Raw messages, verbatim | Convex `vexclawMessages` | 14 days |
-| **Long-term (LTM)** | Extracted facts, decisions, lessons | Convex `vexclawMemories` + Obsidian | Forever |
+| **Short-term (STM)** | Raw messages, verbatim | Convex `crystalMessages` | 14 days |
+| **Long-term (LTM)** | Extracted facts, decisions, lessons | Convex `crystalMemories` + Obsidian | Forever |
 
 STM is the rolling window. LTM is the permanent knowledge base. Both are vector-indexed for semantic search.
 
@@ -50,10 +50,10 @@ OpenClaw (your AI assistant)
 
 ### Plugin Registration
 
-VexClaw registers with OpenClaw in two ways:
+Memory Crystal registers with OpenClaw in two ways:
 
-- **Recall** — via `hooks.internal.entries.vexclaw-memory` (fires `before_model_resolve`)
-- **Capture** — via `plugins.entries.vexclaw-capture` (fires `llm_output` + `message_received`)
+- **Recall** — via `hooks.internal.entries.crystal-memory` (fires `before_model_resolve`)
+- **Capture** — via `plugins.entries.crystal-capture` (fires `llm_output` + `message_received`)
 
 The `plugins.entries` approach uses OpenClaw's full JavaScript plugin API, giving access to turn-level events not available through internal hooks.
 
@@ -64,12 +64,12 @@ The `plugins.entries` approach uses OpenClaw's full JavaScript plugin API, givin
 ## Monorepo Structure
 
 ```
-openclaw-vexclaw/
+openclaw-crystal/
   apps/
     web/              Next.js 15 web app (SaaS dashboard)
   convex/
     schema.ts         All database tables
-    vexclaw/
+    crystal/
       capture.ts      Memory extraction functions
       recall.ts       Vector search + injection
       sessions.ts     Session management
@@ -90,7 +90,7 @@ openclaw-vexclaw/
 
 ## SaaS Product
 
-VexClaw is available as a hosted SaaS (coming soon).
+Memory Crystal is available as a hosted SaaS (coming soon).
 
 - **$20/month** — pay as you go, cancel anytime
 - Works with OpenClaw out of the box
@@ -118,7 +118,7 @@ See [docs/02-setup-guides/INSTALL.md](docs/02-setup-guides/INSTALL.md) for full 
 
 | Store | Purpose | Example |
 |---|---|---|
-| `episodic` | Events and experiences | "We decided to pivot VexClaw to SaaS on Feb 27" |
+| `episodic` | Events and experiences | "We decided to pivot Memory Crystal to SaaS on Feb 27" |
 | `semantic` | Facts and knowledge | "Railway is used for web app deployment" |
 | `procedural` | How-to and workflows | "Use Codex spark for coding agents" |
 | `prospective` | Plans and intentions | "Need to wire Convex Auth to dashboard UI" |
@@ -130,7 +130,7 @@ See [docs/02-setup-guides/INSTALL.md](docs/02-setup-guides/INSTALL.md) for full 
 
 Deployment: `rightful-mockingbird-389.convex.cloud`
 
-Key tables: `vexclawMemories`, `vexclawMessages`, `vexclawSessions`, `vexclawCheckpoints`, `vexclawUserProfiles`, `vexclawApiKeys`
+Key tables: `crystalMemories`, `crystalMessages`, `crystalSessions`, `crystalCheckpoints`, `crystalUserProfiles`, `crystalApiKeys`
 
 ---
 
@@ -138,14 +138,14 @@ Key tables: `vexclawMemories`, `vexclawMessages`, `vexclawSessions`, `vexclawChe
 
 | Tool | Description |
 |---|---|
-| `vexclaw_remember` | Manually store a memory |
-| `vexclaw_recall` | Semantic search across LTM |
-| `vexclaw_what_do_i_know` | List recent memories by store |
-| `vexclaw_why_did_we` | Search for decision rationale |
-| `vexclaw_forget` | Archive a memory |
-| `vexclaw_stats` | Memory system stats |
-| `vexclaw_checkpoint` | Save a memory snapshot |
-| `vexclaw_wake` | Bootstrap session with recent context |
+| `crystal_remember` | Manually store a memory |
+| `crystal_recall` | Semantic search across LTM |
+| `crystal_what_do_i_know` | List recent memories by store |
+| `crystal_why_did_we` | Search for decision rationale |
+| `crystal_forget` | Archive a memory |
+| `crystal_stats` | Memory system stats |
+| `crystal_checkpoint` | Save a memory snapshot |
+| `crystal_wake` | Bootstrap session with recent context |
 
 ---
 
@@ -165,4 +165,4 @@ Key tables: `vexclawMemories`, `vexclawMessages`, `vexclawSessions`, `vexclawChe
 
 ---
 
-*VexClaw is proprietary. Not for public distribution.*
+*Memory Crystal is proprietary. Not for public distribution.*

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "id": "vexclaw",
-  "name": "VexClaw",
+  "id": "crystal",
+  "name": "Memory Crystal",
   "version": "0.1.0",
   "description": "Drop-in OpenClaw memory plugin using Convex + MCP tools.",
   "entry": "./handler.js",
@@ -17,62 +17,62 @@
   },
   "capabilities": {
     "tools": [
-      "vexclaw_remember",
-      "vexclaw_recall",
-      "vexclaw_what_do_i_know",
-      "vexclaw_why_did_we",
-      "vexclaw_forget",
-      "vexclaw_stats",
-      "vexclaw_checkpoint",
-      "vexclaw_wake"
+      "crystal_remember",
+      "crystal_recall",
+      "crystal_what_do_i_know",
+      "crystal_why_did_we",
+      "crystal_forget",
+      "crystal_stats",
+      "crystal_checkpoint",
+      "crystal_wake"
     ],
-    "mcpCommand": "/Users/gerald/.nvm/versions/node/v22.22.0/bin/node",
+    "mcpCommand": "/path/to/node",
     "mcpArgs": [
-      "/Users/gerald/projects/openclaw-vexclaw/mcp-server/dist/index.js"
+      "/path/to/openclaw-crystal/mcp-server/dist/index.js"
     ]
   },
   "commands": {
-    "vexclaw-capture": {
-      "command": "/Users/gerald/.nvm/versions/node/v22.22.0/bin/node",
+    "crystal-capture": {
+      "command": "/path/to/node",
       "args": [
-        "/Users/gerald/projects/openclaw-vexclaw/plugin/capture-hook.js"
+        "/path/to/openclaw-crystal/plugin/capture-hook.js"
       ],
       "env": {
         "CONVEX_URL": "https://rightful-mockingbird-389.convex.cloud",
         "OPENAI_API_KEY": "${OPENAI_API_KEY}",
-        "OBSIDIAN_VAULT_PATH": "/Users/gerald/Documents/Gerald/Memory",
-        "VEXCLAW_MCP_HOST": "127.0.0.1",
-        "VEXCLAW_MCP_PORT": "8788",
-        "VEXCLAW_ENV_FILE": "/Users/gerald/projects/openclaw-vexclaw/mcp-server/.env",
-        "VEXCLAW_NODE": "/Users/gerald/.nvm/versions/node/v22.22.0/bin/node",
-        "VEXCLAW_PLUGIN_DIR": "/Users/gerald/projects/openclaw-vexclaw/plugin",
-        "VEXCLAW_ROOT": "/Users/gerald/projects/openclaw-vexclaw",
-        "VEXCLAW_MCP_MODE": "stdio"
+        "OBSIDIAN_VAULT_PATH": "/path/to/obsidian-vault",
+        "CRYSTAL_MCP_HOST": "127.0.0.1",
+        "CRYSTAL_MCP_PORT": "8788",
+        "CRYSTAL_ENV_FILE": "/path/to/openclaw-crystal/mcp-server/.env",
+        "CRYSTAL_NODE": "/path/to/node",
+        "CRYSTAL_PLUGIN_DIR": "/path/to/openclaw-crystal/plugin",
+        "CRYSTAL_ROOT": "/path/to/openclaw-crystal",
+        "CRYSTAL_MCP_MODE": "stdio"
       }
     },
-    "vexclaw-recall": {
-      "command": "/Users/gerald/.nvm/versions/node/v22.22.0/bin/node",
+    "crystal-recall": {
+      "command": "/path/to/node",
       "args": [
-        "/Users/gerald/projects/openclaw-vexclaw/plugin/recall-hook.js"
+        "/path/to/openclaw-crystal/plugin/recall-hook.js"
       ],
       "env": {
         "CONVEX_URL": "https://rightful-mockingbird-389.convex.cloud",
         "OPENAI_API_KEY": "${OPENAI_API_KEY}",
-        "OBSIDIAN_VAULT_PATH": "/Users/gerald/Documents/Gerald/Memory",
-        "VEXCLAW_MCP_HOST": "127.0.0.1",
-        "VEXCLAW_MCP_PORT": "8788",
-        "VEXCLAW_ENV_FILE": "/Users/gerald/projects/openclaw-vexclaw/mcp-server/.env",
-        "VEXCLAW_NODE": "/Users/gerald/.nvm/versions/node/v22.22.0/bin/node",
-        "VEXCLAW_PLUGIN_DIR": "/Users/gerald/projects/openclaw-vexclaw/plugin",
-        "VEXCLAW_ROOT": "/Users/gerald/projects/openclaw-vexclaw",
-        "VEXCLAW_MCP_MODE": "stdio"
+        "OBSIDIAN_VAULT_PATH": "/path/to/obsidian-vault",
+        "CRYSTAL_MCP_HOST": "127.0.0.1",
+        "CRYSTAL_MCP_PORT": "8788",
+        "CRYSTAL_ENV_FILE": "/path/to/openclaw-crystal/mcp-server/.env",
+        "CRYSTAL_NODE": "/path/to/node",
+        "CRYSTAL_PLUGIN_DIR": "/path/to/openclaw-crystal/plugin",
+        "CRYSTAL_ROOT": "/path/to/openclaw-crystal",
+        "CRYSTAL_MCP_MODE": "stdio"
       }
     }
   },
   "env": {
-    "VEXCLAW_MCP_MODE": "sse",
-    "VEXCLAW_MCP_HOST": "127.0.0.1",
-    "VEXCLAW_MCP_PORT": "8788",
-    "VEXCLAW_ENV_FILE": "/Users/gerald/projects/openclaw-vexclaw/mcp-server/.env"
+    "CRYSTAL_MCP_MODE": "sse",
+    "CRYSTAL_MCP_HOST": "127.0.0.1",
+    "CRYSTAL_MCP_PORT": "8788",
+    "CRYSTAL_ENV_FILE": "/path/to/openclaw-crystal/mcp-server/.env"
   }
 }

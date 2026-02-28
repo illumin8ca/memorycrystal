@@ -5,10 +5,11 @@ dist/
 !.env.example
 .convex/
 .convex.local/
-.vexclaw/
-.vexclaw-state/
+.crystal/
+.crystal-state/
 *.log
 !*.example.log
 secrets/
 *.pem
 plugin/openclaw-hook.json
+.serena

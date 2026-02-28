@@ -2,7 +2,7 @@
 
 ## Package Identity
 
-- Purpose: MCP tool surface exposed as `vexclaw_*` and all Convex/embedding/Obsidian adapters.
+- Purpose: MCP tool surface exposed as `crystal_*` and all Convex/embedding/Obsidian adapters.
 - Scope: `mcp-server/src`.
 
 ## Setup Commands
@@ -40,13 +40,13 @@
 
 ## JIT Index Hints
 
-- Search tool names: `rg -n "name: \"vexclaw_" src/tools`
+- Search tool names: `rg -n "name: \"crystal_" src/tools`
 - Find input schemas: `rg -n "inputSchema|required" src/tools`
 - Validate Convex calls: `rg -n "mutation\\(|query\\(|action\\(" src`
 
 ## Common Gotchas
 
-- `scripts/vexclaw-enable.sh` writes command maps based on `mcp-server/dist/index.js`; rebuild before enable when tool logic changes.
+- `scripts/crystal-enable.sh` writes command maps based on `mcp-server/dist/index.js`; rebuild before enable when tool logic changes.
 - Embedding provider behavior should remain explicit; keep `EMBEDDING_PROVIDER` in env for defaults.
 
 ## Pre-PR Checks

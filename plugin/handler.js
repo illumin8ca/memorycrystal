@@ -69,7 +69,7 @@ const runCaptureHook = (payload = {}) => {
     console.error(stderr);
     return {
       ok: false,
-      message: "VexClaw hook failed",
+      message: "Memory Crystal hook failed",
       error: true,
       stderr,
     };
@@ -77,9 +77,9 @@ const runCaptureHook = (payload = {}) => {
   const capture = parseCaptureResult((result.stdout || "").trim());
   return {
     ok: true,
-    message: "VexClaw capture hook executed.",
+    message: "Memory Crystal capture hook executed.",
     payload: {
-      hook: "vexclaw-capture",
+      hook: "crystal-capture",
       inputSummary: capture,
       rawPayload: payload,
     },
@@ -108,7 +108,7 @@ const runRecallHook = (payload = {}) => {
     console.error(stderr);
     return {
       ok: false,
-      message: "VexClaw hook failed",
+      message: "Memory Crystal hook failed",
       error: true,
       stderr,
     };
@@ -117,9 +117,9 @@ const runRecallHook = (payload = {}) => {
   const injection = recall.injectionBlock;
   return {
     ok: true,
-    message: "VexClaw recall hook executed.",
+    message: "Memory Crystal recall hook executed.",
     payload: {
-      hook: "vexclaw-recall",
+      hook: "crystal-recall",
       memories: recall.memories,
       injection,
     },
@@ -131,7 +131,7 @@ const runHook = async (hookName, payload = {}) => {
   if (hookName === "startup") {
     return {
       ok: true,
-      message: "VexClaw startup hook executed.",
+      message: "Memory Crystal startup hook executed.",
       payload,
     };
   }
@@ -146,7 +146,7 @@ const runHook = async (hookName, payload = {}) => {
 
   return {
     ok: true,
-    message: `VexClaw hook '${hookName}' is not yet implemented.`,
+    message: `Memory Crystal hook '${hookName}' is not yet implemented.`,
     payload,
   };
 };

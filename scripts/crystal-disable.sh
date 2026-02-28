@@ -32,7 +32,7 @@ DETECT_OPENCLAW_DIR() {
 }
 
 OPENCLAW_DIR="$(DETECT_OPENCLAW_DIR)"
-PLUGIN_PATH="${OPENCLAW_PLUGIN_DIR:-$OPENCLAW_DIR/extensions/vexclaw-memory}"
+PLUGIN_PATH="${OPENCLAW_PLUGIN_DIR:-$OPENCLAW_DIR/extensions/crystal-memory}"
 OPENCLAW_CONFIG="$OPENCLAW_DIR/openclaw.json"
 HOOK_MAP_PATH="$OPENCLAW_DIR/extensions/internal-hooks/openclaw-hook.json"
 
@@ -53,10 +53,10 @@ for arg in "${@:-}"; do
 done
 
 if [[ "$DRY_RUN" == "true" ]]; then
-  echo "⚙️  VexClaw disable (dry-run)."
-  echo "Would remove/disable hooks.internal.entries.vexclaw-memory in:"
+  echo "⚙️  Memory Crystal disable (dry-run)."
+  echo "Would remove/disable hooks.internal.entries.crystal-memory in:"
   echo "  $OPENCLAW_CONFIG"
-  echo "Would remove vexclaw-memory command from:"
+  echo "Would remove crystal-memory command from:"
   echo "  $HOOK_MAP_PATH"
   if [[ "$PURGE" == "true" ]]; then
     echo "Would remove plugin bundle at: $PLUGIN_PATH"
@@ -90,13 +90,13 @@ internal = hooks.get("internal", {}) if isinstance(hooks, dict) else {}
 entries = internal.get("entries", {}) if isinstance(internal, dict) else {}
 
 if isinstance(entries, dict):
-    if "vexclaw-memory" in entries:
-        del entries["vexclaw-memory"]
+    if "crystal-memory" in entries:
+        del entries["crystal-memory"]
 
 with open(path, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2)
 PY
-  echo "Updated $OPENCLAW_CONFIG to remove hooks.internal.entries.vexclaw-memory."
+  echo "Updated $OPENCLAW_CONFIG to remove hooks.internal.entries.crystal-memory."
 else
   echo "Missing OpenClaw config at $OPENCLAW_CONFIG."
 fi
@@ -121,13 +121,13 @@ path = sys.argv[1]
 data = load_tolerant_json(path)
 commands = data.get("commands", {})
 
-if isinstance(commands, dict) and "vexclaw-memory" in commands:
-    del commands["vexclaw-memory"]
+if isinstance(commands, dict) and "crystal-memory" in commands:
+    del commands["crystal-memory"]
 
 with open(path, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2)
 PY
-  echo "Updated $HOOK_MAP_PATH to remove vexclaw-memory command."
+  echo "Updated $HOOK_MAP_PATH to remove crystal-memory command."
 else
   echo "Missing internal hook command map at $HOOK_MAP_PATH."
 fi
@@ -149,7 +149,7 @@ else
 fi
 
 if [ "$PURGE" == "true" ]; then
-  echo "Disabled VexClaw wiring and removed plugin bundle."
+  echo "Disabled Memory Crystal wiring and removed plugin bundle."
 else
-  echo "Disabled VexClaw wiring and kept plugin bundle."
+  echo "Disabled Memory Crystal wiring and kept plugin bundle."
 fi

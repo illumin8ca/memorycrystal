@@ -13,7 +13,7 @@
 
 ## Conventions
 
-- Keep table/field names stable under `vexclaw*` namespace.
+- Keep table/field names stable under `crystal*` namespace.
 - Define strict value unions for memory/store/category/source to avoid drift.
 - Preserve soft-delete/archival semantics in query and recall paths.
 - Prefer query/mutation/action input validation with `v.object`.
@@ -21,8 +21,8 @@
 ### ✅ DO / ❌ DON'T
 
 - ✅ `convex/schema.ts`
-- ✅ `convex/vexclaw/memories.ts`
-- ✅ `convex/vexclaw/recall.ts`
+- ✅ `convex/crystal/memories.ts`
+- ✅ `convex/crystal/recall.ts`
 - ✅ `convex/crons.ts`
 - ❌ `convex/_generated/*` unless regenerating via Convex tooling.
 
@@ -30,18 +30,18 @@
 
 - `./schema.ts`
 - `./crons.ts`
-- `./convex/vexclaw/memories.ts`
-- `./convex/vexclaw/recall.ts`
-- `./convex/vexclaw/associations.ts`
-- `./convex/vexclaw/graph.ts`
-- `./convex/vexclaw/consolidate.ts`
+- `./convex/crystal/memories.ts`
+- `./convex/crystal/recall.ts`
+- `./convex/crystal/associations.ts`
+- `./convex/crystal/graph.ts`
+- `./convex/crystal/consolidate.ts`
 
 ## JIT Index Hints
 
 - List Convex files: `rg --files convex`
 - Inspect schema changes: `rg -n "defineTable|vectorIndex|index\\(" convex/schema.ts`
 - Inspect cron schedule: `rg -n "crons\\.interval|cronJobs" convex/crons.ts`
-- Inspect graph APIs: `rg -n "getKnowledgeGraphFoundationStatus|seedKnowledgeGraphFromMemory" convex/vexclaw/graph.ts`
+- Inspect graph APIs: `rg -n "getKnowledgeGraphFoundationStatus|seedKnowledgeGraphFromMemory" convex/crystal/graph.ts`
 
 ## Common Gotchas
 
@@ -50,5 +50,5 @@
 
 ## Pre-PR Checks
 
-- `npm run vexclaw:doctor`
-- `npm run convex:run -- vexclaw/graph:getKnowledgeGraphFoundationStatus`
+- `npm run crystal:doctor`
+- `npm run convex:run -- crystal/graph:getKnowledgeGraphFoundationStatus`

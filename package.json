@@ -1,5 +1,5 @@
 {
-  "name": "vexclaw",
+  "name": "memorycrystal",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -7,7 +7,14 @@
   ],
   "scripts": {
     "dev": "cd apps/web && npm run dev",
-    "build": "cd apps/web && npm run build"
+    "build": "cd apps/web && npm run build",
+    "crystal:init": "bash scripts/crystal-init.sh",
+    "crystal:bootstrap": "bash scripts/crystal-bootstrap.sh",
+    "crystal:doctor": "bash scripts/crystal-doctor.sh",
+    "crystal:enable": "bash scripts/crystal-enable.sh",
+    "crystal:disable": "bash scripts/crystal-disable.sh",
+    "crystal:e2e": "bash scripts/crystal-e2e.sh",
+    "test:smoke": "bash scripts/crystal-doctor.sh --smoke"
   },
   "devDependencies": {
     "convex": "^1.32.0"

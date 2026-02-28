@@ -1,14 +1,14 @@
 {
-  "name": "vexclaw-mcp-server",
+  "name": "memorycrystal-mcp-server",
   "version": "0.1.0",
   "private": true,
-  "description": "MCP server for VexClaw memory write/read operations",
+  "description": "MCP server for Memory Crystal memory write/read operations",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "start:vexclaw": "node dist/index.js"
+    "start:crystal": "node dist/index.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.6.0",

@@ -1,4 +1,4 @@
-# VexClaw — Cognitive Memory System for Gerald
+# Memory Crystal — Cognitive Memory System for Gerald
 ## Product Requirements Document
 
 **Status:** DRAFT — Sections 1, 2, and 3 are active; delivery cadence is now tracked in `ROADMAP.md`
@@ -13,11 +13,11 @@
 
 ## 1. Executive Summary
 
-VexClaw is a persistent cognitive memory layer for Gerald, an OpenClaw-based Claude agent that assists Andy Doucet. It is modeled after the architecture of human memory — not as a metaphor, but as a structural blueprint — implementing five distinct memory stores with biologically-inspired decay, spreading activation, and associative recall.
+Memory Crystal is a persistent cognitive memory layer for Gerald, an OpenClaw-based Claude agent that assists Andy Doucet. It is modeled after the architecture of human memory — not as a metaphor, but as a structural blueprint — implementing five distinct memory stores with biologically-inspired decay, spreading activation, and associative recall.
 
 **Why it exists:** Gerald is amnesiac by design. Every session starts fresh. Context windows compact and discard. The more Gerald is used across channels (Discord, Telegram, future surfaces), the more painful this becomes — not just as a UX inconvenience, but as a fundamental ceiling on how useful Gerald can actually be. A developer's AI assistant that can't remember what stack they use, what projects they're building, or what was decided last Tuesday is not an assistant — it's a very expensive autocomplete.
 
-VexClaw solves this by externalizing Gerald's memory into Convex (fast, structured, queryable, real-time) with a human-readable mirror in Obsidian markdown. Gerald gains MCP tools to read and write memories mid-conversation. Andy gains an admin panel in the Gerald Dashboard to browse, edit, and audit what Gerald remembers.
+Memory Crystal solves this by externalizing Gerald's memory into Convex (fast, structured, queryable, real-time) with a human-readable mirror in Obsidian markdown. Gerald gains MCP tools to read and write memories mid-conversation. Andy gains an admin panel in the Gerald Dashboard to browse, edit, and audit what Gerald remembers.
 
 **What success looks like:**
 - Gerald greets Andy on day 47 and already knows what project Andy is building, what blockers exist, and what was decided in last week's retro — without being told.
@@ -75,14 +75,14 @@ Every memory write also creates/updates a markdown file in Andy's Obsidian vault
 
 **G6 — MCP tool surface for Gerald**
 Node.js MCP server exposes tools Gerald calls mid-conversation:
-- `vexclaw_remember` — write a new memory
-- `vexclaw_recall` — semantic search
-- `vexclaw_what_do_i_know` — broad topic check
-- `vexclaw_why_did_we` — decision archaeology
-- `vexclaw_forget` — soft-delete
-- `vexclaw_stats` — health stats
-- `vexclaw_checkpoint` — save working context
-- `vexclaw_wake` — morning briefing
+- `crystal_remember` — write a new memory
+- `crystal_recall` — semantic search
+- `crystal_what_do_i_know` — broad topic check
+- `crystal_why_did_we` — decision archaeology
+- `crystal_forget` — soft-delete
+- `crystal_stats` — health stats
+- `crystal_checkpoint` — save working context
+- `crystal_wake` — morning briefing
 
 **G7 — Admin UI panel in Gerald Dashboard**
 Andy can browse, search, edit, and delete memories at `gerald.andydoucet.com/memory`. Protected by existing Telegram-based auth.
@@ -121,10 +121,10 @@ Gerald captures information worth storing in the background, without asking Andy
 - **AS-8** — Memory health visibility: Dashboard shows health stats (count, avg strength, decay rate)
 
 ### Gerald's Perspective
-- **GS-1** — Call `vexclaw_wake()` at session start to get a briefing of what matters right now
-- **GS-2** — Call `vexclaw_recall()` before answering complex questions
-- **GS-3** — Call `vexclaw_remember()` when something important happens, without interrupting flow
-- **GS-4** — Call `vexclaw_checkpoint()` before context compaction warnings
+- **GS-1** — Call `crystal_wake()` at session start to get a briefing of what matters right now
+- **GS-2** — Call `crystal_recall()` before answering complex questions
+- **GS-3** — Call `crystal_remember()` when something important happens, without interrupting flow
+- **GS-4** — Call `crystal_checkpoint()` before context compaction warnings
 - **GS-5** — Know when NOT to store (transient chatter, not every message)
 - **GS-6** — Access memories across all channels without special-casing
 
@@ -137,7 +137,7 @@ Gerald captures information worth storing in the background, without asking Andy
 - **Capture rate**: >90% of decisions/facts Andy says "remember this" about are captured automatically within 60s
 - **Zero context-loss events**: Defined as Andy having to re-explain something Gerald should know
 - **Memory health**: Average strength > 0.4 across active semantic store after 30 days
-- **Uptime**: VexClaw MCP server available >99.5% of Gerald's active hours
+- **Uptime**: Memory Crystal MCP server available >99.5% of Gerald's active hours
 - **Dashboard adoption**: Andy uses `/memory` panel at least once per week to audit/correct
 
 ---
@@ -165,8 +165,8 @@ Gerald captures information worth storing in the background, without asking Andy
 │                           │  MCP stdio                                      │
 │                           ▼                                                  │
 │              ┌────────────────────────┐                                     │
-│              │    VexClaw MCP Server   │  ← Node.js/TS process              │
-│              │  ~/openclaw/vexclaw/    │    runs alongside OpenClaw          │
+│              │    Memory Crystal MCP Server   │  ← Node.js/TS process              │
+│              │  ~/openclaw/crystal/    │    runs alongside OpenClaw          │
 │              │  mcp-server/index.ts   │                                     │
 │              └──────┬─────────────────┘                                     │
 │                     │                                                        │
@@ -206,17 +206,17 @@ Gerald captures information worth storing in the background, without asking Andy
 
 **Write path (memory capture):**
 ```
-User message → OpenClaw → (post-turn) → VexClaw MCP vexclaw_remember
+User message → OpenClaw → (post-turn) → Memory Crystal MCP crystal_remember
   → LLM extraction (Claude Haiku) → structured memory objects
   → OpenAI embed → 1536-dim vector
-  → Convex mutation (vexclawMemories.create) → vector index
+  → Convex mutation (crystalMemories.create) → vector index
   → Convex action → Obsidian file write
   → Convex real-time push → Dashboard updates live
 ```
 
 **Read path (memory recall):**
 ```
-Incoming message → VexClaw MCP vexclaw_recall
+Incoming message → Memory Crystal MCP crystal_recall
   → embed query text → vector search (top-40 candidates)
   → composite score filter (top-8 results)
   → inject formatted block into Gerald's system prompt
@@ -226,7 +226,7 @@ Incoming message → VexClaw MCP vexclaw_recall
 
 **Background consolidation:**
 ```
-Convex cron (every 12h) → vexclaw_consolidate action
+Convex cron (every 12h) → crystal_consolidate action
   → fetch sensory memories, cluster by embedding similarity > 0.75
   → LLM synthesis (Claude Haiku) → episodic memory
   → promote high-confidence episodic (conf > 0.8, access > 3) → semantic
@@ -244,7 +244,7 @@ import { v } from "convex/values";
 
 export default defineSchema({
   // PRIMARY MEMORY STORE
-  vexclawMemories: defineTable({
+  crystalMemories: defineTable({
     store: v.union(
       v.literal("sensory"),      // raw fragments, TTL ~24h
       v.literal("episodic"),     // synthesized episodes
@@ -273,13 +273,13 @@ export default defineSchema({
       v.literal("observation"),  v.literal("inference"),
       v.literal("external")
     ),
-    sessionId: v.optional(v.id("vexclawSessions")),
+    sessionId: v.optional(v.id("crystalSessions")),
     channel: v.optional(v.string()),  // "discord" | "telegram" | "imessage"
     tags: v.array(v.string()),
     archived: v.boolean(),
     archivedAt: v.optional(v.number()),
-    promotedFrom: v.optional(v.id("vexclawMemories")),
-    checkpointId: v.optional(v.id("vexclawCheckpoints")),
+    promotedFrom: v.optional(v.id("crystalMemories")),
+    checkpointId: v.optional(v.id("crystalCheckpoints")),
   })
     .vectorIndex("by_embedding", {
       vectorField: "embedding",
@@ -292,9 +292,9 @@ export default defineSchema({
     .index("by_session", ["sessionId"]),
 
   // ASSOCIATIVE LINKS
-  vexclawAssociations: defineTable({
-    fromMemoryId: v.id("vexclawMemories"),
-    toMemoryId: v.id("vexclawMemories"),
+  crystalAssociations: defineTable({
+    fromMemoryId: v.id("crystalMemories"),
+    toMemoryId: v.id("crystalMemories"),
     relationshipType: v.union(
       v.literal("supports"),    v.literal("contradicts"),
       v.literal("derives_from"),v.literal("co_occurred"),
@@ -308,7 +308,7 @@ export default defineSchema({
     .index("by_to", ["toMemoryId"]),
 
   // SESSION TRACKING
-  vexclawSessions: defineTable({
+  crystalSessions: defineTable({
     channel: v.string(),
     channelId: v.optional(v.string()),
     startedAt: v.number(),
@@ -319,19 +319,19 @@ export default defineSchema({
     summary: v.optional(v.string()),
     participants: v.array(v.string()),
     model: v.optional(v.string()),
-    checkpointId: v.optional(v.id("vexclawCheckpoints")),
+    checkpointId: v.optional(v.id("crystalCheckpoints")),
   })
     .index("by_channel", ["channel", "lastActiveAt"]),
 
   // CHECKPOINTS
-  vexclawCheckpoints: defineTable({
+  crystalCheckpoints: defineTable({
     label: v.string(),
     description: v.optional(v.string()),
     createdAt: v.number(),
     createdBy: v.union(v.literal("gerald"), v.literal("andy")),
-    sessionId: v.optional(v.id("vexclawSessions")),
+    sessionId: v.optional(v.id("crystalSessions")),
     memorySnapshot: v.array(v.object({
-      memoryId: v.id("vexclawMemories"),
+      memoryId: v.id("crystalMemories"),
       strength: v.float64(),
       content: v.string(),
       store: v.string(),
@@ -342,9 +342,9 @@ export default defineSchema({
     .index("by_created", ["createdAt"]),
 
   // WAKE STATE
-  vexclawWakeState: defineTable({
-    sessionId: v.id("vexclawSessions"),
-    injectedMemoryIds: v.array(v.id("vexclawMemories")),
+  crystalWakeState: defineTable({
+    sessionId: v.id("crystalSessions"),
+    injectedMemoryIds: v.array(v.id("crystalMemories")),
     wakePrompt: v.string(),
     createdAt: v.number(),
   })
@@ -357,9 +357,9 @@ export default defineSchema({
 ## 3. MCP Tool Specifications
 
 ```typescript
-// All tools exposed by the VexClaw MCP Server
+// All tools exposed by the Memory Crystal MCP Server
 
-// vexclaw_remember
+// crystal_remember
 input: {
   store: MemoryStore,           // required
   category: MemoryCategory,     // required
@@ -373,7 +373,7 @@ input: {
 }
 output: { memoryId: string, title: string, store: string }
 
-// vexclaw_recall
+// crystal_recall
 input: {
   query: string,
   stores?: MemoryStore[],       // filter by store type
@@ -384,19 +384,19 @@ input: {
 }
 output: { memories: FormattedMemory[], injectionBlock: string }
 
-// vexclaw_what_do_i_know
+// crystal_what_do_i_know
 input: { topic: string }
 output: { summary: string, memoryCount: number, topMemories: FormattedMemory[] }
 
-// vexclaw_why_did_we
+// crystal_why_did_we
 input: { decision: string }
 output: { reasoning: string, relatedMemories: FormattedMemory[] }
 
-// vexclaw_forget
+// crystal_forget
 input: { memoryId: string, reason?: string }
 output: { success: boolean, archived: boolean }
 
-// vexclaw_stats
+// crystal_stats
 input: {}
 output: {
   totalMemories: number,
@@ -406,11 +406,11 @@ output: {
   archivedCount: number,
 }
 
-// vexclaw_checkpoint
+// crystal_checkpoint
 input: { label: string, description?: string, tags?: string[] }
 output: { checkpointId: string, memoriesSnapshotted: number }
 
-// vexclaw_wake
+// crystal_wake
 input: { channel?: string }
 output: { briefing: string, openGoals: FormattedMemory[], recentDecisions: FormattedMemory[] }
 ```
@@ -467,7 +467,7 @@ function scoreMemory(mem: Memory, vectorScore: number, now: number): number {
 
 // Injection format (prepended to Gerald's system prompt)
 const MEMORY_INJECTION_TEMPLATE = `
-## 🧠 VexClaw Memory Recall
+## 🧠 Memory Crystal Memory Recall
 The following memories are relevant to this conversation:
 
 {memories.map(m => `
@@ -490,16 +490,16 @@ import { cronJobs } from "convex/server";
 const crons = cronJobs();
 
 // Decay: every 24h
-crons.interval("vexclaw-decay", { hours: 24 }, internal.vexclaw.decay);
+crons.interval("crystal-decay", { hours: 24 }, internal.crystal.decay);
 
 // Consolidation: every 12h (cluster sensory → episodic → semantic)
-crons.interval("vexclaw-consolidate", { hours: 12 }, internal.vexclaw.consolidate);
+crons.interval("crystal-consolidate", { hours: 12 }, internal.crystal.consolidate);
 
 // Cleanup: archive memories strength < 0.1, delete sensory > 24h old
-crons.interval("vexclaw-cleanup", { hours: 24 }, internal.vexclaw.cleanup);
+crons.interval("crystal-cleanup", { hours: 24 }, internal.crystal.cleanup);
 
 // Spreading activation: build association links for new memories
-crons.interval("vexclaw-associate", { hours: 6 }, internal.vexclaw.buildAssociations);
+crons.interval("crystal-associate", { hours: 6 }, internal.crystal.buildAssociations);
 ```
 
 **Decay logic:**
@@ -522,13 +522,13 @@ const newStrength = Math.max(0, mem.strength - decayRate * daysSinceAccess);
 ├── sensory/
 │   └── 2026-02-25-sensory-001.md
 ├── episodic/
-│   └── 2026-02-25-vexclaw-memory-system-decision.md
+│   └── 2026-02-25-crystal-memory-system-decision.md
 ├── semantic/
 │   └── andy-prefers-typescript.md
 ├── procedural/
 │   └── deploy-gerald-dashboard.md
 └── prospective/
-│   └── review-vexclaw-schema-weekend.md
+│   └── review-crystal-schema-weekend.md
 └── _index.md                    # auto-generated master index
 ```
 
@@ -546,14 +546,14 @@ source: conversation
 channel: discord
 ---
 
-# Andy chose Convex over Supabase for VexClaw
+# Andy chose Convex over Supabase for Memory Crystal
 
 Andy already pays for Convex, has an existing project, and it has native vector
 search, real-time subscriptions, and TypeScript-first design. No additional
 infrastructure needed.
 ```
 
-**Sync trigger:** Convex action fires after every `vexclawMemories` write. Uses Node.js `fs.writeFile` via an HTTP action to the MCP server's local filesystem endpoint.
+**Sync trigger:** Convex action fires after every `crystalMemories` write. Uses Node.js `fs.writeFile` via an HTTP action to the MCP server's local filesystem endpoint.
 
 ---
 
@@ -561,14 +561,14 @@ infrastructure needed.
 
 **Features:**
 - Memory browser: filterable by store, category, strength, date, tags
-- Search bar: semantic search (calls `vexclaw_recall` via API)
+- Search bar: semantic search (calls `crystal_recall` via API)
 - Memory card: shows title, content, strength bar, decay curve, source channel, tags, associations
 - Edit in place: title, content, tags, confidence
 - Delete (archive): soft-delete with confirmation
 - Stats panel: total count, by-store breakdown, avg strength, last 24h captures
 - Checkpoint viewer: browse historical snapshots
 
-**Real-time:** Convex React hooks (`useQuery`) subscribe to `vexclawMemories` table — dashboard updates instantly as Gerald captures new memories.
+**Real-time:** Convex React hooks (`useQuery`) subscribe to `crystalMemories` table — dashboard updates instantly as Gerald captures new memories.
 
 **Auth:** Existing Telegram-based auth at `gerald.andydoucet.com` (user ID 511172388 only).
 
@@ -579,14 +579,14 @@ infrastructure needed.
 **Changes to workspace:**
 ```
 ~/openclaw/
-├── AGENTS.md              # update: add VexClaw MCP registration + usage rules
+├── AGENTS.md              # update: add Memory Crystal MCP registration + usage rules
 ├── skills/
-│   └── vexclaw/
-│       ├── SKILL.md       # how Gerald uses VexClaw tools
+│   └── crystal/
+│       ├── SKILL.md       # how Gerald uses Memory Crystal tools
 │       └── prompts/
 │           ├── extraction.md   # auto-capture prompt
 │           └── injection.md    # recall injection format
-└── vexclaw/                # MCP server lives here
+└── crystal/                # MCP server lives here
     └── mcp-server/
         ├── package.json
         ├── index.ts
@@ -595,15 +595,15 @@ infrastructure needed.
 
 **AGENTS.md additions:**
 ```markdown
-## 🧠 VexClaw Memory
-You have persistent memory via VexClaw MCP tools. Use them:
-- At session start: call `vexclaw_wake()` to get your briefing
-- Before answering complex questions: call `vexclaw_recall(query)`
-- After learning something important: call `vexclaw_remember(...)`
-- Before context compaction warnings: call `vexclaw_checkpoint(label)`
-- Use `vexclaw_why_did_we(decision)` to explain past decisions to Andy
+## 🧠 Memory Crystal Memory
+You have persistent memory via Memory Crystal MCP tools. Use them:
+- At session start: call `crystal_wake()` to get your briefing
+- Before answering complex questions: call `crystal_recall(query)`
+- After learning something important: call `crystal_remember(...)`
+- Before context compaction warnings: call `crystal_checkpoint(label)`
+- Use `crystal_why_did_we(decision)` to explain past decisions to Andy
 
-Memory privacy: do NOT store PII, passwords, or secrets in VexClaw.
+Memory privacy: do NOT store PII, passwords, or secrets in Memory Crystal.
 ```
 
 ---
@@ -612,11 +612,11 @@ Memory privacy: do NOT store PII, passwords, or secrets in VexClaw.
 
 | Phase | Scope | Est. Effort | Definition of Done |
 |-------|-------|-------------|-------------------|
-| **1 — MVP** | Convex schema, sensory + semantic stores, basic `vexclaw_remember` + `vexclaw_recall` MCP tools, manual only | 1-2 days | Gerald can manually store and recall memories via MCP tools |
+| **1 — MVP** | Convex schema, sensory + semantic stores, basic `crystal_remember` + `crystal_recall` MCP tools, manual only | 1-2 days | Gerald can manually store and recall memories via MCP tools |
 | **2 — Full cognitive model** | Episodic, procedural, prospective stores, decay cron, consolidation pipeline, associations | 2-3 days | All 5 stores working, decay math verified, memories promote automatically |
 | **3 — Auto-capture + recall** | LLM extraction post-turn, deduplication, auto-recall injection into system prompt, Obsidian dual-write | 2-3 days | Gerald captures memories without being asked; recalls on every turn |
 | **4 — Dashboard** | Gerald Dashboard `/memory` panel, real-time Convex subscriptions, CRUD UI | 1-2 days | Andy can browse/edit/delete memories at gerald.andydoucet.com/memory |
-| **5 — Spreading activation + wake** | Association graph, `vexclaw_wake` morning briefing, `vexclaw_checkpoint` + `vexclaw_why_did_we` | 2-3 days | Related memories surface together; Gerald opens sessions with context briefing |
+| **5 — Spreading activation + wake** | Association graph, `crystal_wake` morning briefing, `crystal_checkpoint` + `crystal_why_did_we` | 2-3 days | Related memories surface together; Gerald opens sessions with context briefing |
 
 ---
 
@@ -628,16 +628,16 @@ Memory privacy: do NOT store PII, passwords, or secrets in VexClaw.
 ### Phase 1 — Minimum Viable Memory (Target: working in 1-2 days)
 
 **What gets built:**
-- `gerald-vexclaw` repo initialized with Convex project connected to existing Andy Convex account
-- Convex schema deployed: `vexclawMemories` table only (sensory + semantic stores), vector index
+- `gerald-crystal` repo initialized with Convex project connected to existing Andy Convex account
+- Convex schema deployed: `crystalMemories` table only (sensory + semantic stores), vector index
 - Embedding adapter: OpenAI `text-embedding-3-small`, wrapped in `lib/embed.ts`
-- Two MCP tools: `vexclaw_remember` and `vexclaw_recall`
+- Two MCP tools: `crystal_remember` and `crystal_recall`
 - MCP server wired into OpenClaw via `openclaw.json` MCP config
-- `AGENTS.md` updated: Gerald knows to call `vexclaw_recall` at session start and `vexclaw_remember` for key facts
+- `AGENTS.md` updated: Gerald knows to call `crystal_recall` at session start and `crystal_remember` for key facts
 
 **Definition of done:**
-- Gerald can manually call `vexclaw_remember` mid-conversation and have it persist to Convex
-- Gerald can call `vexclaw_recall("Convex memory system")` and get back relevant stored memories
+- Gerald can manually call `crystal_remember` mid-conversation and have it persist to Convex
+- Gerald can call `crystal_recall("Convex memory system")` and get back relevant stored memories
 - Memory survives a full session restart and is retrievable in a new session
 - Latency: recall < 500ms end-to-end
 
@@ -649,17 +649,17 @@ Memory privacy: do NOT store PII, passwords, or secrets in VexClaw.
 
 **What gets built:**
 - All 5 memory stores active (episodic, procedural, prospective added)
-- All 5 tables deployed: `vexclawAssociations`, `vexclawSessions`, `vexclawCheckpoints`, `vexclawWakeState`
+- All 5 tables deployed: `crystalAssociations`, `crystalSessions`, `crystalCheckpoints`, `crystalWakeState`
 - Decay cron (every 24h): strength reduction, archive at < 0.1
 - Consolidation cron (every 12h): cluster sensory → synthesize episodic via Claude Haiku
 - Auto-promotion: high-confidence episodic → semantic
-- Spreading activation: `vexclaw_associate` cron builds association links
-- Remaining MCP tools: `vexclaw_forget`, `vexclaw_stats`, `vexclaw_checkpoint`, `vexclaw_what_do_i_know`, `vexclaw_why_did_we`, `vexclaw_wake`
+- Spreading activation: `crystal_associate` cron builds association links
+- Remaining MCP tools: `crystal_forget`, `crystal_stats`, `crystal_checkpoint`, `crystal_what_do_i_know`, `crystal_why_did_we`, `crystal_wake`
 
 **Definition of done:**
 - Sensory memories created in Phase 1 have been auto-promoted to episodic/semantic by cron
 - Decay math verified: test memory created with strength=1.0, check it reads correctly lower after 24h
-- `vexclaw_wake` returns a coherent briefing from existing memories
+- `crystal_wake` returns a coherent briefing from existing memories
 - Association links exist between semantically related memories
 
 **Dependencies:** Phase 1 complete, Claude Haiku API access for consolidation LLM calls
@@ -671,7 +671,7 @@ Memory privacy: do NOT store PII, passwords, or secrets in VexClaw.
 **What gets built:**
 - Auto-capture: post-turn hook in OpenClaw fires LLM extraction (Claude Haiku) on every conversation exchange, stores worthy memories automatically
 - Deduplication: before write, vector search for similarity > 0.92 → patch/merge instead of insert
-- Auto-recall: before Gerald responds, `vexclaw_recall` fires and injects top-8 relevant memories into system prompt block
+- Auto-recall: before Gerald responds, `crystal_recall` fires and injects top-8 relevant memories into system prompt block
 - Obsidian dual-write: Convex action writes markdown file to `~/Documents/Gerald/Memory/` on every memory write
 - Channel metadata: memories tagged with source channel (discord/telegram/imessage)
 
@@ -690,10 +690,10 @@ Memory privacy: do NOT store PII, passwords, or secrets in VexClaw.
 **What gets built:**
 - New route `/memory` in Gerald Dashboard (Next.js)
 - Memory browser: list view with filter by store, category, strength, date, tags
-- Search: calls VexClaw API, shows semantic results
+- Search: calls Memory Crystal API, shows semantic results
 - Memory card: title, content, strength bar (visual), decay rate, source channel, tags, associations
 - Edit in-place: title, content, tags, confidence (PATCH to Convex mutation)
-- Soft-delete button with confirmation (calls `vexclaw_forget`)
+- Soft-delete button with confirmation (calls `crystal_forget`)
 - Stats panel: total, by-store breakdown, avg strength, last 24h captures
 - Real-time: Convex React `useQuery` hooks so dashboard updates live as Gerald captures memories
 
@@ -711,17 +711,17 @@ Memory privacy: do NOT store PII, passwords, or secrets in VexClaw.
 
 **What gets built:**
 - Full spreading activation on recall: when a memory is retrieved, its top-3 associated memories are included in the result set
-- `vexclaw_wake` refined: morning briefing includes open prospective memories, recent decisions, active projects, suggested follow-ups
+- `crystal_wake` refined: morning briefing includes open prospective memories, recent decisions, active projects, suggested follow-ups
 - Checkpoint viewer in dashboard: browse historical snapshots, restore context
-- Memory import tool: one-shot script to ingest existing `MEMORY.md` and daily logs into VexClaw as semantic memories (migration complete)
+- Memory import tool: one-shot script to ingest existing `MEMORY.md` and daily logs into Memory Crystal as semantic memories (migration complete)
 - Association graph visualization in dashboard (simple force-directed graph of linked memories)
 - Emotional weight tuning: review valence/arousal assignments, ensure high-emotion memories are decaying appropriately slower
 
 **Definition of done:**
-- Session start `vexclaw_wake` gives Gerald a genuinely useful briefing without manual prompting
+- Session start `crystal_wake` gives Gerald a genuinely useful briefing without manual prompting
 - Recall of "Convex" surfaces associated "Gerald Dashboard", "memory system", "TypeScript" memories
 - Historical checkpoints browsable in dashboard
-- All existing MEMORY.md content is in VexClaw
+- All existing MEMORY.md content is in Memory Crystal
 
 **Dependencies:** Phase 4 complete
 
@@ -731,21 +731,21 @@ Memory privacy: do NOT store PII, passwords, or secrets in VexClaw.
 
 ### Decision: Standalone Repo
 
-**Verdict: New standalone repo `gerald-vexclaw`**
+**Verdict: New standalone repo `gerald-crystal`**
 
 Rationale:
 - The Convex backend is not tightly coupled to the dashboard UI — separating them allows independent deployment and versioning
 - The MCP server is a separate long-running process from Gerald Dashboard's Next.js server
-- If we ever want to reuse VexClaw for a different agent or project, it's already decoupled
+- If we ever want to reuse Memory Crystal for a different agent or project, it's already decoupled
 - Gerald Dashboard imports the Convex client and subscribes to the shared Convex deployment — no code duplication needed
 
 ### Folder Structure
 
 ```
-gerald-vexclaw/                     # standalone repo
+gerald-crystal/                     # standalone repo
 ├── convex/                        # Convex backend (deploys to existing Convex project)
 │   ├── schema.ts                  # all 5 tables defined
-│   ├── vexclaw/
+│   ├── crystal/
 │   │   ├── memories.ts            # CRUD mutations + queries
 │   │   ├── recall.ts              # vector search + composite scoring
 │   │   ├── decay.ts               # decay mutation
@@ -784,10 +784,10 @@ gerald-vexclaw/                     # standalone repo
 └── package.json
 
 ~/openclaw/                        # existing OpenClaw workspace (changes only)
-├── AGENTS.md                      # add VexClaw usage instructions
+├── AGENTS.md                      # add Memory Crystal usage instructions
 └── skills/
-    └── vexclaw/
-        └── SKILL.md               # skill file for VexClaw tool usage
+    └── crystal/
+        └── SKILL.md               # skill file for Memory Crystal tool usage
 
 gerald-dashboard/                  # existing repo (additions only)
 └── app/
@@ -801,11 +801,11 @@ gerald-dashboard/                  # existing repo (additions only)
 
 ### Convex Project Sharing
 
-Gerald Dashboard and VexClaw share the **same Convex deployment**. Both reference the same `CONVEX_URL`. The VexClaw tables (`vexclaw*`) are namespaced clearly and don't conflict with any existing Gerald Dashboard tables.
+Gerald Dashboard and Memory Crystal share the **same Convex deployment**. Both reference the same `CONVEX_URL`. The Memory Crystal tables (`crystal*`) are namespaced clearly and don't conflict with any existing Gerald Dashboard tables.
 
 ```bash
-# Deploy VexClaw schema to existing Convex project
-cd gerald-vexclaw
+# Deploy Memory Crystal schema to existing Convex project
+cd gerald-crystal
 npx convex deploy --project <existing-project-id>
 ```
 
@@ -818,13 +818,13 @@ npx convex deploy --project <existing-project-id>
 | **R1** | OpenAI embedding costs exceed budget | Medium | Low | text-embedding-3-small is ~$0.02/1M tokens. At ~500 memories/month × avg 100 tokens = 50K tokens = ~$0.001/month. Negligible. Ollama fallback available if needed. |
 | **R2** | Convex free tier limits hit | Low | High | Convex free tier: 1M function calls/month, 8GB storage. At our scale (hundreds of memories, not millions) we're nowhere near limits. Monitor via Convex dashboard. |
 | **R3** | Auto-capture is too aggressive (noise) | High | Medium | Start with conservative extraction prompt — only capture decisions, facts, explicit instructions. Tune aggressiveness via confidence threshold. Andy can delete false positives from dashboard. |
-| **R4** | Auto-capture misses important info | Medium | Medium | First 2 weeks: Andy manually calls `vexclaw_remember` for anything critical. Review capture rate in dashboard. Tune extraction prompt iteratively. |
-| **R5** | MCP server crashes and Gerald loses memory access | Medium | High | Add health check in AGENTS.md: Gerald tries `vexclaw_stats` at session start, falls back to flat-file memory if unavailable. MCP server restarts via `pm2` or launchd. |
+| **R4** | Auto-capture misses important info | Medium | Medium | First 2 weeks: Andy manually calls `crystal_remember` for anything critical. Review capture rate in dashboard. Tune extraction prompt iteratively. |
+| **R5** | MCP server crashes and Gerald loses memory access | Medium | High | Add health check in AGENTS.md: Gerald tries `crystal_stats` at session start, falls back to flat-file memory if unavailable. MCP server restarts via `pm2` or launchd. |
 | **R6** | OpenClaw MCP API changes break integration | Low | High | Pin to specific OpenClaw version in release notes. MCP is a stable standard — tool-level breaking changes are unlikely. Monitor OpenClaw changelog. |
 | **R7** | Obsidian vault path changes or becomes inaccessible | Low | Low | Dual-write is for human convenience only, not critical path. If vault write fails, log warning and continue. Convex is source of truth. |
-| **R8** | Memory privacy leak in group chats | Medium | High | Tag all memories with source channel. Add explicit rule in extraction prompt: "Do not store information shared by people other than Andy." Group chat memories require Andy's explicit `vexclaw_remember` call. |
+| **R8** | Memory privacy leak in group chats | Medium | High | Tag all memories with source channel. Add explicit rule in extraction prompt: "Do not store information shared by people other than Andy." Group chat memories require Andy's explicit `crystal_remember` call. |
 | **R9** | Convex cold start latency spikes recall time | Low | Medium | Convex serverless functions have <100ms cold starts in practice. If p95 recall exceeds 400ms budget, add a keep-warm cron that pings the recall function every 5 minutes. |
-| **R10** | Data loss if Convex account is closed/compromised | Low | Critical | Obsidian vault is the offline backup. Add weekly export cron: dump all semantic + procedural memories to a JSON file in `~/openclaw/memory/vexclaw-backup-YYYY-MM-DD.json`. |
+| **R10** | Data loss if Convex account is closed/compromised | Low | Critical | Obsidian vault is the offline backup. Add weekly export cron: dump all semantic + procedural memories to a JSON file in `~/openclaw/memory/crystal-backup-YYYY-MM-DD.json`. |
 
 ---
 
@@ -843,7 +843,7 @@ Where exactly does Andy's Obsidian vault live? Needs to be a path accessible fro
 **OQ3 — MCP transport: stdio vs HTTP**
 - stdio: simpler, OpenClaw manages the process lifecycle, no port to manage
 - HTTP: more flexible, can be called from dashboard or other tools, persistent connection
-- **Recommendation:** stdio for Phase 1 (simplest), consider HTTP in Phase 5 if dashboard needs direct VexClaw API access
+- **Recommendation:** stdio for Phase 1 (simplest), consider HTTP in Phase 5 if dashboard needs direct Memory Crystal API access
 
 **OQ4 — LLM for extraction: Claude Haiku vs local**
 - Claude Haiku: fast, cheap (~$0.25/1M input tokens), requires Anthropic API key
@@ -857,8 +857,8 @@ Where exactly does Andy's Obsidian vault live? Needs to be a path accessible fro
 
 **OQ6 — Group chat memory policy**
 - Currently: MEMORY.md is blocked in Discord for privacy
-- With VexClaw: should Gerald auto-capture from Discord conversations?
-- **Recommendation:** No auto-capture in group chats in Phase 3. Require explicit `vexclaw_remember` calls. Re-evaluate in Phase 5.
+- With Memory Crystal: should Gerald auto-capture from Discord conversations?
+- **Recommendation:** No auto-capture in group chats in Phase 3. Require explicit `crystal_remember` calls. Re-evaluate in Phase 5.
 
 **OQ7 — Memory retention period for sensory store**
 - Current plan: 24h TTL
@@ -902,16 +902,16 @@ npx ts-node scripts/test-recall.ts --query "X.com automation"
 npx ts-node scripts/test-recall.ts --query "Gerald Dashboard"
 npx ts-node scripts/test-recall.ts --query "Convex memory system"
 ```
-Spot-check that key facts from the flat files are now recallable via VexClaw.
+Spot-check that key facts from the flat files are now recallable via Memory Crystal.
 
 **Step 4: Transition**
 - Keep `MEMORY.md` and daily logs as read-only archives (rename to `MEMORY.md.archive`)
-- Update `AGENTS.md`: remove instruction to read `MEMORY.md` at session start, replace with `vexclaw_wake()` call
-- Begin using VexClaw exclusively from this point forward
+- Update `AGENTS.md`: remove instruction to read `MEMORY.md` at session start, replace with `crystal_wake()` call
+- Begin using Memory Crystal exclusively from this point forward
 
 **Step 5: Cleanup (optional, after 30 days)**
-- If VexClaw has been stable for 30 days with no recall gaps, `MEMORY.md` can be deprecated entirely
-- Daily log files can be discontinued (session memories handled by VexClaw sessions table)
+- If Memory Crystal has been stable for 30 days with no recall gaps, `MEMORY.md` can be deprecated entirely
+- Daily log files can be discontinued (session memories handled by Memory Crystal sessions table)
 
 ---
 
@@ -942,16 +942,16 @@ const TEST_CASES = [
   { query: "why did we choose Convex", expectedTags: ["convex", "memory", "decision"] },
 ];
 ```
-Each test case runs `vexclaw_recall`, checks that expected tags appear in top-3 results. Run before and after any scoring weight changes.
+Each test case runs `crystal_recall`, checks that expected tags appear in top-3 results. Run before and after any scoring weight changes.
 
 ### Integration Tests (MCP tools)
-- Start MCP server, send mock `vexclaw_remember` call via stdio, verify memory appears in Convex
-- Send `vexclaw_recall` with known query, verify returned memories match expected
+- Start MCP server, send mock `crystal_remember` call via stdio, verify memory appears in Convex
+- Send `crystal_recall` with known query, verify returned memories match expected
 
 ### End-to-End Validation (manual, weekly)
 Andy's checklist:
 1. Start fresh OpenClaw session
-2. Verify `vexclaw_wake` returns a coherent briefing
+2. Verify `crystal_wake` returns a coherent briefing
 3. Reference a project decision from a prior week — verify Gerald recalls it correctly
 4. Make a new decision, end session, restart, verify it was captured
 5. Open Dashboard, verify the new memory appears
@@ -970,7 +970,7 @@ After any significant change to the MCP server or Convex schema, run:
 ## 7. Operational Runbook
 
 ### Daily: Nothing required
-VexClaw runs fully autonomously. Decay and consolidation crons fire automatically.
+Memory Crystal runs fully autonomously. Decay and consolidation crons fire automatically.
 
 ### Weekly: Memory Health Check
 Open `gerald.andydoucet.com/memory` → Stats panel. Verify:
@@ -981,16 +981,16 @@ Open `gerald.andydoucet.com/memory` → Stats panel. Verify:
 ### When Gerald recalls something wrong
 ```
 Option A (conversational): "Gerald, that's wrong — [correct fact]"
-  → Gerald calls vexclaw_forget(wrongMemoryId) + vexclaw_remember(correctedFact)
+  → Gerald calls crystal_forget(wrongMemoryId) + crystal_remember(correctedFact)
 
 Option B (dashboard): Open /memory → search for the wrong memory → Edit in place
 ```
 
 ### When Gerald forgets something it should know
-1. Check `vexclaw_stats` — is the MCP server reachable?
-2. Call `vexclaw_recall("topic")` manually to test retrieval
+1. Check `crystal_stats` — is the MCP server reachable?
+2. Call `crystal_recall("topic")` manually to test retrieval
 3. If memory exists but wasn't recalled: composite score may be too low (increase strength manually in dashboard)
-4. If memory doesn't exist: it wasn't captured. Call `vexclaw_remember` manually
+4. If memory doesn't exist: it wasn't captured. Call `crystal_remember` manually
 
 ### When MCP server is down
 Signs: Gerald says "I don't have access to my memory tools right now"
@@ -998,24 +998,24 @@ Signs: Gerald says "I don't have access to my memory tools right now"
 Fix:
 ```bash
 # Check if process is running
-ps aux | grep vexclaw-mcp
+ps aux | grep crystal-mcp
 
 # Restart
-cd ~/openclaw/vexclaw/mcp-server
+cd ~/openclaw/crystal/mcp-server
 npm start &
 
 # Or via pm2
-pm2 restart vexclaw-mcp
+pm2 restart crystal-mcp
 ```
 In the meantime, Gerald falls back to flat-file memory (MEMORY.md archive) per fallback instructions in AGENTS.md.
 
 ### When Convex is down
-This is rare (Convex SLA is 99.9%). Gerald logs a warning and falls back to flat-file memory automatically. When Convex comes back, memories written during the outage may be missing — Andy manually adds any critical ones via `vexclaw_remember`.
+This is rare (Convex SLA is 99.9%). Gerald logs a warning and falls back to flat-file memory automatically. When Convex comes back, memories written during the outage may be missing — Andy manually adds any critical ones via `crystal_remember`.
 
 ### Manual memory backup
 ```bash
 npx ts-node scripts/export-backup.ts \
-  --output ~/openclaw/memory/vexclaw-backup-$(date +%Y-%m-%d).json \
+  --output ~/openclaw/memory/crystal-backup-$(date +%Y-%m-%d).json \
   --stores semantic,procedural,prospective
 ```
 Run this any time before a major schema change or Convex project migration.
@@ -1041,12 +1041,12 @@ npx ts-node scripts/add-memory.ts \
 Add fine-grained channel policies: some memories are "Discord-only" (not surfaced in Telegram), some are "all channels". Useful when Gerald participates in multiple group chats with different audiences.
 
 **Memory sharing between agents**
-If Andy ever runs a second OpenClaw agent (e.g., a specialized coding agent), VexClaw could serve as shared memory. Both agents read/write to the same Convex project but with different `agentId` filters.
+If Andy ever runs a second OpenClaw agent (e.g., a specialized coding agent), Memory Crystal could serve as shared memory. Both agents read/write to the same Convex project but with different `agentId` filters.
 
 **Voice-triggered memories**
-When Gerald makes a voice call, important things said during the call are auto-captured into VexClaw via the call transcript. Requires voice-call plugin integration.
+When Gerald makes a voice call, important things said during the call are auto-captured into Memory Crystal via the call transcript. Requires voice-call plugin integration.
 
-**Obsidian → VexClaw two-way sync**
+**Obsidian → Memory Crystal two-way sync**
 v1 is Convex → Obsidian only. A future watcher script could monitor Obsidian vault for manual edits and sync them back to Convex. Enables Andy to write memories directly in Obsidian and have Gerald pick them up.
 
 **Memory confidence calibration**
@@ -1056,7 +1056,7 @@ Track how often recalled memories are "correct" (implicit signal: Andy doesn't c
 If Convex goes away or Andy wants a fully offline setup, export all memories to a local SQLite database with a compatible schema. The MCP server abstraction makes this a backend swap, not an architectural change.
 
 **Smart prospective memory triggers**
-Prospective memories (future intentions) today are surfaced in `vexclaw_wake`. Future: trigger them proactively — if Andy says "remind me about X on Friday" and it's now Friday, VexClaw surfaces that memory automatically via a cron that runs `vexclaw_recall` with the current date as a filter.
+Prospective memories (future intentions) today are surfaced in `crystal_wake`. Future: trigger them proactively — if Andy says "remind me about X on Friday" and it's now Friday, Memory Crystal surfaces that memory automatically via a cron that runs `crystal_recall` with the current date as a filter.
 
 **Memory analytics dashboard**
 Chart memory growth over time, decay curves per memory, most-recalled topics, recall latency trends. Helps Andy understand what Gerald actually knows and how the system is performing.
@@ -1067,7 +1067,7 @@ Import from other sources: Notion databases, GitHub issues, linear tickets, emai
 ---
 
 # Appendix: Key References
-- Context Studios "VexClaw" article: <https://www.contextstudios.ai/blog/building-ai-agent-memory-with-convex-how-we-gave-our-ai-a-brain-that-actually-remembers>
+- Context Studios "Memory Crystal" article: <https://www.contextstudios.ai/blog/building-ai-agent-memory-with-convex-how-we-gave-our-ai-a-brain-that-actually-remembers>
 - Convex vector search docs: <https://docs.convex.dev/search/vector-search>
 - Convex agents component: <https://docs.convex.dev/agents>
 - Mem0 OSS (reference only): <https://github.com/mem0ai/mem0>

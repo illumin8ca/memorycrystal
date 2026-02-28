@@ -6,8 +6,8 @@ Documented observations from the implementation surface:
 
 ## Language and naming
 
-- Runtime naming: `vexclaw` prefix across MCP tools and scripts.
-- Script naming convention: kebab-case (`vexclaw-init.sh`, `vexclaw-enable.sh`).
+- Runtime naming: `crystal` prefix across MCP tools and scripts.
+- Script naming convention: kebab-case (`crystal-init.sh`, `crystal-enable.sh`).
 - MCP tool names are descriptive and role-based.
 
 ## UI styling surface

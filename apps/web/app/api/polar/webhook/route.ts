@@ -78,10 +78,10 @@ export async function POST(request: NextRequest) {
 
   const profile =
     (userIdHint
-      ? await rawClient.query(api.vexclaw.userProfiles.getByUser, { userId: userIdHint })
+      ? await rawClient.query(api.crystal.userProfiles.getByUser, { userId: userIdHint })
       : null) ??
     (polarCustomerId
-      ? await rawClient.query(api.vexclaw.userProfiles.getByPolarCustomer, {
+      ? await rawClient.query(api.crystal.userProfiles.getByPolarCustomer, {
           polarCustomerId: String(polarCustomerId),
         })
       : null);
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ skipped: "no matching profile" });
   }
 
-  await rawClient.mutation(api.vexclaw.userProfiles.updateSubscription, {
+  await rawClient.mutation(api.crystal.userProfiles.updateSubscription, {
     userProfileId: profile._id,
     polarSubscriptionId: polarSubscriptionId ? String(polarSubscriptionId) : undefined,
     polarCustomerId: polarCustomerId ? String(polarCustomerId) : undefined,

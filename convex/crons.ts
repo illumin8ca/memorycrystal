@@ -3,11 +3,11 @@ import { api } from "./_generated/api";
 
 const crons = cronJobs();
 
-crons.interval("vexclaw-decay", { hours: 24 }, api.vexclaw.decay.applyDecay, {});
-crons.interval("vexclaw-consolidate", { hours: 12 }, api.vexclaw.consolidate.runConsolidation, {});
-crons.interval("vexclaw-cleanup", { hours: 24 }, api.vexclaw.cleanup.runCleanup, {});
-crons.interval("vexclaw-associate", { hours: 6 }, api.vexclaw.associations.buildAssociations, {});
-crons.interval("stmEmbedder", { minutes: 5 }, api.vexclaw.stmEmbedder.embedUnprocessedMessages, {});
-crons.daily("stm-expire", { hourUTC: 4, minuteUTC: 0 }, api.vexclaw.messages.expireOldMessages, {});
+crons.interval("crystal-decay", { hours: 24 }, api.crystal.decay.applyDecay, {});
+crons.interval("crystal-consolidate", { hours: 12 }, api.crystal.consolidate.runConsolidation, {});
+crons.interval("crystal-cleanup", { hours: 24 }, api.crystal.cleanup.runCleanup, {});
+crons.interval("crystal-associate", { hours: 6 }, api.crystal.associations.buildAssociations, {});
+crons.interval("stmEmbedder", { minutes: 5 }, api.crystal.stmEmbedder.embedUnprocessedMessages, {});
+crons.daily("stm-expire", { hourUTC: 4, minuteUTC: 0 }, api.crystal.messages.expireOldMessages, {});
 
 export default crons;

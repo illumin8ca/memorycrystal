@@ -116,12 +116,12 @@ const buildAssociationCandidates = async (ctx: any, memoryId: string, limit: num
   // In an Action context, ctx.db is not available — use ctx.runQuery to call a query function.
   // Fall back gracefully if associations aren't populated.
   const outgoing: any[] = await ctx.runQuery(
-    "vexclaw/associations:listByFrom" as any,
+    "crystal/associations:listByFrom" as any,
     { fromMemoryId: memoryId }
   ).catch(() => []);
 
   const incoming: any[] = await ctx.runQuery(
-    "vexclaw/associations:listByTo" as any,
+    "crystal/associations:listByTo" as any,
     { toMemoryId: memoryId }
   ).catch(() => []);
 
@@ -139,7 +139,7 @@ const buildAssociationCandidates = async (ctx: any, memoryId: string, limit: num
 
 const buildInjectionBlock = (memories: RecallResult[]) => {
   if (memories.length === 0) {
-    return "## 🧠 VexClaw Memory Recall\nNo matching memories found.";
+    return "## 🧠 Memory Crystal Memory Recall\nNo matching memories found.";
   }
 
   const lines = memories.map((memory) => {
@@ -152,7 +152,7 @@ const buildInjectionBlock = (memories: RecallResult[]) => {
     ].join("\n");
   });
 
-  return ["## 🧠 VexClaw Memory Recall", ...lines].join("\n");
+  return ["## 🧠 Memory Crystal Memory Recall", ...lines].join("\n");
 };
 
 export const recallMemories = action({
@@ -165,7 +165,7 @@ export const recallMemories = action({
     const includeArchived = args.includeArchived ?? false;
     const requestedTags = args.tags?.length ? normalizeTagList(args.tags) : undefined;
 
-    const vectorResults = (await ctx.vectorSearch("vexclawMemories", "by_embedding", {
+    const vectorResults = (await ctx.vectorSearch("crystalMemories", "by_embedding", {
       vector: args.embedding,
       limit: vectorTake,
       ...(includeArchived
@@ -183,7 +183,7 @@ export const recallMemories = action({
     const rawResults: Array<RecallCandidateDocument & { _id: string; _score: number }> = (
       await Promise.all(
         vectorResults.map(async (vr) => {
-          const doc = await ctx.runQuery("vexclaw/memories:getMemory" as any, { memoryId: vr._id });
+          const doc = await ctx.runQuery("crystal/memories:getMemory" as any, { memoryId: vr._id });
           if (!doc) return null;
           return { ...doc, _id: vr._id, _score: vr._score };
         })
@@ -256,7 +256,7 @@ export const recallMemories = action({
 
       for (const memory of finalMemories) {
         await ctx
-          .runMutation("vexclaw/memories:updateMemoryAccess" as any, { memoryId: memory.memoryId })
+          .runMutation("crystal/memories:updateMemoryAccess" as any, { memoryId: memory.memoryId })
           .catch(() => {});
       }
 
@@ -278,7 +278,7 @@ export const recallMemories = action({
           continue;
         }
 
-        const linked = await ctx.runQuery("vexclaw/memories:getMemory" as any, { memoryId: candidateId });
+        const linked = await ctx.runQuery("crystal/memories:getMemory" as any, { memoryId: candidateId });
         if (!linked || (!includeArchived && linked.archived)) {
           continue;
         }
@@ -313,7 +313,7 @@ export const recallMemories = action({
 
     for (const memory of finalMemories) {
       await ctx
-        .runMutation("vexclaw/memories:updateMemoryAccess" as any, { memoryId: memory.memoryId })
+        .runMutation("crystal/memories:updateMemoryAccess" as any, { memoryId: memory.memoryId })
         .catch(() => {});
     }
 

@@ -1,6 +1,6 @@
 # Config Guide — openclaw.json
 
-VexClaw registers two components with OpenClaw. Both require entries in `~/.openclaw/openclaw.json`.
+Memory Crystal registers two components with OpenClaw. Both require entries in `~/.openclaw/openclaw.json`.
 
 ## Rule: Never Edit Config at Runtime
 
@@ -23,23 +23,23 @@ Registered under `plugins.entries`. This fires after every AI response via `llm_
 ### Files required
 
 ```
-~/.openclaw/extensions/vexclaw-capture/
-  index.js      ← copy of plugin/plugin.js from this repo
+~/.openclaw/extensions/crystal-capture/
+  index.js      ← copy of plugin/capture-hook.js from this repo
 ```
 
 ### Setup commands (run outside OpenClaw runtime)
 
 ```bash
 # 1. Create extension dir and copy plugin
-mkdir -p ~/.openclaw/extensions/vexclaw-capture
-cp /path/to/openclaw-vexclaw/plugin/plugin.js ~/.openclaw/extensions/vexclaw-capture/index.js
+mkdir -p ~/.openclaw/extensions/crystal-capture
+cp /path/to/openclaw-crystal/plugin/capture-hook.js ~/.openclaw/extensions/crystal-capture/index.js
 
 # 2. Add to plugins.allow
-jq '.plugins.allow += ["vexclaw-capture"]' ~/.openclaw/openclaw.json > /tmp/oc.json \
+jq '.plugins.allow += ["crystal-capture"]' ~/.openclaw/openclaw.json > /tmp/oc.json \
   && mv /tmp/oc.json ~/.openclaw/openclaw.json
 
 # 3. Add to plugins.entries
-jq '.plugins.entries["vexclaw-capture"] = {"enabled": true}' ~/.openclaw/openclaw.json > /tmp/oc.json \
+jq '.plugins.entries["crystal-capture"] = {"enabled": true}' ~/.openclaw/openclaw.json > /tmp/oc.json \
   && mv /tmp/oc.json ~/.openclaw/openclaw.json
 
 # 4. Validate
@@ -54,24 +54,24 @@ openclaw gateway restart
 
 After restart, check the gateway log for:
 ```
-[vexclaw] capture hooks registered (message_received + llm_output)
+[crystal] capture hooks registered (message_received + llm_output)
 ```
 
 ---
 
 ## Environment Variables
 
-VexClaw reads env vars from `mcp-server/.env`. These must also be present in OpenClaw's environment for the plugin to work.
+Memory Crystal reads env vars from `mcp-server/.env`. These must also be present in OpenClaw's environment for the plugin to work.
 
-Required vars in `openclaw.json` under `hooks.internal.entries.vexclaw-memory.env` (or system env):
+Required vars in `openclaw.json` under `hooks.internal.entries.crystal-memory.env` (or system env):
 
 | Variable | Purpose |
 |---|---|
 | `CONVEX_URL` | `https://rightful-mockingbird-389.convex.cloud` |
 | `OPENAI_API_KEY` | For embeddings (text-embedding-3-small) and extraction (gpt-4o-mini) |
 | `OBSIDIAN_VAULT_PATH` | Absolute path to your Obsidian vault |
-| `VEXCLAW_ROOT` | Absolute path to the openclaw-vexclaw repo |
-| `VEXCLAW_ENV_FILE` | Absolute path to mcp-server/.env |
+| `CRYSTAL_ROOT` | Absolute path to the openclaw-crystal repo |
+| `CRYSTAL_ENV_FILE` | Absolute path to mcp-server/.env |
 
 ---
 
@@ -82,8 +82,8 @@ Required vars in `openclaw.json` under `hooks.internal.entries.vexclaw-memory.en
   "hooks": {
     "internal": {
       "entries": {
-        "vexclaw-memory": {
-          // Loads handler.js from ~/.openclaw/extensions/vexclaw-memory/
+        "crystal-memory": {
+          // Loads handler.js from ~/.openclaw/extensions/crystal-memory/
           // Registers before_model_resolve recall hook
           // Runs recall-hook.js as a subprocess before each AI response
           "enabled": true
@@ -92,10 +92,10 @@ Required vars in `openclaw.json` under `hooks.internal.entries.vexclaw-memory.en
     }
   },
   "plugins": {
-    "allow": ["vexclaw-capture"],   // Trusts the plugin as local code
+    "allow": ["crystal-capture"],   // Trusts the plugin as local code
     "entries": {
-      "vexclaw-capture": {
-        // Loads index.js from ~/.openclaw/extensions/vexclaw-capture/
+      "crystal-capture": {
+        // Loads index.js from ~/.openclaw/extensions/crystal-capture/
         // Registers message_received + llm_output hooks
         // Runs capture-hook.js as a subprocess after each AI response
         "enabled": true
@@ -113,4 +113,4 @@ Required vars in `openclaw.json` under `hooks.internal.entries.vexclaw-memory.en
 
 **Plugin not listed in gateway log** — the extension directory doesn't exist or `index.js` is missing.
 
-**Capture not firing** — check `plugins.allow` includes `"vexclaw-capture"` and gateway was restarted after config change.
+**Capture not firing** — check `plugins.allow` includes `"crystal-capture"` and gateway was restarted after config change.

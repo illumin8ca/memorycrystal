@@ -23,14 +23,14 @@ const MAX_ASSOC_TOTAL = 10000;
 const MAX_SAMPLE_CAP = 100;
 
 const associationInput = v.object({
-  fromMemoryId: v.id("vexclawMemories"),
-  toMemoryId: v.id("vexclawMemories"),
+  fromMemoryId: v.id("crystalMemories"),
+  toMemoryId: v.id("crystalMemories"),
   relationshipType: relationTypes,
   weight: v.float64(),
 });
 
 const associationQueryInput = v.object({
-  memoryId: v.id("vexclawMemories"),
+  memoryId: v.id("crystalMemories"),
   direction: v.optional(associationDirection),
   limit: v.optional(v.number()),
 });
@@ -57,7 +57,7 @@ export const upsertAssociation = mutation({
     }
 
     const existing = await ctx.db
-      .query("vexclawAssociations")
+      .query("crystalAssociations")
       .withIndex("by_from", (q) => q.eq("fromMemoryId", args.fromMemoryId))
       .filter((q) => q.eq("toMemoryId", args.toMemoryId as string))
       .take(1);
@@ -72,7 +72,7 @@ export const upsertAssociation = mutation({
       return existingAssoc._id;
     }
 
-    return ctx.db.insert("vexclawAssociations", {
+    return ctx.db.insert("crystalAssociations", {
       fromMemoryId: args.fromMemoryId,
       toMemoryId: args.toMemoryId,
       relationshipType: args.relationshipType,
@@ -92,11 +92,11 @@ export const getAssociationsForMemory = query({
     const associations =
       direction === "from"
         ? await ctx.db
-            .query("vexclawAssociations")
+            .query("crystalAssociations")
             .withIndex("by_from", (q) => q.eq("fromMemoryId", args.memoryId))
             .take(limit)
         : await ctx.db
-            .query("vexclawAssociations")
+            .query("crystalAssociations")
             .withIndex("by_to", (q) => q.eq("toMemoryId", args.memoryId))
             .take(limit);
 
@@ -112,7 +112,7 @@ export const getAssociationsForMemory = query({
 
 export const removeAssociation = mutation({
   args: {
-    associationId: v.id("vexclawAssociations"),
+    associationId: v.id("crystalAssociations"),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.associationId);
@@ -129,7 +129,7 @@ export const getMemoriesForAssociation = query({
   args: { limit: v.number() },
   handler: async (ctx, args) => {
     return ctx.db
-      .query("vexclawMemories")
+      .query("crystalMemories")
       .filter((q: any) => q.eq("archived", false))
       .take(args.limit);
   },
@@ -139,13 +139,13 @@ export const hasRecentAssociationQuery = query({
   args: { memoryId: v.string(), cutoffMs: v.number() },
   handler: async (ctx, args) => {
     const recentAsSource = await ctx.db
-      .query("vexclawAssociations")
+      .query("crystalAssociations")
       .withIndex("by_from", (q: any) => q.eq("fromMemoryId", args.memoryId as never))
       .filter((q: any) => q.gt("updatedAt", args.cutoffMs))
       .take(1);
     if (recentAsSource.length > 0) return true;
     const recentAsTarget = await ctx.db
-      .query("vexclawAssociations")
+      .query("crystalAssociations")
       .withIndex("by_to", (q: any) => q.eq("toMemoryId", args.memoryId as never))
       .filter((q: any) => q.gt("updatedAt", args.cutoffMs))
       .take(1);
@@ -156,7 +156,7 @@ export const hasRecentAssociationQuery = query({
 export const getTotalAssociationCount = query({
   args: { limit: v.number() },
   handler: async (ctx, args) => {
-    const sample = await ctx.db.query("vexclawAssociations").take(args.limit + 1);
+    const sample = await ctx.db.query("crystalAssociations").take(args.limit + 1);
     return sample.length;
   },
 });
@@ -173,7 +173,7 @@ export const upsertAssociationRecord = mutation({
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
-      .query("vexclawAssociations")
+      .query("crystalAssociations")
       .withIndex("by_from", (q: any) => q.eq("fromMemoryId", args.fromMemoryId as never))
       .filter((q: any) => q.eq("toMemoryId", args.toMemoryId))
       .take(1);
@@ -186,7 +186,7 @@ export const upsertAssociationRecord = mutation({
       });
       return { created: false };
     }
-    await ctx.db.insert("vexclawAssociations", {
+    await ctx.db.insert("crystalAssociations", {
       fromMemoryId: args.fromMemoryId as any,
       toMemoryId: args.toMemoryId as any,
       relationshipType: args.relationshipType,
@@ -201,7 +201,7 @@ export const upsertAssociationRecord = mutation({
 export const buildAssociations = action({
   args: buildAssociationsInput,
   handler: async (ctx, args) => {
-    const existingAssociations = await ctx.runQuery("vexclaw/associations:getTotalAssociationCount" as any, {
+    const existingAssociations = await ctx.runQuery("crystal/associations:getTotalAssociationCount" as any, {
       limit: MAX_ASSOC_TOTAL + 1,
     });
 
@@ -222,7 +222,7 @@ export const buildAssociations = action({
     const skipIfRecentBefore = Date.now() - SKIP_IF_RECENT_MS;
 
     const memories = (
-      await ctx.runQuery("vexclaw/associations:getMemoriesForAssociation" as any, {
+      await ctx.runQuery("crystal/associations:getMemoriesForAssociation" as any, {
         limit: maxSamples,
       })
     ).sort((a: { lastAccessedAt: number }, b: { lastAccessedAt: number }) => b.lastAccessedAt - a.lastAccessedAt);
@@ -233,7 +233,7 @@ export const buildAssociations = action({
 
     for (const source of memories) {
       const hasRecent = await ctx.runQuery(
-        "vexclaw/associations:hasRecentAssociationQuery" as any,
+        "crystal/associations:hasRecentAssociationQuery" as any,
         { memoryId: source._id, cutoffMs: skipIfRecentBefore }
       );
       if (hasRecent) {
@@ -243,7 +243,7 @@ export const buildAssociations = action({
 
       processed += 1;
 
-      const nearest = (await ctx.vectorSearch("vexclawMemories", "by_embedding", {
+      const nearest = (await ctx.vectorSearch("crystalMemories", "by_embedding", {
         vector: source.embedding,
         limit: neighborsPerMemory + 1,
         filter: (q: any) => q.eq("archived", false),
@@ -263,7 +263,7 @@ export const buildAssociations = action({
         const orderedTo = source._id < candidate._id ? candidate._id : source._id;
 
         const result = await ctx.runMutation(
-          "vexclaw/associations:upsertAssociationRecord" as any,
+          "crystal/associations:upsertAssociationRecord" as any,
           {
             fromMemoryId: orderedFrom,
             toMemoryId: orderedTo,
@@ -293,7 +293,7 @@ export const listByFrom = query({
   args: { fromMemoryId: v.string() },
   handler: async (ctx, args) => {
     return ctx.db
-      .query("vexclawAssociations")
+      .query("crystalAssociations")
       .withIndex("by_from", (q: any) => q.eq("fromMemoryId", args.fromMemoryId as never))
       .take(100);
   },
@@ -303,7 +303,7 @@ export const listByTo = query({
   args: { toMemoryId: v.string() },
   handler: async (ctx, args) => {
     return ctx.db
-      .query("vexclawAssociations")
+      .query("crystalAssociations")
       .withIndex("by_to", (q: any) => q.eq("toMemoryId", args.toMemoryId as never))
       .take(100);
   },

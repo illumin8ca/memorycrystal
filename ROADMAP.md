@@ -1,12 +1,12 @@
-# VexClaw Product Roadmap
+# Memory Crystal Product Roadmap
 
 ## Positioning
 
-VexClaw is now a drop-in memory plugin for OpenClaw with a single-command install path and a clean API-preserving evolution path.
+Memory Crystal is now a drop-in memory plugin for OpenClaw with a single-command install path and a clean API-preserving evolution path.
 
-- Install with one command: `npm run vexclaw:bootstrap`
+- Install with one command: `npm run crystal:bootstrap`
 - No framework changes required in OpenClaw
-- Existing MCP tool names remain stable (`vexclaw_*`)
+- Existing MCP tool names remain stable (`crystal_*`)
 - Optional graph migration available after launch via Convex action
 
 This is the canonical roadmap. `docs/ROADMAP.md` points to this file.
@@ -17,18 +17,18 @@ This is the canonical roadmap. `docs/ROADMAP.md` points to this file.
 - Convex memory stores and MCP tools operational for production use.
 - Core recall/remember pipeline and plugin health checks stabilized.
 - Phase-0 typed graph foundation implemented:
-  - New tables: `vexclawNodes`, `vexclawRelations`, `vexclawMemoryNodeLinks`
-  - Status query: `vexclaw/graph:getKnowledgeGraphFoundationStatus`
-  - Migration action: `vexclaw/graph:seedKnowledgeGraphFromMemory`
+  - New tables: `crystalNodes`, `crystalRelations`, `crystalMemoryNodeLinks`
+  - Status query: `crystal/graph:getKnowledgeGraphFoundationStatus`
+  - Migration action: `crystal/graph:seedKnowledgeGraphFromMemory`
 
 ## Product roadmap (now and next)
 
 ### Phase 5 — Persistent cognitive memory hardening (completed)
 
 - Spreading activation now wired by default in recall:
-  - `includeAssociations` is enabled by default in `handleRecallTool` and passed to `vexclaw/recall:recallMemories`.
+  - `includeAssociations` is enabled by default in `handleRecallTool` and passed to `crystal/recall:recallMemories`.
 - Session warm-up protocol completed:
-  - `vexclaw_wake` is now documented as required at the start of every new session in `AGENTS.md`.
+  - `crystal_wake` is now documented as required at the start of every new session in `AGENTS.md`.
 - MEMORY.md migration executed:
   - dry-run completed successfully.
   - live run completed but failed on network resolution (`ENOTFOUND` for Convex/OpenAI in this environment), with `CONVEX_URL` and `OPENAI_API_KEY` present.
@@ -43,7 +43,7 @@ Goal: reduce install risk and operational friction.
   - document required environment and local prerequisites more explicitly
   - reduce false-failure modes in health checks for non-interactive environments
 - Observability and ops:
-  - `vexclaw-stats` includes MCP/process health indicators
+  - `crystal-stats` includes MCP/process health indicators
   - daily/weekly memory integrity checks and alert thresholds
 - Documentation and packaging:
   - finalized install/uninstall + recovery docs
@@ -90,7 +90,7 @@ Goal: move from memory-linked graph to explicit typed graph reasoning.
 
 ## Commercial readiness checklist (sellability)
 
-To package VexClaw as a product today:
+To package Memory Crystal as a product today:
 
 - Drop-in install with one command and clear configuration prompts
 - Stable default MCP contract with backward compatibility

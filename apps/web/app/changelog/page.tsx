@@ -1,9 +1,10 @@
-import Link from "next/link";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 
 const changelogEntries = [
   {
     version: "v1.0.0",
-    title: "Phase 5: Spreading activation, vexclaw_wake, MEMORY.md migration",
+    title: "Phase 5: Spreading activation, crystal_wake, MEMORY.md migration",
     details:
       "Introduced graph-aware scoring for recall plus session wake-up briefings and full migration tooling for MEMORY.md stores.",
   },
@@ -35,59 +36,33 @@ const changelogEntries = [
 
 function BracketHeading({ children }: { children: string }) {
   return (
-    <p className="text-xs font-mono text-[#8899bb] tracking-[0.28em] uppercase mb-4">
-      <span className="text-[#00aaff]">[ </span>
+    <p className="text-xs font-mono text-secondary tracking-[0.28em] uppercase mb-4">
+      <span className="text-accent">[ </span>
       {children}
-      <span className="text-[#00aaff]"> ]</span>
+      <span className="text-accent"> ]</span>
     </p>
-  );
-}
-
-function ChangelogHeader() {
-  return (
-    <header className="border-b border-[rgba(255,255,255,0.08)] bg-[#050508]">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 h-16 flex items-center justify-between">
-        <Link href="/" className="font-heading text-lg tracking-wide neon-text">
-          MEMORY CRYSTAL
-        </Link>
-        <nav className="flex items-center gap-6 text-sm text-[#8899bb]">
-          <Link href="/docs" className="hover:text-[#00aaff]">
-            Docs
-          </Link>
-          <Link href="/pricing" className="hover:text-[#00aaff]">
-            Pricing
-          </Link>
-        </nav>
-      </div>
-    </header>
   );
 }
 
 export default function ChangelogPage() {
   return (
-    <div className="min-h-screen bg-[#050508] text-[#f0f4ff]">
-      <ChangelogHeader />
+    <div className="min-h-screen bg-void text-primary">
+      <Header />
       <main className="max-w-5xl mx-auto px-6 lg:px-8 py-16">
-        <BracketHeading children="CHANGELOG" />
+        <BracketHeading>CHANGELOG</BracketHeading>
         <h1 className="font-heading text-5xl md:text-6xl">What we shipped.</h1>
 
         <section className="mt-10 space-y-5">
           {changelogEntries.map((entry) => (
-            <article key={entry.version} className="glass-card border border-[rgba(255,255,255,0.16)] p-6">
-              <div className="font-mono text-[#00aaff] text-sm">{entry.version}</div>
+            <article key={entry.version} className="glass-card border border-border/45 p-6">
+              <div className="font-mono text-accent text-sm">{entry.version}</div>
               <h2 className="mt-2 text-2xl font-heading">{entry.title}</h2>
-              <p className="mt-3 text-[#8899bb] leading-relaxed">{entry.details}</p>
+              <p className="mt-3 text-secondary leading-relaxed">{entry.details}</p>
             </article>
           ))}
         </section>
       </main>
-      <footer className="border-t border-[rgba(255,255,255,0.08)] py-8">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 flex justify-between text-[#8899bb] text-sm">
-          <p className="font-heading text-lg neon-text">MEMORY CRYSTAL</p>
-          <p>Built on OpenClaw</p>
-          <p>© {new Date().getFullYear()} MEMORY CRYSTAL</p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

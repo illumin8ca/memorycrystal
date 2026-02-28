@@ -10,23 +10,23 @@
 
 import type * as auth from "../auth.js";
 import type * as crons from "../crons.js";
+import type * as crystal_apiKeys from "../crystal/apiKeys.js";
+import type * as crystal_associations from "../crystal/associations.js";
+import type * as crystal_checkpoints from "../crystal/checkpoints.js";
+import type * as crystal_cleanup from "../crystal/cleanup.js";
+import type * as crystal_consolidate from "../crystal/consolidate.js";
+import type * as crystal_dashboard from "../crystal/dashboard.js";
+import type * as crystal_decay from "../crystal/decay.js";
+import type * as crystal_graph from "../crystal/graph.js";
+import type * as crystal_memories from "../crystal/memories.js";
+import type * as crystal_messages from "../crystal/messages.js";
+import type * as crystal_recall from "../crystal/recall.js";
+import type * as crystal_sessions from "../crystal/sessions.js";
+import type * as crystal_stats from "../crystal/stats.js";
+import type * as crystal_stmEmbedder from "../crystal/stmEmbedder.js";
+import type * as crystal_userProfiles from "../crystal/userProfiles.js";
+import type * as crystal_wake from "../crystal/wake.js";
 import type * as http from "../http.js";
-import type * as vexclaw_apiKeys from "../vexclaw/apiKeys.js";
-import type * as vexclaw_associations from "../vexclaw/associations.js";
-import type * as vexclaw_checkpoints from "../vexclaw/checkpoints.js";
-import type * as vexclaw_cleanup from "../vexclaw/cleanup.js";
-import type * as vexclaw_consolidate from "../vexclaw/consolidate.js";
-import type * as vexclaw_dashboard from "../vexclaw/dashboard.js";
-import type * as vexclaw_decay from "../vexclaw/decay.js";
-import type * as vexclaw_graph from "../vexclaw/graph.js";
-import type * as vexclaw_memories from "../vexclaw/memories.js";
-import type * as vexclaw_messages from "../vexclaw/messages.js";
-import type * as vexclaw_recall from "../vexclaw/recall.js";
-import type * as vexclaw_sessions from "../vexclaw/sessions.js";
-import type * as vexclaw_stats from "../vexclaw/stats.js";
-import type * as vexclaw_stmEmbedder from "../vexclaw/stmEmbedder.js";
-import type * as vexclaw_userProfiles from "../vexclaw/userProfiles.js";
-import type * as vexclaw_wake from "../vexclaw/wake.js";
 
 import type {
   ApiFromModules,
@@ -37,23 +37,23 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   crons: typeof crons;
+  "crystal/apiKeys": typeof crystal_apiKeys;
+  "crystal/associations": typeof crystal_associations;
+  "crystal/checkpoints": typeof crystal_checkpoints;
+  "crystal/cleanup": typeof crystal_cleanup;
+  "crystal/consolidate": typeof crystal_consolidate;
+  "crystal/dashboard": typeof crystal_dashboard;
+  "crystal/decay": typeof crystal_decay;
+  "crystal/graph": typeof crystal_graph;
+  "crystal/memories": typeof crystal_memories;
+  "crystal/messages": typeof crystal_messages;
+  "crystal/recall": typeof crystal_recall;
+  "crystal/sessions": typeof crystal_sessions;
+  "crystal/stats": typeof crystal_stats;
+  "crystal/stmEmbedder": typeof crystal_stmEmbedder;
+  "crystal/userProfiles": typeof crystal_userProfiles;
+  "crystal/wake": typeof crystal_wake;
   http: typeof http;
-  "vexclaw/apiKeys": typeof vexclaw_apiKeys;
-  "vexclaw/associations": typeof vexclaw_associations;
-  "vexclaw/checkpoints": typeof vexclaw_checkpoints;
-  "vexclaw/cleanup": typeof vexclaw_cleanup;
-  "vexclaw/consolidate": typeof vexclaw_consolidate;
-  "vexclaw/dashboard": typeof vexclaw_dashboard;
-  "vexclaw/decay": typeof vexclaw_decay;
-  "vexclaw/graph": typeof vexclaw_graph;
-  "vexclaw/memories": typeof vexclaw_memories;
-  "vexclaw/messages": typeof vexclaw_messages;
-  "vexclaw/recall": typeof vexclaw_recall;
-  "vexclaw/sessions": typeof vexclaw_sessions;
-  "vexclaw/stats": typeof vexclaw_stats;
-  "vexclaw/stmEmbedder": typeof vexclaw_stmEmbedder;
-  "vexclaw/userProfiles": typeof vexclaw_userProfiles;
-  "vexclaw/wake": typeof vexclaw_wake;
 }>;
 
 /**

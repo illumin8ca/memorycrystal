@@ -53,7 +53,7 @@ const composeBriefing = (
       }>
     | undefined
 ) => {
-  const heading = ["## VexClaw Wake Briefing", `Channel: ${channel ?? "unknown"}`, ""];
+  const heading = ["## Memory Crystal Wake Briefing", `Channel: ${channel ?? "unknown"}`, ""];
   const openGoalLines = openGoals.length
     ? openGoals.map((memory) => `- [${memory.store}] ${memory.title}`)
     : ["- none"];
@@ -97,7 +97,7 @@ export const getWakePrompt = action({
     const channel = args.channel?.trim() || undefined;
     const candidateLimit = Math.max(requestedLimit * 5, 100);
 
-    const activeMemories = (await ctx.runQuery("vexclaw/sessions:getActiveMemories" as any, {
+    const activeMemories = (await ctx.runQuery("crystal/sessions:getActiveMemories" as any, {
       channel,
       limit: candidateLimit,
     })) as WakeMemory[];
@@ -115,14 +115,14 @@ export const getWakePrompt = action({
       .map((memory) => toWakeMemory(memory));
 
     const recentMessages = await ctx.runQuery(
-      "vexclaw/messages:getRecentMessages" as any,
+      "crystal/messages:getRecentMessages" as any,
       { limit: 20, channel, sinceMs: now - 24 * 60 * 60 * 1000 }
     );
 
     const wakePrompt = composeBriefing(channel, openGoals, recentDecisions, recentMessages);
     const injectedMemoryIds = [...openGoals, ...recentDecisions].map((memory) => memory.memoryId);
 
-    const sessionId = await ctx.runMutation("vexclaw/sessions:createSession" as any, {
+    const sessionId = await ctx.runMutation("crystal/sessions:createSession" as any, {
       channel: channel ?? "unknown",
       startedAt: now,
       lastActiveAt: now,
@@ -132,7 +132,7 @@ export const getWakePrompt = action({
       participants: [],
     });
 
-    const wakeStateId = await ctx.runMutation("vexclaw/sessions:createWakeState" as any, {
+    const wakeStateId = await ctx.runMutation("crystal/sessions:createWakeState" as any, {
       sessionId,
       injectedMemoryIds,
       wakePrompt,

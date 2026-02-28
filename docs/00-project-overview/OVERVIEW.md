@@ -1,4 +1,4 @@
-# VexClaw — Project Overview
+# Memory Crystal — Project Overview
 
 ## The Problem
 
@@ -6,15 +6,15 @@ AI assistants forget everything. Every conversation starts from zero. You repeat
 
 ## The Solution
 
-VexClaw is a persistent memory layer for AI assistants. It runs silently alongside your AI, capturing what matters and recalling it when relevant. Your AI stops being amnesiac and starts being coherent.
+Memory Crystal is a persistent memory layer for AI assistants. It runs silently alongside your AI, capturing what matters and recalling it when relevant. Your AI stops being amnesiac and starts being coherent.
 
 ## The Product
 
 ### For OpenClaw users (self-hosted)
-Install VexClaw as a plugin. Your conversations are captured automatically, stored in Convex, synced to Obsidian, and recalled before every AI response. Free to run on your own Convex + OpenAI accounts.
+Install Memory Crystal as a plugin. Your conversations are captured automatically, stored in Convex, synced to Obsidian, and recalled before every AI response. Free to run on your own Convex + OpenAI accounts.
 
 ### For everyone (SaaS — coming soon)
-Sign up at vexclaw.io, connect your AI assistant, get a dashboard. $20/month, pay as you go.
+Sign up at crystal.io, connect your AI assistant, get a dashboard. $20/month, pay as you go.
 
 Starting with OpenClaw. Expanding to ChatGPT, Claude.ai, and others via browser extension.
 
@@ -22,7 +22,7 @@ Starting with OpenClaw. Expanding to ChatGPT, Claude.ai, and others via browser 
 
 ## How Memory Works
 
-VexClaw uses a two-layer model:
+Memory Crystal uses a two-layer model:
 
 ### Short-term memory (STM)
 - Every message in and out, verbatim
@@ -52,12 +52,12 @@ VexClaw uses a two-layer model:
 
 ## The Obsidian Vault
 
-Your Obsidian vault gets two things from VexClaw:
+Your Obsidian vault gets two things from Memory Crystal:
 
 1. **Daily logs** (`logs/YYYY-MM-DD.md`) — full verbatim transcript of every conversation, every day, forever
 2. **Memory notes** (`episodic/`, `semantic/`, etc.) — one file per extracted memory, with metadata
 
-This gives you a permanent human-readable archive independent of Convex. Even if you cancel VexClaw, your memories stay in Obsidian.
+This gives you a permanent human-readable archive independent of Convex. Even if you cancel Memory Crystal, your memories stay in Obsidian.
 
 ---
 
@@ -76,9 +76,9 @@ This gives you a permanent human-readable archive independent of Convex. Even if
 
 ---
 
-## What Makes VexClaw Different
+## What Makes Memory Crystal Different
 
-Most "AI memory" products are RAG bolted onto a notes app. VexClaw is a cognitive model:
+Most "AI memory" products are RAG bolted onto a notes app. Memory Crystal is a cognitive model:
 
 - **Two-layer architecture** (STM + LTM) mirrors how human memory works
 - **5 specialised stores** instead of one undifferentiated blob

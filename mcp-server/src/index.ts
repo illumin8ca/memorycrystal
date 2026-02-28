@@ -18,7 +18,7 @@ import { handleSearchMessagesTool, searchMessagesTool } from "./tools/search-mes
 function createMcpServer() {
   const server = new Server(
     {
-      name: "vexclaw-mcp-server",
+      name: "crystal-mcp-server",
       version: "0.1.0",
     },
     {
@@ -49,25 +49,25 @@ function createMcpServer() {
     const { name, arguments: args } = request.params;
 
       switch (name) {
-        case "vexclaw_remember":
+        case "crystal_remember":
           return handleRememberTool(args);
-        case "vexclaw_recall":
+        case "crystal_recall":
           return handleRecallTool(args);
-        case "vexclaw_recent":
+        case "crystal_recent":
           return handleRecentTool(args);
-        case "vexclaw_search_messages":
+        case "crystal_search_messages":
           return handleSearchMessagesTool(args);
-        case "vexclaw_what_do_i_know":
+        case "crystal_what_do_i_know":
           return handleWhatDoIKnowTool(args);
-      case "vexclaw_why_did_we":
+      case "crystal_why_did_we":
         return handleWhyDidWeTool(args);
-      case "vexclaw_forget":
+      case "crystal_forget":
         return handleForgetTool(args);
-      case "vexclaw_stats":
+      case "crystal_stats":
         return handleStatsTool(args);
-      case "vexclaw_checkpoint":
+      case "crystal_checkpoint":
         return handleCheckpointTool(args);
-      case "vexclaw_wake":
+      case "crystal_wake":
         return handleWakeTool(args);
       default:
         return {
@@ -87,8 +87,8 @@ async function runStdio() {
 }
 
 async function runSse() {
-  const host = process.env.VEXCLAW_MCP_HOST ?? "127.0.0.1";
-  const parsedPort = Number(process.env.VEXCLAW_MCP_PORT);
+  const host = process.env.CRYSTAL_MCP_HOST ?? "127.0.0.1";
+  const parsedPort = Number(process.env.CRYSTAL_MCP_PORT);
   const port = Number.isFinite(parsedPort) ? parsedPort : 8788;
 
   let activeTransport: SSEServerTransport | null = null;
@@ -149,11 +149,11 @@ async function runSse() {
 
   httpServer.listen(port, host, () => {
     // eslint-disable-next-line no-console
-    console.log(`VexClaw MCP SSE listening on http://${host}:${port} (GET /sse, POST /messages)`);
+    console.log(`Memory Crystal MCP SSE listening on http://${host}:${port} (GET /sse, POST /messages)`);
   });
 }
 
-const mode = (process.env.VEXCLAW_MCP_MODE ?? "sse").toLowerCase();
+const mode = (process.env.CRYSTAL_MCP_MODE ?? "sse").toLowerCase();
 if (mode === "stdio") {
   await runStdio();
 } else {

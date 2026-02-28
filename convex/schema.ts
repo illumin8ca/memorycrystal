@@ -61,7 +61,7 @@ const graphLinkRole = v.union(v.literal("subject"), v.literal("object"), v.liter
 export default defineSchema({
   ...authTables,
 
-  vexclawMemories: defineTable({
+  crystalMemories: defineTable({
     store: memoryStore,
     category: memoryCategory,
     title: v.string(),
@@ -75,13 +75,13 @@ export default defineSchema({
     lastAccessedAt: v.number(),
     createdAt: v.number(),
     source: memorySource,
-    sessionId: v.optional(v.id("vexclawSessions")),
+    sessionId: v.optional(v.id("crystalSessions")),
     channel: v.optional(v.string()),
     tags: v.array(v.string()),
     archived: v.boolean(),
     archivedAt: v.optional(v.number()),
-    promotedFrom: v.optional(v.id("vexclawMemories")),
-    checkpointId: v.optional(v.id("vexclawCheckpoints")),
+    promotedFrom: v.optional(v.id("crystalMemories")),
+    checkpointId: v.optional(v.id("crystalCheckpoints")),
   })
     .vectorIndex("by_embedding", {
       vectorField: "embedding",
@@ -93,9 +93,9 @@ export default defineSchema({
     .index("by_last_accessed", ["lastAccessedAt"])
     .index("by_session", ["sessionId"]),
 
-  vexclawAssociations: defineTable({
-    fromMemoryId: v.id("vexclawMemories"),
-    toMemoryId: v.id("vexclawMemories"),
+  crystalAssociations: defineTable({
+    fromMemoryId: v.id("crystalMemories"),
+    toMemoryId: v.id("crystalMemories"),
     relationshipType: v.union(
       v.literal("supports"),
       v.literal("contradicts"),
@@ -111,7 +111,7 @@ export default defineSchema({
     .index("by_from", ["fromMemoryId"])
     .index("by_to", ["toMemoryId"]),
 
-  vexclawNodes: defineTable({
+  crystalNodes: defineTable({
     label: v.string(),
     nodeType: graphNodeType,
     alias: v.array(v.string()),
@@ -123,19 +123,19 @@ export default defineSchema({
     metadata: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
-    sourceMemoryIds: v.array(v.id("vexclawMemories")),
+    sourceMemoryIds: v.array(v.id("crystalMemories")),
     status: graphNodeStatus,
   })
     .index("by_canonical_key", ["canonicalKey"])
     .index("by_node_type", ["nodeType"])
     .index("by_status", ["status"]),
 
-  vexclawRelations: defineTable({
-    fromNodeId: v.id("vexclawNodes"),
-    toNodeId: v.id("vexclawNodes"),
+  crystalRelations: defineTable({
+    fromNodeId: v.id("crystalNodes"),
+    toNodeId: v.id("crystalNodes"),
     relationType: graphRelationType,
     weight: v.float64(),
-    evidenceMemoryIds: v.array(v.id("vexclawMemories")),
+    evidenceMemoryIds: v.array(v.id("crystalMemories")),
     evidenceWindow: v.optional(
       v.object({
         from: v.optional(v.number()),
@@ -148,16 +148,16 @@ export default defineSchema({
     confidenceReason: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
-    promotedFrom: v.optional(v.id("vexclawRelations")),
+    promotedFrom: v.optional(v.id("crystalRelations")),
   })
     .index("by_from_node", ["fromNodeId"])
     .index("by_to_node", ["toNodeId"])
     .index("by_relation", ["relationType", "fromNodeId", "toNodeId"])
     .index("by_from_to_relation", ["fromNodeId", "toNodeId", "relationType"]),
 
-  vexclawMemoryNodeLinks: defineTable({
-    memoryId: v.id("vexclawMemories"),
-    nodeId: v.id("vexclawNodes"),
+  crystalMemoryNodeLinks: defineTable({
+    memoryId: v.id("crystalMemories"),
+    nodeId: v.id("crystalNodes"),
     role: graphLinkRole,
     linkConfidence: v.float64(),
     createdAt: v.number(),
@@ -165,7 +165,7 @@ export default defineSchema({
     .index("by_memory", ["memoryId"])
     .index("by_node", ["nodeId"]),
 
-  vexclawSessions: defineTable({
+  crystalSessions: defineTable({
     channel: v.string(),
     channelId: v.optional(v.string()),
     startedAt: v.number(),
@@ -176,18 +176,18 @@ export default defineSchema({
     summary: v.optional(v.string()),
     participants: v.array(v.string()),
     model: v.optional(v.string()),
-    checkpointId: v.optional(v.id("vexclawCheckpoints")),
+    checkpointId: v.optional(v.id("crystalCheckpoints")),
   }).index("by_channel", ["channel", "lastActiveAt"]),
 
-  vexclawCheckpoints: defineTable({
+  crystalCheckpoints: defineTable({
     label: v.string(),
     description: v.optional(v.string()),
     createdAt: v.number(),
     createdBy: v.union(v.literal("gerald"), v.literal("andy")),
-    sessionId: v.optional(v.id("vexclawSessions")),
+    sessionId: v.optional(v.id("crystalSessions")),
     memorySnapshot: v.array(
       v.object({
-        memoryId: v.id("vexclawMemories"),
+        memoryId: v.id("crystalMemories"),
         strength: v.float64(),
         content: v.string(),
         store: v.string(),
@@ -197,14 +197,14 @@ export default defineSchema({
     tags: v.array(v.string()),
   }).index("by_created", ["createdAt"]),
 
-  vexclawWakeState: defineTable({
-    sessionId: v.id("vexclawSessions"),
-    injectedMemoryIds: v.array(v.id("vexclawMemories")),
+  crystalWakeState: defineTable({
+    sessionId: v.id("crystalSessions"),
+    injectedMemoryIds: v.array(v.id("crystalMemories")),
     wakePrompt: v.string(),
     createdAt: v.number(),
   }).index("by_session", ["sessionId"]),
 
-  vexclawMessages: defineTable({
+  crystalMessages: defineTable({
     role: v.union(v.literal("user"), v.literal("assistant"), v.literal("system")),
     content: v.string(),
     channel: v.optional(v.string()),
@@ -226,7 +226,7 @@ export default defineSchema({
       filterFields: ["channel", "role"],
     }),
 
-  vexclawUserProfiles: defineTable({
+  crystalUserProfiles: defineTable({
     userId: v.string(),
     polarSubscriptionId: v.optional(v.string()),
     polarCustomerId: v.optional(v.string()),
@@ -244,7 +244,7 @@ export default defineSchema({
     .index("by_polar_subscription", ["polarSubscriptionId"])
     .index("by_polar_customer", ["polarCustomerId"]),
 
-  vexclawApiKeys: defineTable({
+  crystalApiKeys: defineTable({
     userId: v.string(),
     keyHash: v.string(),
     label: v.optional(v.string()),
