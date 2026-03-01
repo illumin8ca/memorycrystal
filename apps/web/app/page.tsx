@@ -119,12 +119,6 @@ const pricingPlans = [
   },
 ];
 
-const formatLinks = (href: string, children: string) => (
-  <Link href={href} className="font-mono text-xs uppercase tracking-[0.16em] text-accent hover:text-primary">
-    {children}
-  </Link>
-);
-
 function BracketHeading({ children }: { children: string }) {
   return (
     <p className="text-xs font-mono text-secondary tracking-[0.25em] uppercase">
@@ -293,9 +287,9 @@ export default function HomePage() {
 
         <section className="border-y border-border/25 py-20">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <BracketHeading children="THE PROBLEM" />
+            <BracketHeading>THE PROBLEM</BracketHeading>
             <h2 className="mt-2 font-heading text-3xl md:text-5xl">Your AI is brilliant in the moment.<br/>And completely amnesiac the next.</h2>
-            <p className="mt-4 text-secondary max-w-2xl">Context compaction, session resets, workspace switches — every one of them erases the shared understanding you built. The model hasn't gotten dumber. It just can't remember. Memory Crystal fixes that.</p>
+            <p className="mt-4 text-secondary max-w-2xl">Context compaction, session resets, workspace switches — every one of them erases the shared understanding you built. The model hasn&apos;t gotten dumber. It just can&apos;t remember. Memory Crystal fixes that.</p>
             <div className="mt-10 grid gap-4 md:grid-cols-3">
               {problemCards.map((card) => (
                 <article key={card.title} className="glass-card border-border p-7">
@@ -313,7 +307,7 @@ export default function HomePage() {
             <div className="crystal-grid h-full w-full opacity-35" />
           </div>
           <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
-            <BracketHeading children="HOW IT WORKS" />
+            <BracketHeading>HOW IT WORKS</BracketHeading>
             <h2 className="mt-2 font-heading text-3xl md:text-5xl">Persistent memory that survives everything.</h2>
             <div className="mt-10 relative">
               <div className="hidden md:block absolute left-24 right-24 top-11 h-[1px] bg-[rgba(33,128,214,0.28)]" />
@@ -341,7 +335,7 @@ export default function HomePage() {
 
         <section className="border-y border-border/25 py-20">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <BracketHeading children="SUPPORTED PLATFORMS" />
+            <BracketHeading>SUPPORTED PLATFORMS</BracketHeading>
             <h2 className="mt-2 font-heading text-3xl md:text-5xl">One memory layer. Every AI coding agent.</h2>
             <div className="mt-10 grid gap-4 md:grid-cols-3">
               {platformCards.map((platform) => (
@@ -360,7 +354,7 @@ export default function HomePage() {
             <div className="crystal-grid h-full w-full opacity-25" />
           </div>
           <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
-            <BracketHeading children="WHAT YOU GET" />
+            <BracketHeading>WHAT YOU GET</BracketHeading>
             <h2 className="mt-2 font-heading text-3xl md:text-5xl">Not just storage — a complete memory system.</h2>
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {featureCards.map((feature) => (
@@ -376,7 +370,7 @@ export default function HomePage() {
 
         <section id="pricing" className="relative border-y border-border/25 py-20">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <BracketHeading children="PRICING" />
+            <BracketHeading>PRICING</BracketHeading>
             <div className="mt-2 flex flex-wrap items-center gap-5 justify-between">
               <h2 className="font-heading text-3xl md:text-5xl">Start free. Scale when ready.</h2>
               <div className="inline-flex border border-border/45">
@@ -442,7 +436,7 @@ export default function HomePage() {
         <section className="relative border-b border-border/25 py-20">
           <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_25%,rgba(33,128,214,0.2),transparent_60%)]" />
           <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
-            <BracketHeading children="ROADMAP" />
+            <BracketHeading>ROADMAP</BracketHeading>
             <h2 className="mt-2 font-heading text-3xl md:text-5xl">Where we&apos;re going.</h2>
             <div className="mt-8 grid gap-4">
               {roadmapItems.map((item) => (
