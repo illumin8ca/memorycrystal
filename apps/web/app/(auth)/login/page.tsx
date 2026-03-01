@@ -39,8 +39,10 @@ export default function LoginPage() {
     setError("");
     setLoadingMode("github");
     try {
-      await signIn("github", { redirectTo: "/dashboard" });
-      router.push("/dashboard");
+      const result = await signIn("github", { redirectTo: "/dashboard" });
+      if (result.signingIn) {
+        router.push("/dashboard");
+      }
     } catch (err) {
       setError((err as Error).message ?? "GitHub sign in failed");
       setLoadingMode("idle");
@@ -51,8 +53,10 @@ export default function LoginPage() {
     setError("");
     setLoadingMode("google");
     try {
-      await signIn("google", { redirectTo: "/dashboard" });
-      router.push("/dashboard");
+      const result = await signIn("google", { redirectTo: "/dashboard" });
+      if (result.signingIn) {
+        router.push("/dashboard");
+      }
     } catch (err) {
       setError((err as Error).message ?? "Google sign in failed");
       setLoadingMode("idle");
