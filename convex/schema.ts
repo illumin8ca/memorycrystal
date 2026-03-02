@@ -62,7 +62,7 @@ export default defineSchema({
   ...authTables,
 
   crystalMemories: defineTable({
-    userId: v.string(),
+    userId: v.optional(v.string()),
     store: memoryStore,
     category: memoryCategory,
     title: v.string(),
@@ -114,7 +114,7 @@ export default defineSchema({
     .index("by_to", ["toMemoryId"]),
 
   crystalNodes: defineTable({
-    userId: v.string(),
+    userId: v.optional(v.string()),
     label: v.string(),
     nodeType: graphNodeType,
     alias: v.array(v.string()),
@@ -136,7 +136,7 @@ export default defineSchema({
     .index("by_status", ["status"]),
 
   crystalRelations: defineTable({
-    userId: v.string(),
+    userId: v.optional(v.string()),
     fromNodeId: v.id("crystalNodes"),
     toNodeId: v.id("crystalNodes"),
     relationType: graphRelationType,
@@ -163,7 +163,7 @@ export default defineSchema({
     .index("by_from_to_relation", ["fromNodeId", "toNodeId", "relationType"]),
 
   crystalMemoryNodeLinks: defineTable({
-    userId: v.string(),
+    userId: v.optional(v.string()),
     memoryId: v.id("crystalMemories"),
     nodeId: v.id("crystalNodes"),
     role: graphLinkRole,
@@ -175,7 +175,7 @@ export default defineSchema({
     .index("by_node", ["nodeId"]),
 
   crystalSessions: defineTable({
-    userId: v.string(),
+    userId: v.optional(v.string()),
     channel: v.string(),
     channelId: v.optional(v.string()),
     startedAt: v.number(),
@@ -192,7 +192,7 @@ export default defineSchema({
     .index("by_channel", ["channel", "lastActiveAt"]),
 
   crystalCheckpoints: defineTable({
-    userId: v.string(),
+    userId: v.optional(v.string()),
     label: v.string(),
     description: v.optional(v.string()),
     createdAt: v.number(),
@@ -213,7 +213,7 @@ export default defineSchema({
     .index("by_created", ["createdAt"]),
 
   crystalWakeState: defineTable({
-    userId: v.string(),
+    userId: v.optional(v.string()),
     sessionId: v.id("crystalSessions"),
     injectedMemoryIds: v.array(v.id("crystalMemories")),
     wakePrompt: v.string(),

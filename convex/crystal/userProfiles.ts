@@ -1,4 +1,4 @@
-import { mutation, query } from "../_generated/server";
+import { internalQuery, mutation, query } from "../_generated/server";
 import { v } from "convex/values";
 
 export const createOrGet = mutation({
@@ -61,6 +61,15 @@ export const isSubscribed = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
     return profile?.subscriptionStatus === "active" || profile?.subscriptionStatus === "trialing";
+  },
+});
+
+// Used by background jobs to iterate all users
+export const listAllUserIds = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const profiles = await ctx.db.query("crystalUserProfiles").collect();
+    return profiles.map((p) => p.userId);
   },
 });
 

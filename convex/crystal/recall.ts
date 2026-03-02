@@ -165,25 +165,24 @@ export const recallMemories = action({
     const includeArchived = args.includeArchived ?? false;
     const requestedTags = args.tags?.length ? normalizeTagList(args.tags) : undefined;
 
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = identity.subject;
+
     const vectorResults = (await ctx.vectorSearch("crystalMemories", "by_embedding", {
       vector: args.embedding,
       limit: vectorTake,
-      ...(includeArchived
-        ? {}
-        : {
-            /**
-             * The vector filter callback builder type is not strongly exported by the
-             * Convex SDK in this context, so `q` remains `any` intentionally.
-             */
-            filter: (q: any) => q.eq("archived", false),
-          }),
+      filter: (q: any) =>
+        includeArchived
+          ? q.eq("userId", userId)
+          : q.eq("userId", userId).and(q.eq("archived", false)),
     })) as Array<{ _id: string; _score: number }>;
 
     // Fetch full documents for each vector result (vectorSearch only returns _id + _score)
     const rawResults: Array<RecallCandidateDocument & { _id: string; _score: number }> = (
       await Promise.all(
         vectorResults.map(async (vr) => {
-          const doc = await ctx.runQuery("crystal/memories:getMemory" as any, { memoryId: vr._id });
+          const doc = await ctx.runQuery("crystal/memories:getMemoryInternal" as any, { memoryId: vr._id });
           if (!doc) return null;
           return { ...doc, _id: vr._id, _score: vr._score };
         })
@@ -278,7 +277,7 @@ export const recallMemories = action({
           continue;
         }
 
-        const linked = await ctx.runQuery("crystal/memories:getMemory" as any, { memoryId: candidateId });
+        const linked = await ctx.runQuery("crystal/memories:getMemoryInternal" as any, { memoryId: candidateId });
         if (!linked || (!includeArchived && linked.archived)) {
           continue;
         }

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { action, mutation, query } from "../_generated/server";
+import { action, internalMutation, internalQuery, mutation, query } from "../_generated/server";
+import { internal } from "../_generated/api";
 
 const nowMs = () => Date.now();
 const MAX_BATCH = 200;
@@ -9,10 +10,13 @@ const cleanupInput = v.object({
   strengthFloor: v.optional(v.float64()),
 });
 
-export const getMemoriesForCleanup = query({
-  args: { limit: v.number() },
+export const getMemoriesForCleanup = internalQuery({
+  args: { userId: v.string(), limit: v.number() },
   handler: async (ctx, args) => {
-    return ctx.db.query("crystalMemories").take(args.limit);
+    return ctx.db
+      .query("crystalMemories")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId).eq("archived", false))
+      .take(args.limit);
   },
 });
 
@@ -36,21 +40,21 @@ export const getAssociationsByTo = query({
   },
 });
 
-export const deleteAssociation = mutation({
+export const deleteAssociation = internalMutation({
   args: { associationId: v.id("crystalAssociations") },
   handler: async (ctx, args) => {
     await ctx.db.delete(args.associationId);
   },
 });
 
-export const deleteMemory = mutation({
+export const deleteMemory = internalMutation({
   args: { memoryId: v.id("crystalMemories") },
   handler: async (ctx, args) => {
     await ctx.db.delete(args.memoryId);
   },
 });
 
-export const archiveWeakMemory = mutation({
+export const archiveWeakMemory = internalMutation({
   args: { memoryId: v.id("crystalMemories"), archivedAt: v.number() },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.memoryId, { archived: true, archivedAt: args.archivedAt });
@@ -58,22 +62,11 @@ export const archiveWeakMemory = mutation({
 });
 
 const deleteAssociationsForMemory = async (ctx: any, memoryId: string) => {
-  const outgoing = await ctx.runQuery("crystal/cleanup:getAssociationsByFrom" as any, {
-    memoryId,
-    limit: 200,
-  });
-
-  const incoming = await ctx.runQuery("crystal/cleanup:getAssociationsByTo" as any, {
-    memoryId,
-    limit: 200,
-  });
-
+  const outgoing = await ctx.runQuery("crystal/cleanup:getAssociationsByFrom" as any, { memoryId, limit: 200 });
+  const incoming = await ctx.runQuery("crystal/cleanup:getAssociationsByTo" as any, { memoryId, limit: 200 });
   for (const association of [...outgoing, ...incoming]) {
-    await ctx.runMutation("crystal/cleanup:deleteAssociation" as any, {
-      associationId: association._id,
-    });
+    await ctx.runMutation(internal.crystal.cleanup.deleteAssociation, { associationId: association._id });
   }
-
   return outgoing.length + incoming.length;
 };
 
@@ -84,51 +77,48 @@ export const runCleanup = action({
     const sensoryTtlMs = Math.max(args.sensoryTtlHours ?? 24, 1) * 60 * 60 * 1000;
     const strengthFloor = Math.max(args.strengthFloor ?? 0.1, 0);
 
-    const memoryBatch = await ctx.runQuery("crystal/cleanup:getMemoriesForCleanup" as any, {
-      limit: MAX_BATCH + 1,
-    });
-    const memories = memoryBatch.slice(0, MAX_BATCH);
-    const deferred = Math.max(0, memoryBatch.length - MAX_BATCH);
-    if (deferred > 0) {
-      console.log(`[runCleanup] deferred ${deferred} memories to next run`);
-    }
+    const userIds: string[] = await ctx.runQuery(internal.crystal.userProfiles.listAllUserIds, {});
 
-    let archivedByStrength = 0;
     let deletedSensory = 0;
+    let archivedByStrength = 0;
     let removedAssociations = 0;
     let errors = 0;
 
-    for (const memory of memories) {
-      try {
-        const isExpiredSensory = memory.store === "sensory" && !memory.archived && now - memory.createdAt >= sensoryTtlMs;
-        const isWeakMemory = !memory.archived && memory.strength < strengthFloor;
+    for (const userId of userIds) {
+      const memoryBatch: any[] = await ctx.runQuery(internal.crystal.cleanup.getMemoriesForCleanup, {
+        userId,
+        limit: MAX_BATCH + 1,
+      });
 
-        if (isExpiredSensory) {
-          removedAssociations += await deleteAssociationsForMemory(ctx, memory._id);
-          await ctx.runMutation("crystal/cleanup:deleteMemory" as any, {
-            memoryId: memory._id,
-          });
-          deletedSensory += 1;
-          continue;
-        }
+      const memories = memoryBatch.slice(0, MAX_BATCH);
+      const deferred = Math.max(0, memoryBatch.length - MAX_BATCH);
+      if (deferred > 0) {
+        console.log(`[runCleanup] user ${userId}: deferred ${deferred} memories to next run`);
+      }
 
-        if (isWeakMemory) {
-          await ctx.runMutation("crystal/cleanup:archiveWeakMemory" as any, {
-            memoryId: memory._id,
-            archivedAt: now,
-          });
-          archivedByStrength += 1;
+      for (const memory of memories) {
+        try {
+          const isExpiredSensory = memory.store === "sensory" && now - memory.createdAt >= sensoryTtlMs;
+          const isWeakMemory = memory.strength < strengthFloor;
+
+          if (isExpiredSensory) {
+            removedAssociations += await deleteAssociationsForMemory(ctx, memory._id);
+            await ctx.runMutation(internal.crystal.cleanup.deleteMemory, { memoryId: memory._id });
+            deletedSensory += 1;
+            continue;
+          }
+
+          if (isWeakMemory) {
+            await ctx.runMutation(internal.crystal.cleanup.archiveWeakMemory, { memoryId: memory._id, archivedAt: now });
+            archivedByStrength += 1;
+          }
+        } catch (error) {
+          errors += 1;
+          console.log(`[runCleanup] failed to process memory ${memory._id}`, error);
         }
-      } catch (error) {
-        errors += 1;
-        console.log(`[runCleanup] failed to process memory ${memory._id}`, error);
       }
     }
 
-    return {
-      deleted: deletedSensory,
-      archived: archivedByStrength,
-      errors,
-    };
+    return { deleted: deletedSensory, archived: archivedByStrength, removedAssociations, errors };
   },
 });

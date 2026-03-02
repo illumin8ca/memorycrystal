@@ -1,24 +1,32 @@
 import { query } from "../_generated/server";
 
 const nowMs = () => Date.now();
-
 const msPerDay = 24 * 60 * 60 * 1000;
 
 export const getMemoryStats = query({
   args: {},
   handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = identity.subject;
+
     const sampleLimit = 500;
     const sample = await ctx.db
       .query("crystalMemories")
-      .withIndex("by_last_accessed", (q) => q.gte("lastAccessedAt", 0))
+      .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
       .take(sampleLimit + 1);
 
     const bounded = sample.length > sampleLimit;
-    const memories = sample.slice(0, sampleLimit);
+    const active = sample.slice(0, sampleLimit);
     const now = nowMs();
 
-    const active = memories.filter((memory) => !memory.archived);
-    const archivedCount = memories.length - active.length;
+    // Also count archived
+    const archivedSample = await ctx.db
+      .query("crystalMemories")
+      .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", true))
+      .take(sampleLimit);
+
+    const archivedCount = archivedSample.length;
 
     const byStore = active.reduce<Record<string, number>>((acc, memory) => {
       acc[memory.store] = (acc[memory.store] ?? 0) + 1;
@@ -29,7 +37,7 @@ export const getMemoryStats = query({
     const averageStrength = active.length > 0 ? strengthSum / active.length : 0;
 
     const last24h = now - msPerDay;
-    const capturesLast24h = memories.filter((memory) => memory.createdAt >= last24h).length;
+    const capturesLast24h = active.filter((memory) => memory.createdAt >= last24h).length;
 
     const strongest = active
       .slice()
@@ -44,7 +52,7 @@ export const getMemoryStats = query({
       }));
 
     return {
-      totalMemories: memories.length,
+      totalMemories: active.length + archivedCount,
       archivedCount,
       byStore,
       avgStrength: averageStrength,

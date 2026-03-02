@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { internalMutation, mutation, query } from "../_generated/server";
 
 const nowMs = () => Date.now();
 
@@ -90,13 +90,15 @@ const dedupeTags = (tags: string[]): string[] => {
     .map((tag) => tag.trim())
     .map((tag) => tag.toLowerCase())
     .filter((tag) => tag.length > 0);
-
   return Array.from(new Set(normalized));
 };
 
 export const createMemory = mutation({
   args: createMemoryInput,
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = identity.subject;
     const now = nowMs();
 
     const candidates = await ctx.db
@@ -104,7 +106,8 @@ export const createMemory = mutation({
       .withIndex("by_store_category", (q) =>
         q.eq("store", args.store).eq("category", args.category).eq("archived", false)
       )
-      .filter((q) => q.eq("title", args.title))
+      .filter((q) => q.eq(q.field("userId"), userId))
+      .filter((q) => q.eq(q.field("title"), args.title))
       .take(5);
 
     const duplicate = candidates.find(
@@ -129,6 +132,7 @@ export const createMemory = mutation({
     }
 
     const memoryId = await ctx.db.insert("crystalMemories", {
+      userId,
       store: args.store,
       category: args.category,
       title: args.title,
@@ -155,88 +159,133 @@ export const createMemory = mutation({
   },
 });
 
+// Internal version for background jobs that pass userId explicitly
+export const createMemoryInternal = internalMutation({
+  args: { ...createMemoryInput.fields, userId: v.string() },
+  handler: async (ctx, args) => {
+    const now = nowMs();
+    const { userId, ...rest } = args;
+
+    const candidates = await ctx.db
+      .query("crystalMemories")
+      .withIndex("by_store_category", (q) =>
+        q.eq("store", args.store).eq("category", args.category).eq("archived", false)
+      )
+      .filter((q) => q.eq(q.field("userId"), userId))
+      .filter((q) => q.eq(q.field("title"), args.title))
+      .take(5);
+
+    const duplicate = candidates.find(
+      (memory) =>
+        memory.content === args.content &&
+        (args.channel === undefined || args.channel === memory.channel) &&
+        memory.source === (args.source ?? "conversation")
+    );
+
+    if (duplicate) {
+      const existingTags = dedupeTags((duplicate.tags ?? []).concat(args.tags ?? []));
+      await ctx.db.patch(duplicate._id, {
+        lastAccessedAt: now,
+        confidence: args.confidence ?? duplicate.confidence,
+        strength: Math.max(duplicate.strength, args.strength ?? duplicate.strength),
+        valence: args.valence ?? duplicate.valence,
+        arousal: args.arousal ?? duplicate.arousal,
+        tags: existingTags,
+        channel: args.channel ?? duplicate.channel,
+      });
+      return duplicate._id;
+    }
+
+    return ctx.db.insert("crystalMemories", {
+      userId,
+      store: rest.store,
+      category: rest.category,
+      title: rest.title,
+      content: rest.content,
+      embedding: rest.embedding,
+      strength: rest.strength ?? 1,
+      confidence: rest.confidence ?? 0.7,
+      valence: rest.valence ?? 0,
+      arousal: rest.arousal ?? 0.3,
+      accessCount: 0,
+      lastAccessedAt: now,
+      createdAt: now,
+      source: rest.source ?? "conversation",
+      sessionId: rest.sessionId,
+      channel: rest.channel,
+      tags: dedupeTags(rest.tags ?? []),
+      archived: rest.archived ?? false,
+      archivedAt: rest.archivedAt,
+      promotedFrom: rest.promotedFrom,
+      checkpointId: rest.checkpointId,
+    });
+  },
+});
+
 export const listMemories = query({
   args: memoryListInput,
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = identity.subject;
+
     const requestedLimit = args.limit ?? 50;
     const normalizedLimit = Math.min(Math.max(requestedLimit, 1), 200);
-    const hasStore = args.store !== undefined;
-    const hasCategory = args.category !== undefined;
     const hasStrengthBounds = args.minStrength !== undefined || args.maxStrength !== undefined;
 
-    const query =
-      hasStore
-        ? ctx.db.query("crystalMemories").withIndex("by_store_category", (q: any) => {
-          let queryBuilder = q;
-
-          if (hasStore) {
-            queryBuilder = queryBuilder.eq("store", args.store as never);
-          }
-
-          if (hasCategory) {
-            queryBuilder = queryBuilder.eq("category", args.category as never);
-          }
-
-          return queryBuilder;
-        })
-      : hasStrengthBounds
-      ? ctx.db.query("crystalMemories").withIndex("by_strength", (q: any) => {
-          let queryBuilder = q;
-
-          if (args.minStrength !== undefined) {
-            queryBuilder = queryBuilder.gte("strength", args.minStrength);
-          }
-
-          if (args.maxStrength !== undefined) {
-            queryBuilder = queryBuilder.lte("strength", args.maxStrength);
-          }
-
-          return queryBuilder;
-        })
-      : ctx.db.query("crystalMemories").withIndex("by_last_accessed", (q) => q.gte("lastAccessedAt", 0));
-
-    // Fetch a larger buffer to account for post-query filtering (channel, tags, archived, strength).
-    // Without this, take(limit) may exhaust before enough rows survive the filter.
+    // Use by_user index as the base, filter further in memory
     const fetchBuffer = Math.min(normalizedLimit * 4, 800);
-    const memories = await query.take(fetchBuffer);
+    let baseQuery;
 
-    const filtered = memories.filter((memory) => {
-      if (args.store !== undefined && memory.store !== args.store) {
-        return false;
-      }
+    if (hasStrengthBounds) {
+      baseQuery = ctx.db
+        .query("crystalMemories")
+        .withIndex("by_strength", (q) => {
+          let qb = q as any;
+          if (args.minStrength !== undefined) qb = qb.gte("strength", args.minStrength);
+          if (args.maxStrength !== undefined) qb = qb.lte("strength", args.maxStrength);
+          return qb;
+        })
+        .filter((q) => q.eq(q.field("userId"), userId));
+    } else {
+      baseQuery = ctx.db
+        .query("crystalMemories")
+        .withIndex("by_user", (q) => {
+          const archived = args.archived ?? false;
+          return q.eq("userId", userId).eq("archived", archived);
+        });
+    }
 
-      if (args.category !== undefined && memory.category !== args.category) {
-        return false;
-      }
+    const memories = await (baseQuery as any).take(fetchBuffer);
 
-      if (args.channel !== undefined && memory.channel !== args.channel) {
-        return false;
-      }
-
-      if (args.tags?.length && !args.tags.every((tag) => memory.tags.includes(tag))) {
-        return false;
-      }
-
-      if (args.archived !== undefined && memory.archived !== args.archived) {
-        return false;
-      }
-
-      if (args.minStrength !== undefined && memory.strength < args.minStrength) {
-        return false;
-      }
-
-      if (args.maxStrength !== undefined && memory.strength > args.maxStrength) {
-        return false;
-      }
-
+    const filtered = memories.filter((memory: any) => {
+      if (args.store !== undefined && memory.store !== args.store) return false;
+      if (args.category !== undefined && memory.category !== args.category) return false;
+      if (args.channel !== undefined && memory.channel !== args.channel) return false;
+      if (args.tags?.length && !args.tags.every((tag: string) => memory.tags.includes(tag))) return false;
+      if (args.archived !== undefined && memory.archived !== args.archived) return false;
+      if (args.minStrength !== undefined && memory.strength < args.minStrength) return false;
+      if (args.maxStrength !== undefined && memory.strength > args.maxStrength) return false;
       return true;
     });
 
-    return filtered.sort((a, b) => b.lastAccessedAt - a.lastAccessedAt).slice(0, normalizedLimit);
+    return filtered.sort((a: any, b: any) => b.lastAccessedAt - a.lastAccessedAt).slice(0, normalizedLimit);
   },
 });
 
 export const getMemory = query({
+  args: { memoryId: v.id("crystalMemories") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const memory = await ctx.db.get(args.memoryId);
+    if (!memory || memory.userId !== identity.subject) return null;
+    return memory;
+  },
+});
+
+// Internal get — no auth check, used by background jobs and recall action
+export const getMemoryInternal = query({
   args: { memoryId: v.id("crystalMemories") },
   handler: async (ctx, args) => {
     return ctx.db.get(args.memoryId);
@@ -247,16 +296,12 @@ export const updateMemoryAccess = mutation({
   args: { memoryId: v.id("crystalMemories") },
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.memoryId);
-    if (!existing) {
-      return null;
-    }
-
+    if (!existing) return null;
     const now = Date.now();
     await ctx.db.patch(args.memoryId, {
       accessCount: existing.accessCount + 1,
       lastAccessedAt: now,
     });
-
     return ctx.db.get(args.memoryId);
   },
 });
@@ -264,13 +309,12 @@ export const updateMemoryAccess = mutation({
 export const updateMemory = mutation({
   args: updateMemoryInput,
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
     const existing = await ctx.db.get(args.memoryId);
-    if (!existing) {
-      return null;
-    }
+    if (!existing || existing.userId !== identity.subject) return null;
 
     const patch: Record<string, unknown> = {};
-
     if (args.store !== undefined) patch.store = args.store;
     if (args.category !== undefined) patch.category = args.category;
     if (args.title !== undefined) patch.title = args.title;
@@ -295,10 +339,10 @@ export const updateMemory = mutation({
 export const forgetMemory = mutation({
   args: forgetMemoryInput,
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
     const existing = await ctx.db.get(args.memoryId);
-    if (!existing) {
-      return null;
-    }
+    if (!existing || existing.userId !== identity.subject) return null;
 
     await ctx.db.patch(args.memoryId, {
       archived: true,
