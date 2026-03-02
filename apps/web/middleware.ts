@@ -12,10 +12,21 @@ const isProtectedRoute = createRouteMatcher([
   "/checkpoints(.*)",
 ]);
 
+const isAuthRoute = createRouteMatcher(["/login", "/signup"]);
+
 export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
-  if (isProtectedRoute(request) && !(await convexAuth.isAuthenticated())) {
+  const isAuthed = await convexAuth.isAuthenticated();
+
+  // Redirect unauthenticated users away from protected routes
+  if (isProtectedRoute(request) && !isAuthed) {
     return nextjsMiddlewareRedirect(request, "/login");
   }
+
+  // Redirect authenticated users away from auth pages and homepage
+  if (isAuthed && (isAuthRoute(request) || request.nextUrl.pathname === "/")) {
+    return nextjsMiddlewareRedirect(request, "/dashboard");
+  }
+
   return;
 }, { verbose: true });
 
