@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { action, mutation, query } from "../_generated/server";
+import { action, internalAction, internalMutation, internalQuery } from "../_generated/server";
 import { internal } from "../_generated/api";
 
 const dayMs = 24 * 60 * 60 * 1000;
@@ -15,6 +15,7 @@ const consolidationInput = v.object({
 
 type MemoryRecord = {
   _id: string;
+  userId?: string;
   store: string;
   category: string;
   title: string;
@@ -72,7 +73,7 @@ const summarizeMemories = (docs: MemoryRecord[]) =>
     )
     .join("\n\n");
 
-export const getSensoryMemories = query({
+export const getSensoryMemories = internalQuery({
   args: { limit: v.number(), userId: v.string() },
   handler: async (ctx, args) => {
     return ctx.db
@@ -83,14 +84,14 @@ export const getSensoryMemories = query({
   },
 });
 
-export const getMemoryForConsolidation = query({
+export const getMemoryForConsolidation = internalQuery({
   args: { memoryId: v.id("crystalMemories") },
   handler: async (ctx, args) => {
     return ctx.db.get(args.memoryId);
   },
 });
 
-export const archiveConsolidatedMemory = mutation({
+export const archiveConsolidatedMemory = internalMutation({
   args: { memoryId: v.id("crystalMemories"), archivedAt: v.number(), userId: v.string() },
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.memoryId);
@@ -99,7 +100,7 @@ export const archiveConsolidatedMemory = mutation({
   },
 });
 
-export const insertConsolidatedMemory = mutation({
+export const insertConsolidatedMemory = internalMutation({
   args: {
     userId: v.string(),
     store: v.string(),
@@ -125,7 +126,7 @@ export const insertConsolidatedMemory = mutation({
 });
 
 // Per-user consolidation (called by runConsolidation for each user)
-export const consolidateForUser = action({
+export const consolidateForUser = internalAction({
   args: { userId: v.string(), ...consolidationInput.fields },
   handler: async (ctx, args) => {
     const { userId, ...consolidationArgs } = args;
@@ -146,7 +147,7 @@ async function runConsolidationForUser(ctx: any, userId: string, args: {
     const clusterThreshold = Math.min(Math.max(args.clusterThreshold ?? 0.75, 0.65), 0.98);
     const neighborWindow = 8;
 
-    const sensory = (await ctx.runQuery("crystal/consolidate:getSensoryMemories" as any, {
+    const sensory = (await ctx.runQuery(internal.crystal.consolidate.getSensoryMemories, {
       limit: MAX_BATCH + 1,
       userId,
     })) as MemoryRecord[];
@@ -183,7 +184,7 @@ async function runConsolidationForUser(ctx: any, userId: string, args: {
           vector: memory.embedding,
           limit: neighborWindow + 1,
           filter: (q: any) =>
-            q.and(q.eq("store", "sensory"), q.eq("archived", false)),
+            q.and(q.eq("userId", userId), q.eq("store", "sensory"), q.eq("archived", false)),
         })) as unknown as ScoredCandidate[];
 
         const cluster = nearest
@@ -206,14 +207,14 @@ async function runConsolidationForUser(ctx: any, userId: string, args: {
         const docs = (
           await Promise.all(
             cluster.map(async (memoryId) =>
-              ctx.runQuery("crystal/consolidate:getMemoryForConsolidation" as any, {
+              ctx.runQuery(internal.crystal.consolidate.getMemoryForConsolidation, {
                 memoryId,
               }) as Promise<MemoryRecord | null>
             )
           )
         ).filter(
           (item): item is MemoryRecord =>
-            item !== null && item.store === "sensory" && item.archived === false
+            item !== null && item.userId === userId && item.store === "sensory" && item.archived === false
         );
 
         if (docs.length < minClusterSize) {
@@ -235,7 +236,7 @@ async function runConsolidationForUser(ctx: any, userId: string, args: {
           summarizeMemories(docs),
         ].join("\n\n");
 
-        const episodicId = await ctx.runMutation("crystal/consolidate:insertConsolidatedMemory" as any, {
+        const episodicId = await ctx.runMutation(internal.crystal.consolidate.insertConsolidatedMemory, {
           userId,
           store: "episodic",
           category: "event",
@@ -256,7 +257,7 @@ async function runConsolidationForUser(ctx: any, userId: string, args: {
         });
 
         for (const item of docs) {
-          await ctx.runMutation("crystal/consolidate:archiveConsolidatedMemory" as any, {
+          await ctx.runMutation(internal.crystal.consolidate.archiveConsolidatedMemory, {
             memoryId: item._id,
             archivedAt: now,
             userId,
@@ -272,10 +273,10 @@ async function runConsolidationForUser(ctx: any, userId: string, args: {
 
     for (const episodicId of createdEpisodic) {
       try {
-        const episodic = (await ctx.runQuery("crystal/consolidate:getMemoryForConsolidation" as any, {
+        const episodic = (await ctx.runQuery(internal.crystal.consolidate.getMemoryForConsolidation, {
           memoryId: episodicId,
         })) as (MemoryRecord & { _id: string }) | null;
-        if (!episodic) {
+        if (!episodic || episodic.userId !== userId) {
           continue;
         }
 
@@ -288,7 +289,7 @@ async function runConsolidationForUser(ctx: any, userId: string, args: {
           vector: episodic.embedding,
           limit: 3,
           filter: (q: any) =>
-            q.and(q.eq("store", "semantic"), q.eq("archived", false)),
+            q.and(q.eq("userId", userId), q.eq("store", "semantic"), q.eq("archived", false)),
         })) as Array<{ _score?: number; score?: number }>;
 
         const topScore = semanticCandidates[0]?._score ?? semanticCandidates[0]?.score ?? 0;
@@ -296,7 +297,7 @@ async function runConsolidationForUser(ctx: any, userId: string, args: {
           continue;
         }
 
-        await ctx.runMutation("crystal/consolidate:insertConsolidatedMemory" as any, {
+        await ctx.runMutation(internal.crystal.consolidate.insertConsolidatedMemory, {
           userId,
           store: "semantic",
           category: episodic.category,

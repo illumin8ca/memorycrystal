@@ -68,21 +68,13 @@ export async function POST(request: NextRequest) {
     subscription.customer_id ??
     subscription.customer?.id ??
     subscription.customer?.customerId;
-  const userIdHint =
-    subscription.userId ??
-    subscription.user_id ??
-    subscription.user?.id ??
-    subscription.metadata?.userId;
-
   const subscriptionStatus = toSubscriptionStatus(subscription.status);
 
   const profile =
-    (userIdHint
-      ? await rawClient.query(api.crystal.userProfiles.getByUser, { userId: userIdHint })
-      : null) ??
     (polarCustomerId
       ? await rawClient.query(api.crystal.userProfiles.getByPolarCustomer, {
           polarCustomerId: String(polarCustomerId),
+          webhookToken: secret,
         })
       : null);
 
@@ -95,6 +87,7 @@ export async function POST(request: NextRequest) {
     polarSubscriptionId: polarSubscriptionId ? String(polarSubscriptionId) : undefined,
     polarCustomerId: polarCustomerId ? String(polarCustomerId) : undefined,
     subscriptionStatus,
+    webhookToken: secret,
   });
 
   return NextResponse.json({ received: true });

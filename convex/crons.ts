@@ -1,5 +1,5 @@
 import { cronJobs } from "convex/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 const crons = cronJobs();
 
@@ -8,6 +8,6 @@ crons.interval("crystal-consolidate", { hours: 12 }, api.crystal.consolidate.run
 crons.interval("crystal-cleanup", { hours: 24 }, api.crystal.cleanup.runCleanup, {});
 crons.interval("crystal-associate", { hours: 6 }, api.crystal.associations.buildAssociations, {});
 crons.interval("stmEmbedder", { minutes: 5 }, api.crystal.stmEmbedder.embedUnprocessedMessages, {});
-crons.daily("stm-expire", { hourUTC: 4, minuteUTC: 0 }, api.crystal.messages.expireOldMessages, {});
+crons.daily("stm-expire", { hourUTC: 4, minuteUTC: 0 }, internal.crystal.messages.expireOldMessages, {});
 
 export default crons;

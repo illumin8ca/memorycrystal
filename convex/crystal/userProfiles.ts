@@ -1,14 +1,19 @@
-import { internalQuery, mutation, query } from "../_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { v } from "convex/values";
 
 export const createOrGet = mutation({
-  args: { userId: v.string() },
-  handler: async (ctx, { userId }) => {
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = identity.subject;
+
     const existing = await ctx.db
       .query("crystalUserProfiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
     if (existing) return existing;
+
     const now = Date.now();
     const id = await ctx.db.insert("crystalUserProfiles", {
       userId,
@@ -21,24 +26,48 @@ export const createOrGet = mutation({
 });
 
 export const getByUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    return ctx.db.query("crystalUserProfiles").withIndex("by_user", (q) => q.eq("userId", identity.subject)).first();
+  },
+});
+
+export const isSubscribed = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+
+    const profile = await ctx.db
+      .query("crystalUserProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .first();
+    return profile?.subscriptionStatus === "active" || profile?.subscriptionStatus === "trialing";
+  },
+});
+
+// Internal helpers for webhook/server jobs
+export const getByUserInternal = internalQuery({
   args: { userId: v.string() },
   handler: async (ctx, { userId }) =>
     ctx.db.query("crystalUserProfiles").withIndex("by_user", (q) => q.eq("userId", userId)).first(),
 });
 
-export const getByPolarCustomer = query({
+export const getByPolarCustomerInternal = internalQuery({
   args: { polarCustomerId: v.string() },
   handler: async (ctx, { polarCustomerId }) =>
     ctx.db.query("crystalUserProfiles").withIndex("by_polar_customer", (q) => q.eq("polarCustomerId", polarCustomerId)).first(),
 });
 
-export const getByPolarSubscription = query({
+export const getByPolarSubscriptionInternal = internalQuery({
   args: { polarSubscriptionId: v.string() },
   handler: async (ctx, { polarSubscriptionId }) =>
     ctx.db.query("crystalUserProfiles").withIndex("by_polar_subscription", (q) => q.eq("polarSubscriptionId", polarSubscriptionId)).first(),
 });
 
-export const updateSubscription = mutation({
+export const updateSubscriptionInternal = internalMutation({
   args: {
     userProfileId: v.id("crystalUserProfiles"),
     polarSubscriptionId: v.optional(v.string()),
@@ -53,23 +82,41 @@ export const updateSubscription = mutation({
   },
 });
 
-export const isSubscribed = query({
-  args: { userId: v.string() },
-  handler: async (ctx, { userId }) => {
-    const profile = await ctx.db
-      .query("crystalUserProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-    return profile?.subscriptionStatus === "active" || profile?.subscriptionStatus === "trialing";
-  },
-});
-
 // Used by background jobs to iterate all users
 export const listAllUserIds = internalQuery({
   args: {},
   handler: async (ctx) => {
     const profiles = await ctx.db.query("crystalUserProfiles").collect();
     return profiles.map((p) => p.userId);
+  },
+});
+
+export const getByPolarCustomer = query({
+  args: { polarCustomerId: v.string(), webhookToken: v.string() },
+  handler: async (ctx, { polarCustomerId, webhookToken }) => {
+    if (!process.env.POLAR_WEBHOOK_SECRET || webhookToken !== process.env.POLAR_WEBHOOK_SECRET) {
+      throw new Error("Unauthorized");
+    }
+    return ctx.db.query("crystalUserProfiles").withIndex("by_polar_customer", (q) => q.eq("polarCustomerId", polarCustomerId)).first();
+  },
+});
+
+export const updateSubscription = mutation({
+  args: {
+    userProfileId: v.id("crystalUserProfiles"),
+    polarSubscriptionId: v.optional(v.string()),
+    polarCustomerId: v.optional(v.string()),
+    subscriptionStatus: v.union(
+      v.literal("active"), v.literal("inactive"), v.literal("cancelled"), v.literal("trialing")
+    ),
+    plan: v.optional(v.string()),
+    webhookToken: v.string(),
+  },
+  handler: async (ctx, { userProfileId, webhookToken, ...fields }) => {
+    if (!process.env.POLAR_WEBHOOK_SECRET || webhookToken !== process.env.POLAR_WEBHOOK_SECRET) {
+      throw new Error("Unauthorized");
+    }
+    await ctx.db.patch(userProfileId, { ...fields, updatedAt: Date.now() });
   },
 });
 

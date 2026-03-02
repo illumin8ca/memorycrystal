@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { action } from "../_generated/server";
+import { internal } from "../_generated/api";
 
 const nowMs = () => Date.now();
 const millisecondsPerDay = 24 * 60 * 60 * 1000;
@@ -112,17 +113,17 @@ const dedupeById = (items: RecallResult[]) => {
  * like `runQuery`, and the SDK typing does not expose complete context shapes
  * for these helpers in this file, so `any` is an intentional choice.
  */
-const buildAssociationCandidates = async (ctx: any, memoryId: string, limit: number) => {
+const buildAssociationCandidates = async (ctx: any, userId: string, memoryId: string, limit: number) => {
   // In an Action context, ctx.db is not available — use ctx.runQuery to call a query function.
   // Fall back gracefully if associations aren't populated.
   const outgoing: any[] = await ctx.runQuery(
-    "crystal/associations:listByFrom" as any,
-    { fromMemoryId: memoryId }
+    internal.crystal.associations.listByFrom,
+    { userId, fromMemoryId: memoryId }
   ).catch(() => []);
 
   const incoming: any[] = await ctx.runQuery(
-    "crystal/associations:listByTo" as any,
-    { toMemoryId: memoryId }
+    internal.crystal.associations.listByTo,
+    { userId, toMemoryId: memoryId }
   ).catch(() => []);
 
   return [...outgoing, ...incoming]
@@ -179,15 +180,15 @@ export const recallMemories = action({
     })) as Array<{ _id: string; _score: number }>;
 
     // Fetch full documents for each vector result (vectorSearch only returns _id + _score)
-    const rawResults: Array<RecallCandidateDocument & { _id: string; _score: number }> = (
+    const rawResults = (
       await Promise.all(
         vectorResults.map(async (vr) => {
-          const doc = await ctx.runQuery("crystal/memories:getMemoryInternal" as any, { memoryId: vr._id });
+          const doc = await ctx.runQuery(internal.crystal.memories.getMemoryInternal, { memoryId: vr._id as any });
           if (!doc) return null;
           return { ...doc, _id: vr._id, _score: vr._score };
         })
       )
-    ).filter((d): d is RecallCandidateDocument & { _id: string; _score: number } => d !== null);
+    ).filter((d) => d !== null) as Array<RecallCandidateDocument & { _id: string; _score: number; userId?: string }>;
 
     const now = nowMs();
 
@@ -269,7 +270,7 @@ export const recallMemories = action({
     const expanded: RecallResult[] = [];
 
     for (const topResult of finalMemories) {
-      const assocCandidates = await buildAssociationCandidates(ctx, topResult.memoryId, 3);
+      const assocCandidates = await buildAssociationCandidates(ctx, userId, topResult.memoryId, 3);
 
       for (const assoc of assocCandidates) {
         const candidateId = topResult.memoryId === assoc.sourceId ? assoc.targetId : assoc.sourceId;
@@ -277,8 +278,8 @@ export const recallMemories = action({
           continue;
         }
 
-        const linked = await ctx.runQuery("crystal/memories:getMemoryInternal" as any, { memoryId: candidateId });
-        if (!linked || (!includeArchived && linked.archived)) {
+        const linked = await ctx.runQuery(internal.crystal.memories.getMemoryInternal, { memoryId: candidateId as any });
+        if (!linked || linked.userId !== userId || (!includeArchived && linked.archived)) {
           continue;
         }
 

@@ -34,7 +34,7 @@ const requestEmbedding = async (apiKey: string, content: string): Promise<number
 
 export const embedUnprocessedMessages = action({
   args: { limit: v.optional(v.number()) },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ processed: number; succeeded: number; failed: number; skipped: number }> => {
     const limit = Math.min(args.limit ?? 50, 100);
     const apiKey = process.env.OPENAI_API_KEY;
     const stats = { processed: 0, succeeded: 0, failed: 0, skipped: 0 };
@@ -59,7 +59,7 @@ export const embedUnprocessedMessages = action({
           continue;
         }
 
-        await ctx.runMutation("crystal/messages:updateMessageEmbedding" as any, {
+        await ctx.runMutation(internal.crystal.messages.updateMessageEmbedding, {
           messageId: message._id,
           embedding,
         });

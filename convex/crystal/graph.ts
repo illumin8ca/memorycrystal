@@ -45,6 +45,7 @@ const mapAssociationType = (relationshipType: string): GraphRelationType => rela
 
 const ensureNode = async (
   ctx: any,
+  userId: string,
   canonicalKey: string,
   label: string,
   nodeType: MemoryNodeType,
@@ -54,7 +55,7 @@ const ensureNode = async (
   const existing = (
     await ctx.db
       .query("crystalNodes")
-      .withIndex("by_canonical_key", (q: any) => q.eq("canonicalKey", canonicalKey))
+      .withIndex("by_user_canonical", (q: any) => q.eq("userId", userId).eq("canonicalKey", canonicalKey))
       .take(1)
   )[0] as { _id: string; sourceMemoryIds: string[] } | undefined;
 
@@ -70,6 +71,7 @@ const ensureNode = async (
 
   const now = nowMs();
   const nodeId = await ctx.db.insert("crystalNodes", {
+    userId,
     label,
     nodeType,
     alias: [],
@@ -90,6 +92,7 @@ const ensureNode = async (
 
 const upsertNodeLink = async (
   ctx: any,
+  userId: string,
   memoryId: string,
   nodeId: string,
   role: "subject" | "object" | "topic",
@@ -108,6 +111,7 @@ const upsertNodeLink = async (
   }
 
   return ctx.db.insert("crystalMemoryNodeLinks", {
+    userId,
     memoryId,
     nodeId,
     role,
@@ -118,6 +122,7 @@ const upsertNodeLink = async (
 
 const upsertRelation = async (
   ctx: any,
+  userId: string,
   fromNodeId: string,
   toNodeId: string,
   relationType: GraphRelationType,
@@ -158,6 +163,7 @@ const upsertRelation = async (
   }
 
   await ctx.db.insert("crystalRelations", {
+    userId,
     fromNodeId,
     toNodeId,
     relationType,
@@ -224,7 +230,7 @@ export const seedKnowledgeGraphFromMemory = mutation({
       const existing = (
         await ctx.db
           .query("crystalNodes")
-          .withIndex("by_canonical_key", (q: any) => q.eq("canonicalKey", canonical))
+          .withIndex("by_user_canonical", (q: any) => q.eq("userId", userId).eq("canonicalKey", canonical))
           .take(1)
       )[0] as { _id: string } | undefined;
       if (existing) {
@@ -234,6 +240,7 @@ export const seedKnowledgeGraphFromMemory = mutation({
       const label = normalizeText(memory.title || memory.content?.slice(0, 80) || "Untitled memory");
       return ensureNode(
         ctx,
+        userId,
         canonical,
         label,
         "event",
@@ -253,13 +260,14 @@ export const seedKnowledgeGraphFromMemory = mutation({
         created.nodes += 1;
       }
 
-      await upsertNodeLink(ctx, memoryId, source.nodeId, "topic", 0.95);
+      await upsertNodeLink(ctx, userId, memoryId, source.nodeId, "topic", 0.95);
       created.links += 1;
 
       if (memory.channel) {
         const channelCanonical = canonicalize("channel", normalizeChannel(memory.channel));
         const channel = await ensureNode(
           ctx,
+          userId,
           channelCanonical,
           normalizeChannel(memory.channel),
           "channel",
@@ -269,7 +277,7 @@ export const seedKnowledgeGraphFromMemory = mutation({
         if (channel.created) {
           created.nodes += 1;
         }
-        await upsertNodeLink(ctx, memoryId, channel.nodeId, "topic", 0.65);
+        await upsertNodeLink(ctx, userId, memoryId, channel.nodeId, "topic", 0.65);
         created.links += 1;
       }
 
@@ -282,6 +290,7 @@ export const seedKnowledgeGraphFromMemory = mutation({
         const tagCanonical = canonicalize("concept", normalizedTag);
         const tagNode = await ensureNode(
           ctx,
+          userId,
           tagCanonical,
           normalizedTag,
           "concept",
@@ -291,7 +300,7 @@ export const seedKnowledgeGraphFromMemory = mutation({
         if (tagNode.created) {
           created.nodes += 1;
         }
-        await upsertNodeLink(ctx, memoryId, tagNode.nodeId, "topic", 0.8);
+        await upsertNodeLink(ctx, userId, memoryId, tagNode.nodeId, "topic", 0.8);
         created.links += 1;
       }
     }
@@ -299,13 +308,13 @@ export const seedKnowledgeGraphFromMemory = mutation({
     if (includeAssociations) {
       const associations = await ctx.db
         .query("crystalAssociations")
-        .filter((q: any) => q.gte("weight", 0))
+        .filter((q: any) => q.gte(q.field("weight"), 0))
         .take(maxAssociations);
 
       for (const association of associations) {
-        const sourceMemory = (await ctx.db.get(association.fromMemoryId)) as { _id: string; channel?: string } | null;
-        const targetMemory = (await ctx.db.get(association.toMemoryId)) as { _id: string; channel?: string } | null;
-        if (!sourceMemory || !targetMemory) {
+        const sourceMemory = (await ctx.db.get(association.fromMemoryId)) as { _id: string; userId?: string; channel?: string } | null;
+        const targetMemory = (await ctx.db.get(association.toMemoryId)) as { _id: string; userId?: string; channel?: string } | null;
+        if (!sourceMemory || !targetMemory || sourceMemory.userId !== userId || targetMemory.userId !== userId) {
           continue;
         }
 
@@ -324,6 +333,7 @@ export const seedKnowledgeGraphFromMemory = mutation({
 
         const relation = await upsertRelation(
           ctx,
+          userId,
           sourceNode.nodeId,
           targetNode.nodeId,
           mapAssociationType(association.relationshipType),
@@ -339,8 +349,8 @@ export const seedKnowledgeGraphFromMemory = mutation({
 
         created.relations += relation.created;
         created.updatedRelations += relation.updated;
-        await upsertNodeLink(ctx, sourceMemory._id, sourceNode.nodeId, "subject", 0.7);
-        await upsertNodeLink(ctx, targetMemory._id, targetNode.nodeId, "object", 0.7);
+        await upsertNodeLink(ctx, userId, sourceMemory._id, sourceNode.nodeId, "subject", 0.7);
+        await upsertNodeLink(ctx, userId, targetMemory._id, targetNode.nodeId, "object", 0.7);
       }
     }
 

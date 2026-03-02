@@ -20,6 +20,16 @@ const toClampedLimit = (value: number | undefined, min: number, max: number, fal
   return Math.min(Math.max(Math.floor(requested), min), max);
 };
 
+type SearchMessageResult = {
+  messageId: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  channel?: string;
+  sessionKey?: string;
+  timestamp: number;
+  score: number;
+};
+
 export const logMessage = mutation({
   args: {
     role: roleEnum,
@@ -85,7 +95,7 @@ export const logMessageInternal = internalMutation({
   },
 });
 
-export const updateMessageEmbedding = mutation({
+export const updateMessageEmbedding = internalMutation({
   args: {
     messageId: v.id("crystalMessages"),
     embedding: v.array(v.float64()),
@@ -205,7 +215,7 @@ export const getMessageInternal = internalQuery({
   handler: async (ctx, args) => ctx.db.get(args.messageId),
 });
 
-export const expireOldMessages = mutation({
+export const expireOldMessages = internalMutation({
   args: {},
   handler: async (ctx, _args) => {
     const now = Date.now();
@@ -231,7 +241,7 @@ export const searchMessages = action({
     channel: v.optional(v.string()),
     sinceMs: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<SearchMessageResult[]> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const userId = identity.subject;
@@ -249,9 +259,9 @@ export const searchMessages = action({
       ...(filter ? { filter } : {}),
     })) as Array<{ _id: string; _score: number }>;
 
-    const messages = await Promise.all(
+    const messages: Array<SearchMessageResult | null> = await Promise.all(
       vectorResults.map(async (result) => {
-        const message = await ctx.runQuery(internal.crystal.messages.getMessageInternal, { messageId: result._id });
+        const message = await ctx.runQuery(internal.crystal.messages.getMessageInternal, { messageId: result._id as any });
         if (!message) return null;
         // Enforce userId ownership post-fetch
         if (message.userId !== userId) return null;
@@ -269,6 +279,6 @@ export const searchMessages = action({
       })
     );
 
-    return messages.filter((entry): entry is NonNullable<(typeof messages)[number]> => entry !== null);
+    return messages.filter((entry): entry is SearchMessageResult => entry !== null);
   },
 });

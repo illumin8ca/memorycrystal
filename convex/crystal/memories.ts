@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, mutation, query } from "../_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "../_generated/server";
 
 const nowMs = () => Date.now();
 
@@ -285,7 +285,7 @@ export const getMemory = query({
 });
 
 // Internal get — no auth check, used by background jobs and recall action
-export const getMemoryInternal = query({
+export const getMemoryInternal = internalQuery({
   args: { memoryId: v.id("crystalMemories") },
   handler: async (ctx, args) => {
     return ctx.db.get(args.memoryId);
@@ -295,8 +295,10 @@ export const getMemoryInternal = query({
 export const updateMemoryAccess = mutation({
   args: { memoryId: v.id("crystalMemories") },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
     const existing = await ctx.db.get(args.memoryId);
-    if (!existing) return null;
+    if (!existing || existing.userId !== identity.subject) return null;
     const now = Date.now();
     await ctx.db.patch(args.memoryId, {
       accessCount: existing.accessCount + 1,

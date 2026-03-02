@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { action, internalMutation, internalQuery, mutation, query } from "../_generated/server";
+import { action, internalMutation, internalQuery } from "../_generated/server";
 import { internal } from "../_generated/api";
 
 const nowMs = () => Date.now();
@@ -20,7 +20,7 @@ export const getMemoriesForCleanup = internalQuery({
   },
 });
 
-export const getAssociationsByFrom = query({
+export const getAssociationsByFrom = internalQuery({
   args: { memoryId: v.id("crystalMemories"), limit: v.number() },
   handler: async (ctx, args) => {
     return ctx.db
@@ -30,7 +30,7 @@ export const getAssociationsByFrom = query({
   },
 });
 
-export const getAssociationsByTo = query({
+export const getAssociationsByTo = internalQuery({
   args: { memoryId: v.id("crystalMemories"), limit: v.number() },
   handler: async (ctx, args) => {
     return ctx.db
@@ -62,8 +62,8 @@ export const archiveWeakMemory = internalMutation({
 });
 
 const deleteAssociationsForMemory = async (ctx: any, memoryId: string) => {
-  const outgoing = await ctx.runQuery("crystal/cleanup:getAssociationsByFrom" as any, { memoryId, limit: 200 });
-  const incoming = await ctx.runQuery("crystal/cleanup:getAssociationsByTo" as any, { memoryId, limit: 200 });
+  const outgoing = await ctx.runQuery(internal.crystal.cleanup.getAssociationsByFrom, { memoryId, limit: 200 });
+  const incoming = await ctx.runQuery(internal.crystal.cleanup.getAssociationsByTo, { memoryId, limit: 200 });
   for (const association of [...outgoing, ...incoming]) {
     await ctx.runMutation(internal.crystal.cleanup.deleteAssociation, { associationId: association._id });
   }

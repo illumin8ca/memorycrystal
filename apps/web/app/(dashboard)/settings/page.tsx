@@ -17,7 +17,7 @@ type ApiKeyRow = {
 export default function SettingsPage() {
   const user = useQuery(api.crystal.userProfiles.getCurrentUser, {});
   const userId = user?.userId ?? null;
-  const apiKeys = useQuery(api.crystal.apiKeys.listApiKeys, userId ? { userId } : "skip");
+  const apiKeys = useQuery(api.crystal.apiKeys.listApiKeys, userId ? {} : "skip");
   const createApiKey = useMutation(api.crystal.apiKeys.createApiKey);
   const revokeApiKey = useMutation(api.crystal.apiKeys.revokeApiKey);
 
@@ -30,7 +30,7 @@ export default function SettingsPage() {
     setError("");
     setIsCreating(true);
     try {
-      const key = await createApiKey({ userId });
+      const key = await createApiKey({});
       setCreatedKey(key);
     } catch (err) {
       setError((err as Error).message ?? "Failed to create key");
@@ -47,7 +47,7 @@ export default function SettingsPage() {
 
   const handleRevoke = async (keyId: Id<"crystalApiKeys">) => {
     if (!userId) return;
-    await revokeApiKey({ userId, keyId });
+    await revokeApiKey({ keyId });
   };
 
   return (

@@ -1,4 +1,4 @@
-import { mutation, query } from "../_generated/server";
+import { internalQuery, mutation, query } from "../_generated/server";
 import { v } from "convex/values";
 
 async function sha256Hex(input: string): Promise<string> {
@@ -55,7 +55,7 @@ export const revokeApiKey = mutation({
   },
 });
 
-export const validateApiKey = query({
+export const validateApiKey = internalQuery({
   args: { keyHash: v.string() },
   handler: async (ctx, { keyHash }) => {
     const key = await ctx.db
