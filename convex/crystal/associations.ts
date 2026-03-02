@@ -128,9 +128,12 @@ export const removeAssociation = mutation({
 export const getMemoriesForAssociation = query({
   args: { limit: v.number() },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = identity.subject;
     return ctx.db
       .query("crystalMemories")
-      .filter((q: any) => q.eq("archived", false))
+      .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
       .take(args.limit);
   },
 });

@@ -177,13 +177,19 @@ const upsertRelation = async (
 };
 
 export const getKnowledgeGraphFoundationStatus = query({
-  handler: async (ctx) => ({
-    memories: (await ctx.db.query("crystalMemories").withIndex("by_last_accessed", (q) => q.gte("lastAccessedAt", 0)).take(200)).length,
-    nodes: (await ctx.db.query("crystalNodes").take(200)).length,
-    relations: (await ctx.db.query("crystalRelations").take(200)).length,
-    links: (await ctx.db.query("crystalMemoryNodeLinks").take(200)).length,
-    generatedAt: nowMs(),
-  }),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = identity.subject;
+
+    return {
+      memories: (await ctx.db.query("crystalMemories").withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false)).take(200)).length,
+      nodes: (await ctx.db.query("crystalNodes").filter((q) => q.eq(q.field("userId"), userId)).take(200)).length,
+      relations: (await ctx.db.query("crystalRelations").filter((q) => q.eq(q.field("userId"), userId)).take(200)).length,
+      links: (await ctx.db.query("crystalMemoryNodeLinks").filter((q) => q.eq(q.field("userId"), userId)).take(200)).length,
+      generatedAt: nowMs(),
+    };
+  },
 });
 
 export const seedKnowledgeGraphFromMemory = mutation({
@@ -193,13 +199,17 @@ export const seedKnowledgeGraphFromMemory = mutation({
     includeAssociations: v.optional(v.boolean()),
   }),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = identity.subject;
+
     const includeAssociations = args.includeAssociations ?? true;
     const maxMemories = Math.floor(clamp(args.maxMemories ?? 400, 1, 5000));
     const maxAssociations = Math.floor(clamp(args.maxAssociations ?? 400, 0, 10000));
 
     const memories = await ctx.db
       .query("crystalMemories")
-      .filter((q: any) => q.eq("archived", false))
+      .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
       .take(maxMemories);
 
     const created = {
