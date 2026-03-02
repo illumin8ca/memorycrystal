@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { action } from "../_generated/server";
+import { internal } from "../_generated/api";
 
 const OPENAI_EMBEDDING_ENDPOINT = "https://api.openai.com/v1/embeddings";
 const OPENAI_EMBEDDING_MODEL = "text-embedding-3-small";
@@ -38,7 +39,7 @@ export const embedUnprocessedMessages = action({
     const apiKey = process.env.OPENAI_API_KEY;
     const stats = { processed: 0, succeeded: 0, failed: 0, skipped: 0 };
 
-    const messages = await ctx.runQuery("crystal/messages:getUnembeddedMessages" as any, { limit });
+    const messages = await ctx.runQuery(internal.crystal.messages.getUnembeddedMessages, { limit });
 
     if (!apiKey) {
       return { ...stats, processed: messages.length, skipped: messages.length };

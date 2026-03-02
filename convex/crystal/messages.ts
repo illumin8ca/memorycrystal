@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { action, mutation, query } from "../_generated/server";
+import { action, internalMutation, internalQuery, mutation, query } from "../_generated/server";
+import { internal } from "../_generated/api";
 
 const DEFAULT_TTL_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
 const MAX_CONTENT_LENGTH = 8000; // truncate very long messages
@@ -29,11 +30,14 @@ export const logMessage = mutation({
     ttlDays: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
     const now = Date.now();
     const ttlDays = Math.max(args.ttlDays ?? 14, 0);
     const ttlMs = ttlDays * 24 * 60 * 60 * 1000;
 
     const messageId = await ctx.db.insert("crystalMessages", {
+      userId: identity.subject,
       role: args.role,
       content: truncateContent(args.content),
       channel: normalizeText(args.channel),
@@ -49,12 +53,48 @@ export const logMessage = mutation({
   },
 });
 
+// Internal version for server-side logging (MCP/cron) where userId is known
+export const logMessageInternal = internalMutation({
+  args: {
+    userId: v.string(),
+    role: roleEnum,
+    content: v.string(),
+    channel: v.optional(v.string()),
+    sessionKey: v.optional(v.string()),
+    metadata: v.optional(v.string()),
+    ttlDays: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, ...rest } = args;
+    const now = Date.now();
+    const ttlDays = Math.max(rest.ttlDays ?? 14, 0);
+    const ttlMs = ttlDays * 24 * 60 * 60 * 1000;
+
+    return ctx.db.insert("crystalMessages", {
+      userId,
+      role: rest.role,
+      content: truncateContent(rest.content),
+      channel: normalizeText(rest.channel),
+      sessionKey: normalizeText(rest.sessionKey),
+      timestamp: now,
+      embedding: undefined,
+      embedded: false,
+      expiresAt: now + (ttlDays === 0 ? 0 : ttlMs || DEFAULT_TTL_MS),
+      metadata: normalizeText(rest.metadata),
+    });
+  },
+});
+
 export const updateMessageEmbedding = mutation({
   args: {
     messageId: v.id("crystalMessages"),
     embedding: v.array(v.float64()),
   },
   handler: async (ctx, args) => {
+    // updateMessageEmbedding is called by the embedder background job — no user auth needed,
+    // but we verify the record exists before patching.
+    const existing = await ctx.db.get(args.messageId);
+    if (!existing) throw new Error("Message not found");
     await ctx.db.patch(args.messageId, {
       embedded: true,
       embedding: args.embedding,
@@ -72,6 +112,10 @@ export const getRecentMessages = query({
     sinceMs: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = identity.subject;
+
     const requestedLimit = toClampedLimit(args.limit, 1, 100, 20);
     const channel = normalizeText(args.channel);
     const sessionKey = normalizeText(args.sessionKey);
@@ -97,13 +141,17 @@ export const getRecentMessages = query({
             q.gte("timestamp", sinceMs ?? 0)
           );
 
-    const recent = await baseQuery.order("desc").take(requestedLimit);
+    const recent = await baseQuery
+      .order("desc")
+      .filter((q) => q.eq(q.field("userId"), userId))
+      .take(requestedLimit);
 
     return recent.reverse();
   },
 });
 
-export const getUnembeddedMessages = query({
+// Internal version for background jobs (no auth context)
+export const getUnembeddedMessages = internalQuery({
   args: {
     limit: v.optional(v.number()),
   },
@@ -120,11 +168,41 @@ export const getUnembeddedMessages = query({
   },
 });
 
+// Public version requires auth
+export const getUnembeddedMessagesForUser = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = identity.subject;
+    const requestedLimit = toClampedLimit(args.limit, 1, 100, 50);
+
+    return (
+      await ctx.db
+        .query("crystalMessages")
+        .withIndex("by_embedded", (q) => q.eq("embedded", false))
+        .filter((q) => q.eq(q.field("userId"), userId))
+        .order("desc")
+        .take(requestedLimit)
+    ).reverse();
+  },
+});
+
 export const getMessage = query({
   args: { messageId: v.id("crystalMessages") },
   handler: async (ctx, args) => {
-    return ctx.db.get(args.messageId);
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const message = await ctx.db.get(args.messageId);
+    if (!message || message.userId !== identity.subject) return null;
+    return message;
   },
+});
+
+// Internal version for background jobs (embedder, etc.)
+export const getMessageInternal = internalQuery({
+  args: { messageId: v.id("crystalMessages") },
+  handler: async (ctx, args) => ctx.db.get(args.messageId),
 });
 
 export const expireOldMessages = mutation({
@@ -154,6 +232,10 @@ export const searchMessages = action({
     sinceMs: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = identity.subject;
+
     const channel = normalizeText(args.channel);
     const limit = toClampedLimit(args.limit, 1, 100, 10);
     // Only channel and role are valid filterFields in the vectorIndex definition
@@ -169,8 +251,10 @@ export const searchMessages = action({
 
     const messages = await Promise.all(
       vectorResults.map(async (result) => {
-        const message = await ctx.runQuery("crystal/messages:getMessage" as any, { messageId: result._id });
+        const message = await ctx.runQuery(internal.crystal.messages.getMessageInternal, { messageId: result._id });
         if (!message) return null;
+        // Enforce userId ownership post-fetch
+        if (message.userId !== userId) return null;
         // Apply sinceMs filter post-fetch (not a valid vector filterField)
         if (args.sinceMs !== undefined && message.timestamp < args.sinceMs) return null;
         return {

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { action, mutation, query } from "../_generated/server";
+import { internal } from "../_generated/api";
 
 const dayMs = 24 * 60 * 60 * 1000;
 const nowMs = () => Date.now();
@@ -72,12 +73,12 @@ const summarizeMemories = (docs: MemoryRecord[]) =>
     .join("\n\n");
 
 export const getSensoryMemories = query({
-  args: { limit: v.number() },
+  args: { limit: v.number(), userId: v.string() },
   handler: async (ctx, args) => {
     return ctx.db
       .query("crystalMemories")
-      .filter((q: any) => q.eq("store", "sensory"))
-      .filter((q: any) => q.eq("archived", false))
+      .withIndex("by_user", (q) => q.eq("userId", args.userId).eq("archived", false))
+      .filter((q: any) => q.eq(q.field("store"), "sensory"))
       .take(args.limit);
   },
 });
@@ -90,14 +91,17 @@ export const getMemoryForConsolidation = query({
 });
 
 export const archiveConsolidatedMemory = mutation({
-  args: { memoryId: v.id("crystalMemories"), archivedAt: v.number() },
+  args: { memoryId: v.id("crystalMemories"), archivedAt: v.number(), userId: v.string() },
   handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.memoryId);
+    if (!existing || existing.userId !== args.userId) throw new Error("Not found");
     await ctx.db.patch(args.memoryId, { archived: true, archivedAt: args.archivedAt });
   },
 });
 
 export const insertConsolidatedMemory = mutation({
   args: {
+    userId: v.string(),
     store: v.string(),
     category: v.string(),
     title: v.string(),
@@ -120,9 +124,21 @@ export const insertConsolidatedMemory = mutation({
   },
 });
 
-export const runConsolidation = action({
-  args: consolidationInput,
+// Per-user consolidation (called by runConsolidation for each user)
+export const consolidateForUser = action({
+  args: { userId: v.string(), ...consolidationInput.fields },
   handler: async (ctx, args) => {
+    const { userId, ...consolidationArgs } = args;
+    return runConsolidationForUser(ctx, userId, consolidationArgs);
+  },
+});
+
+async function runConsolidationForUser(ctx: any, userId: string, args: {
+  sensoryMaxAgeHours?: number;
+  minClusterSize?: number;
+  maxSensorySamples?: number;
+  clusterThreshold?: number;
+}) {
     const now = nowMs();
     const sensoryAgeMs = Math.max(args.sensoryMaxAgeHours ?? 24, 2) * 60 * 60 * 1000;
     const minClusterSize = Math.min(Math.max(args.minClusterSize ?? 2, 2), 12);
@@ -132,6 +148,7 @@ export const runConsolidation = action({
 
     const sensory = (await ctx.runQuery("crystal/consolidate:getSensoryMemories" as any, {
       limit: MAX_BATCH + 1,
+      userId,
     })) as MemoryRecord[];
 
     const deferred = Math.max(0, sensory.length - MAX_BATCH);
@@ -219,6 +236,7 @@ export const runConsolidation = action({
         ].join("\n\n");
 
         const episodicId = await ctx.runMutation("crystal/consolidate:insertConsolidatedMemory" as any, {
+          userId,
           store: "episodic",
           category: "event",
           title,
@@ -241,6 +259,7 @@ export const runConsolidation = action({
           await ctx.runMutation("crystal/consolidate:archiveConsolidatedMemory" as any, {
             memoryId: item._id,
             archivedAt: now,
+            userId,
           });
         }
 
@@ -278,6 +297,7 @@ export const runConsolidation = action({
         }
 
         await ctx.runMutation("crystal/consolidate:insertConsolidatedMemory" as any, {
+          userId,
           store: "semantic",
           category: episodic.category,
           title: `Semantic: ${episodic.title}`,
@@ -305,5 +325,27 @@ export const runConsolidation = action({
     return {
       ...stats,
     };
+}
+
+// Top-level cron entry point: iterate all users
+export const runConsolidation = action({
+  args: consolidationInput,
+  handler: async (ctx, args) => {
+    const userIds: string[] = await ctx.runQuery(
+      internal.crystal.userProfiles.listAllUserIds,
+      {}
+    );
+
+    const results = [];
+    for (const userId of userIds) {
+      try {
+        const result = await runConsolidationForUser(ctx, userId, args);
+        results.push({ userId, ...result });
+        console.log(`[runConsolidation] user ${userId}: processed ${result.processed}, promoted ${result.promoted}`);
+      } catch (error) {
+        console.log(`[runConsolidation] user ${userId} failed`, error);
+      }
+    }
+    return { users: results.length, results };
   },
 });

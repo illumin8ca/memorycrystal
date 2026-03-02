@@ -52,9 +52,21 @@ const clampAssociationWeight = (weight: number) => Math.max(0.1, Math.min(1, wei
 export const upsertAssociation = mutation({
   args: associationInput,
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = identity.subject;
+
     if (args.fromMemoryId === args.toMemoryId) {
       throw new Error("Cannot associate a memory with itself");
     }
+
+    // Verify caller owns both memories
+    const [fromMem, toMem] = await Promise.all([
+      ctx.db.get(args.fromMemoryId),
+      ctx.db.get(args.toMemoryId),
+    ]);
+    if (!fromMem || fromMem.userId !== userId) throw new Error("Memory not found");
+    if (!toMem || toMem.userId !== userId) throw new Error("Memory not found");
 
     const existing = await ctx.db
       .query("crystalAssociations")
@@ -86,6 +98,14 @@ export const upsertAssociation = mutation({
 export const getAssociationsForMemory = query({
   args: associationQueryInput,
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = identity.subject;
+
+    // Verify ownership of the memory before returning its associations
+    const memory = await ctx.db.get(args.memoryId);
+    if (!memory || memory.userId !== userId) return [];
+
     const limit = Math.min(Math.max(args.limit ?? 10, 1), 50);
     const direction = args.direction ?? "from";
 
@@ -115,10 +135,16 @@ export const removeAssociation = mutation({
     associationId: v.id("crystalAssociations"),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = identity.subject;
+
     const existing = await ctx.db.get(args.associationId);
-    if (!existing) {
-      return null;
-    }
+    if (!existing) return null;
+
+    // Verify ownership via the source memory
+    const fromMem = await ctx.db.get(existing.fromMemoryId);
+    if (!fromMem || fromMem.userId !== userId) throw new Error("Not authorized");
 
     await ctx.db.delete(args.associationId);
     return { deleted: args.associationId };

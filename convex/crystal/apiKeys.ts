@@ -13,8 +13,11 @@ function generateKey(): string {
 }
 
 export const createApiKey = mutation({
-  args: { userId: v.string(), label: v.optional(v.string()) },
-  handler: async (ctx, { userId, label }) => {
+  args: { label: v.optional(v.string()) },
+  handler: async (ctx, { label }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = identity.subject;
     const rawKey = generateKey();
     const keyHash = await sha256Hex(rawKey);
     await ctx.db.insert("crystalApiKeys", {
@@ -29,21 +32,25 @@ export const createApiKey = mutation({
 });
 
 export const listApiKeys = query({
-  args: { userId: v.string() },
-  handler: async (ctx, { userId }) => {
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
     const keys = await ctx.db
       .query("crystalApiKeys")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .collect();
     return keys.map(({ keyHash: _kh, ...rest }) => rest);
   },
 });
 
 export const revokeApiKey = mutation({
-  args: { userId: v.string(), keyId: v.id("crystalApiKeys") },
-  handler: async (ctx, { userId, keyId }) => {
+  args: { keyId: v.id("crystalApiKeys") },
+  handler: async (ctx, { keyId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
     const key = await ctx.db.get(keyId);
-    if (!key || key.userId !== userId) throw new Error("Not found");
+    if (!key || key.userId !== identity.subject) throw new Error("Not found");
     await ctx.db.patch(keyId, { active: false });
   },
 });
