@@ -131,7 +131,7 @@ function BracketHeading({ children }: { children: string }) {
 
 function ScrollIndicator() {
   return (
-    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-accent">
+    <div className="hidden sm:flex absolute bottom-8 left-1/2 -translate-x-1/2 flex-col items-center gap-2 text-accent">
       <span className="text-[10px] font-mono tracking-[0.3em] uppercase opacity-60">Scroll</span>
       <svg
         className="w-5 h-5 animate-bounce opacity-80"
@@ -147,7 +147,7 @@ function ScrollIndicator() {
 
 function HeroCrystal() {
   return (
-    <div className="absolute right-[8%] top-1/2 -translate-y-1/2 pointer-events-none select-none">
+    <div className="hidden lg:block absolute right-[8%] top-1/2 -translate-y-1/2 pointer-events-none select-none">
       {/* Glow aura behind the crystal */}
       <div
         className="crystal-aura absolute inset-0 -inset-x-20 -inset-y-16"
@@ -258,13 +258,13 @@ export default function HomePage() {
             <HeroCrystal />
           </div>
 
-          <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 h-[calc(100vh-4rem)] flex flex-col justify-center">
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[calc(100vh-4rem)] flex flex-col justify-center">
             <p className="text-xs font-mono tracking-[0.24em] text-accent">[ PERSISTENT MEMORY FOR AI AGENTS ]</p>
-            <h1 className="mt-3 text-[clamp(2.5rem,10vw,5.2rem)] leading-tight tracking-wide">
+            <h1 className="mt-3 text-[clamp(2rem,10vw,5.2rem)] leading-tight tracking-wide">
               Say Goodbye to<br />
               <span className="font-bold">Forgetful AI</span>
             </h1>
-            <p className="mt-6 max-w-2xl text-primary text-lg">
+            <p className="mt-6 max-w-2xl text-primary text-base sm:text-lg">
               Memory Crystal is the MCP server that gives Claude Code, Codex, and OpenClaw agents persistent memory across every session, compaction, and restart. No more re-explaining your codebase. No more lost context. Your AI picks up exactly where you left off.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row gap-4">
@@ -286,7 +286,7 @@ export default function HomePage() {
         </section>
 
         <section className="border-y border-border/25 py-20">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <BracketHeading>THE PROBLEM</BracketHeading>
             <h2 className="mt-2 font-heading text-3xl md:text-5xl">Your AI is brilliant in the moment.<br/>And completely amnesiac the next.</h2>
             <p className="mt-4 text-secondary max-w-2xl">Context compaction, session resets, workspace switches — every one of them erases the shared understanding you built. The model hasn&apos;t gotten dumber. It just can&apos;t remember. Memory Crystal fixes that.</p>
@@ -306,7 +306,7 @@ export default function HomePage() {
           <div className="absolute inset-0 pointer-events-none">
             <div className="crystal-grid h-full w-full opacity-35" />
           </div>
-          <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <BracketHeading>HOW IT WORKS</BracketHeading>
             <h2 className="mt-2 font-heading text-3xl md:text-5xl">Persistent memory that survives everything.</h2>
             <div className="mt-10 relative">
@@ -334,7 +334,7 @@ export default function HomePage() {
         </section>
 
         <section className="border-y border-border/25 py-20">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <BracketHeading>SUPPORTED PLATFORMS</BracketHeading>
             <h2 className="mt-2 font-heading text-3xl md:text-5xl">One memory layer. Every AI coding agent.</h2>
             <div className="mt-10 grid gap-4 md:grid-cols-3">
@@ -353,7 +353,7 @@ export default function HomePage() {
           <div className="absolute inset-0 pointer-events-none">
             <div className="crystal-grid h-full w-full opacity-25" />
           </div>
-          <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <BracketHeading>WHAT YOU GET</BracketHeading>
             <h2 className="mt-2 font-heading text-3xl md:text-5xl">Not just storage — a complete memory system.</h2>
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -369,7 +369,7 @@ export default function HomePage() {
         </section>
 
         <section id="pricing" className="relative border-y border-border/25 py-20">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <BracketHeading>PRICING</BracketHeading>
             <div className="mt-2 flex flex-wrap items-center gap-5 justify-between">
               <h2 className="font-heading text-3xl md:text-5xl">Start free. Scale when ready.</h2>
@@ -435,7 +435,7 @@ export default function HomePage() {
 
         <section className="relative border-b border-border/25 py-20">
           <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_25%,rgba(33,128,214,0.2),transparent_60%)]" />
-          <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <BracketHeading>ROADMAP</BracketHeading>
             <h2 className="mt-2 font-heading text-3xl md:text-5xl">Where we&apos;re going.</h2>
             <div className="mt-8 grid gap-4">
@@ -454,7 +454,7 @@ export default function HomePage() {
           <div className="absolute left-1/2 top-6 -translate-x-1/2 opacity-20 crystal-drift">
             <CrystalIcon size={64} />
           </div>
-          <div className="relative max-w-4xl mx-auto px-6 text-center">
+          <div className="relative max-w-4xl mx-auto px-4 sm:px-6 text-center">
             <h2 className="font-heading text-4xl md:text-5xl">Your AI Deserves to Remember</h2>
             <p className="mt-4 text-secondary">Start free. No credit card required.</p>
             <Link

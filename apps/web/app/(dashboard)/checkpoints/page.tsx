@@ -22,33 +22,26 @@ const checkpoints = [
 export default function CheckpointsPage() {
   return (
     <div>
-      <h1 className="font-mono font-bold text-2xl text-primary mb-3 tracking-wide">
-        CHECKPOINTS
-      </h1>
-      <p className="text-secondary text-sm mb-8">
+      <h1 className="font-mono font-bold text-xl sm:text-2xl text-primary mb-3 tracking-wide">CHECKPOINTS</h1>
+      <p className="text-secondary text-sm mb-6 sm:mb-8">
         Placeholder checkpoint view for now. Each checkpoint can later connect to Convex snapshots and restore
         actions.
       </p>
 
-      <div className="border border-border">
-        <div className="bg-elevated grid grid-cols-4 px-4 py-2 text-secondary text-xs tracking-widest uppercase font-mono">
-          <span>Title</span>
-          <span>Date</span>
-          <span>Memory Count</span>
-          <span>Created By</span>
-        </div>
+      <div className="space-y-3">
         {checkpoints.map((checkpoint) => (
-          <div
-            key={checkpoint.title}
-            className="grid grid-cols-4 px-4 py-3 border-t border-border bg-surface text-sm"
-          >
-            <span className="text-primary font-medium">{checkpoint.title}</span>
-            <span className="text-secondary">{checkpoint.date}</span>
-            <span className="text-secondary">{checkpoint.memoryCount}</span>
-            <span className="w-fit text-accent text-xs font-mono border border-accent px-2 py-0.5">
-              {checkpoint.createdBy}
-            </span>
-          </div>
+          <article key={checkpoint.title} className="border border-border bg-surface p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <span className="text-primary font-medium">{checkpoint.title}</span>
+              <span className="w-fit text-accent text-[10px] sm:text-xs font-mono border border-accent px-2 py-1 shrink-0">
+                {checkpoint.createdBy}
+              </span>
+            </div>
+            <div className="text-sm text-secondary flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+              <span>{checkpoint.date}</span>
+              <span>Memories: {checkpoint.memoryCount}</span>
+            </div>
+          </article>
         ))}
       </div>
     </div>

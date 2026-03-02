@@ -36,31 +36,31 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <h1 className="font-mono font-bold text-2xl text-primary mb-8 tracking-wide">DASHBOARD</h1>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+      <h1 className="font-mono font-bold text-xl sm:text-2xl text-primary mb-5 sm:mb-8 tracking-wide">DASHBOARD</h1>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-10">
         {cards.map((s) => (
-          <div key={s.label} className="bg-surface border border-border p-6">
-            <p className="text-secondary text-xs tracking-widest uppercase mb-2">{s.label}</p>
-            <p className="text-3xl font-bold neon-text">{s.value}</p>
-            <p className="text-secondary text-xs mt-1">{s.sub}</p>
+          <div key={s.label} className="bg-surface border border-border p-4 sm:p-6 min-w-0">
+            <p className="text-secondary text-[11px] tracking-widest uppercase mb-2">{s.label}</p>
+            <p className="text-2xl sm:text-3xl font-bold neon-text break-words">{s.value}</p>
+            <p className="text-secondary text-xs mt-1 break-words">{s.sub}</p>
           </div>
         ))}
       </div>
-      <p className="text-secondary text-xs tracking-widest uppercase mb-4">RECENT ACTIVITY</p>
+      <p className="text-secondary text-xs tracking-widest uppercase mb-3 sm:mb-4">RECENT ACTIVITY</p>
       <div className="space-y-2">
         {stats?.recentActivity && stats.recentActivity.length > 0
           ? stats.recentActivity.map((m) => (
               <div
                 key={`${m.title}-${m.createdAt}`}
-                className="bg-surface border border-border p-4 flex items-center justify-between"
+                className="bg-surface border border-border p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-primary text-sm font-medium">{m.title}</span>
-                  <span className="text-accent text-xs border border-accent px-2 py-0.5 font-mono">
+                <div className="flex items-start sm:items-center gap-2 sm:gap-3 min-w-0">
+                  <span className="text-primary text-sm font-medium truncate">{m.title}</span>
+                  <span className="text-accent text-[10px] sm:text-xs border border-accent px-2 py-0.5 font-mono shrink-0">
                     {m.store}
                   </span>
                 </div>
-                <span className="text-secondary text-xs shrink-0 ml-4">{formatTime(m.createdAt)}</span>
+                <span className="text-secondary text-xs shrink-0">{formatTime(m.createdAt)}</span>
               </div>
             ))
           : !stats
