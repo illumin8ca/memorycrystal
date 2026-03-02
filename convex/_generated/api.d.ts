@@ -26,6 +26,7 @@ import type * as crystal_stats from "../crystal/stats.js";
 import type * as crystal_stmEmbedder from "../crystal/stmEmbedder.js";
 import type * as crystal_userProfiles from "../crystal/userProfiles.js";
 import type * as crystal_wake from "../crystal/wake.js";
+import type * as eslint_rules_no_public_userid_arg from "../eslint_rules/no_public_userid_arg.js";
 import type * as http from "../http.js";
 
 import type {
@@ -53,6 +54,7 @@ declare const fullApi: ApiFromModules<{
   "crystal/stmEmbedder": typeof crystal_stmEmbedder;
   "crystal/userProfiles": typeof crystal_userProfiles;
   "crystal/wake": typeof crystal_wake;
+  "eslint_rules/no_public_userid_arg": typeof eslint_rules_no_public_userid_arg;
   http: typeof http;
 }>;
 

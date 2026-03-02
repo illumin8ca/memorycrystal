@@ -312,8 +312,8 @@ export const seedKnowledgeGraphFromMemory = mutation({
         .take(maxAssociations);
 
       for (const association of associations) {
-        const sourceMemory = (await ctx.db.get(association.fromMemoryId)) as { _id: string; userId?: string; channel?: string } | null;
-        const targetMemory = (await ctx.db.get(association.toMemoryId)) as { _id: string; userId?: string; channel?: string } | null;
+        const sourceMemory = (await ctx.db.get(association.fromMemoryId)) as { _id: string; userId: string; channel?: string } | null;
+        const targetMemory = (await ctx.db.get(association.toMemoryId)) as { _id: string; userId: string; channel?: string } | null;
         if (!sourceMemory || !targetMemory || sourceMemory.userId !== userId || targetMemory.userId !== userId) {
           continue;
         }

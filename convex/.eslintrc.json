@@ -1,0 +1,6 @@
+{
+  "plugins": ["local-rules"],
+  "rules": {
+    "local-rules/no-public-userid-arg": "error"
+  }
+}

@@ -62,7 +62,7 @@ export default defineSchema({
   ...authTables,
 
   crystalMemories: defineTable({
-    userId: v.optional(v.string()),
+    userId: v.string(),
     store: memoryStore,
     category: memoryCategory,
     title: v.string(),
@@ -114,7 +114,7 @@ export default defineSchema({
     .index("by_to", ["toMemoryId"]),
 
   crystalNodes: defineTable({
-    userId: v.optional(v.string()),
+    userId: v.string(),
     label: v.string(),
     nodeType: graphNodeType,
     alias: v.array(v.string()),
@@ -136,7 +136,7 @@ export default defineSchema({
     .index("by_status", ["status"]),
 
   crystalRelations: defineTable({
-    userId: v.optional(v.string()),
+    userId: v.string(),
     fromNodeId: v.id("crystalNodes"),
     toNodeId: v.id("crystalNodes"),
     relationType: graphRelationType,
@@ -163,7 +163,7 @@ export default defineSchema({
     .index("by_from_to_relation", ["fromNodeId", "toNodeId", "relationType"]),
 
   crystalMemoryNodeLinks: defineTable({
-    userId: v.optional(v.string()),
+    userId: v.string(),
     memoryId: v.id("crystalMemories"),
     nodeId: v.id("crystalNodes"),
     role: graphLinkRole,
@@ -175,7 +175,7 @@ export default defineSchema({
     .index("by_node", ["nodeId"]),
 
   crystalSessions: defineTable({
-    userId: v.optional(v.string()),
+    userId: v.string(),
     channel: v.string(),
     channelId: v.optional(v.string()),
     startedAt: v.number(),
@@ -192,7 +192,7 @@ export default defineSchema({
     .index("by_channel", ["channel", "lastActiveAt"]),
 
   crystalCheckpoints: defineTable({
-    userId: v.optional(v.string()),
+    userId: v.string(),
     label: v.string(),
     description: v.optional(v.string()),
     createdAt: v.number(),
@@ -213,7 +213,7 @@ export default defineSchema({
     .index("by_created", ["createdAt"]),
 
   crystalWakeState: defineTable({
-    userId: v.optional(v.string()),
+    userId: v.string(),
     sessionId: v.id("crystalSessions"),
     injectedMemoryIds: v.array(v.id("crystalMemories")),
     wakePrompt: v.string(),
@@ -223,7 +223,7 @@ export default defineSchema({
     .index("by_session", ["sessionId"]),
 
   crystalMessages: defineTable({
-    userId: v.optional(v.string()),
+    userId: v.string(),
     role: v.union(v.literal("user"), v.literal("assistant"), v.literal("system")),
     content: v.string(),
     channel: v.optional(v.string()),

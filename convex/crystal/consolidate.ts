@@ -15,7 +15,7 @@ const consolidationInput = v.object({
 
 type MemoryRecord = {
   _id: string;
-  userId?: string;
+  userId: string;
   store: string;
   category: string;
   title: string;

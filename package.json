@@ -17,6 +17,9 @@
     "test:smoke": "bash scripts/crystal-doctor.sh --smoke"
   },
   "devDependencies": {
-    "convex": "^1.32.0"
+    "convex": "^1.32.0",
+    "convex-test": "^0.0.41",
+    "eslint-plugin-local-rules": "^3.0.2",
+    "vitest": "^4.0.18"
   }
 }

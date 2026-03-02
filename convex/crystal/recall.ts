@@ -173,10 +173,7 @@ export const recallMemories = action({
     const vectorResults = (await ctx.vectorSearch("crystalMemories", "by_embedding", {
       vector: args.embedding,
       limit: vectorTake,
-      filter: (q: any) =>
-        includeArchived
-          ? q.eq("userId", userId)
-          : q.eq("userId", userId).and(q.eq("archived", false)),
+      filter: (q: any) => q.eq("userId", userId),
     })) as Array<{ _id: string; _score: number }>;
 
     // Fetch full documents for each vector result (vectorSearch only returns _id + _score)
@@ -188,7 +185,7 @@ export const recallMemories = action({
           return { ...doc, _id: vr._id, _score: vr._score };
         })
       )
-    ).filter((d) => d !== null) as Array<RecallCandidateDocument & { _id: string; _score: number; userId?: string }>;
+    ).filter((d) => d !== null) as Array<RecallCandidateDocument & { _id: string; _score: number; userId: string }>;
 
     const now = nowMs();
 
