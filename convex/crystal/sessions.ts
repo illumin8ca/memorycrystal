@@ -1,3 +1,4 @@
+import { stableUserId } from "./auth";
 import { v } from "convex/values";
 import { internalMutation, mutation, query } from "../_generated/server";
 
@@ -14,7 +15,7 @@ export const createSession = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    return ctx.db.insert("crystalSessions", { ...args, userId: identity.subject });
+    return ctx.db.insert("crystalSessions", { ...args, userId: stableUserId(identity.subject) });
   },
 });
 
@@ -44,7 +45,7 @@ export const createWakeState = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    return ctx.db.insert("crystalWakeState", { ...args, userId: identity.subject });
+    return ctx.db.insert("crystalWakeState", { ...args, userId: stableUserId(identity.subject) });
   },
 });
 
@@ -66,7 +67,7 @@ export const getActiveMemories = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
 
     let q = ctx.db
       .query("crystalMemories")

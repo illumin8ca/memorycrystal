@@ -1,3 +1,4 @@
+import { stableUserId } from "./auth";
 import { v } from "convex/values";
 import { action, internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
@@ -56,7 +57,7 @@ export const getMemoriesForDecayAuth = query({
     if (!identity) throw new Error("Unauthenticated");
     return ctx.db
       .query("crystalMemories")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject).eq("archived", false))
+      .withIndex("by_user", (q) => q.eq("userId", stableUserId(identity.subject)).eq("archived", false))
       .take(args.limit);
   },
 });
@@ -73,7 +74,7 @@ export const applyDecayPatchAuth = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const memory = await ctx.db.get(args.memoryId);
-    if (!memory || memory.userId !== identity.subject) return;
+    if (!memory || memory.userId !== stableUserId(identity.subject)) return;
     const patch: Record<string, unknown> = { strength: args.strength };
     if (args.archived) {
       patch.archived = true;

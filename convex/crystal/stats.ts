@@ -1,3 +1,4 @@
+import { stableUserId } from "./auth";
 import { query } from "../_generated/server";
 
 const nowMs = () => Date.now();
@@ -8,7 +9,7 @@ export const getMemoryStats = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
 
     const sampleLimit = 500;
     const sample = await ctx.db

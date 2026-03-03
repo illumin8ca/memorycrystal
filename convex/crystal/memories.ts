@@ -1,3 +1,4 @@
+import { stableUserId } from "./auth";
 import { v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "../_generated/server";
 
@@ -98,7 +99,7 @@ export const createMemory = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
     const now = nowMs();
 
     const candidates = await ctx.db
@@ -227,7 +228,7 @@ export const listMemories = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
 
     const requestedLimit = args.limit ?? 50;
     const normalizedLimit = Math.min(Math.max(requestedLimit, 1), 200);
@@ -279,7 +280,7 @@ export const getMemory = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const memory = await ctx.db.get(args.memoryId);
-    if (!memory || memory.userId !== identity.subject) return null;
+    if (!memory || memory.userId !== stableUserId(identity.subject)) return null;
     return memory;
   },
 });
@@ -298,7 +299,7 @@ export const updateMemoryAccess = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const existing = await ctx.db.get(args.memoryId);
-    if (!existing || existing.userId !== identity.subject) return null;
+    if (!existing || existing.userId !== stableUserId(identity.subject)) return null;
     const now = Date.now();
     await ctx.db.patch(args.memoryId, {
       accessCount: existing.accessCount + 1,
@@ -314,7 +315,7 @@ export const updateMemory = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const existing = await ctx.db.get(args.memoryId);
-    if (!existing || existing.userId !== identity.subject) return null;
+    if (!existing || existing.userId !== stableUserId(identity.subject)) return null;
 
     const patch: Record<string, unknown> = {};
     if (args.store !== undefined) patch.store = args.store;
@@ -344,7 +345,7 @@ export const forgetMemory = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const existing = await ctx.db.get(args.memoryId);
-    if (!existing || existing.userId !== identity.subject) return null;
+    if (!existing || existing.userId !== stableUserId(identity.subject)) return null;
 
     await ctx.db.patch(args.memoryId, {
       archived: true,

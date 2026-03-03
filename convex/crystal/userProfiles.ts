@@ -1,12 +1,13 @@
 import { internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { v } from "convex/values";
+import { stableUserId } from "./auth";
 
 export const createOrGet = mutation({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
 
     const existing = await ctx.db
       .query("crystalUserProfiles")
@@ -35,7 +36,7 @@ export const getByUser = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    return ctx.db.query("crystalUserProfiles").withIndex("by_user", (q) => q.eq("userId", identity.subject)).first();
+    return ctx.db.query("crystalUserProfiles").withIndex("by_user", (q) => q.eq("userId", stableUserId(identity.subject))).first();
   },
 });
 
@@ -47,7 +48,7 @@ export const isSubscribed = query({
 
     const profile = await ctx.db
       .query("crystalUserProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", stableUserId(identity.subject)))
       .first();
     return profile?.subscriptionStatus === "active" || profile?.subscriptionStatus === "trialing" || profile?.subscriptionStatus === "unlimited";
   },
@@ -132,7 +133,7 @@ export const getCurrentUser = query({
     if (!identity) return null;
 
     return {
-      userId: identity.subject,
+      userId: stableUserId(identity.subject),
       email: identity.email ?? null,
       name: identity.name ?? null,
     };

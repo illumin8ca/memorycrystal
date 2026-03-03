@@ -12,6 +12,7 @@ import type * as auth from "../auth.js";
 import type * as crons from "../crons.js";
 import type * as crystal_apiKeys from "../crystal/apiKeys.js";
 import type * as crystal_associations from "../crystal/associations.js";
+import type * as crystal_auth from "../crystal/auth.js";
 import type * as crystal_checkpoints from "../crystal/checkpoints.js";
 import type * as crystal_cleanup from "../crystal/cleanup.js";
 import type * as crystal_consolidate from "../crystal/consolidate.js";
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   "crystal/apiKeys": typeof crystal_apiKeys;
   "crystal/associations": typeof crystal_associations;
+  "crystal/auth": typeof crystal_auth;
   "crystal/checkpoints": typeof crystal_checkpoints;
   "crystal/cleanup": typeof crystal_cleanup;
   "crystal/consolidate": typeof crystal_consolidate;

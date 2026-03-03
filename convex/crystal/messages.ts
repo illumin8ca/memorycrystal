@@ -1,3 +1,4 @@
+import { stableUserId } from "./auth";
 import { v } from "convex/values";
 import { action, internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
@@ -47,7 +48,7 @@ export const logMessage = mutation({
     const ttlMs = ttlDays * 24 * 60 * 60 * 1000;
 
     const messageId = await ctx.db.insert("crystalMessages", {
-      userId: identity.subject,
+      userId: stableUserId(identity.subject),
       role: args.role,
       content: truncateContent(args.content),
       channel: normalizeText(args.channel),
@@ -124,7 +125,7 @@ export const getRecentMessages = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
 
     const requestedLimit = toClampedLimit(args.limit, 1, 100, 20);
     const channel = normalizeText(args.channel);
@@ -184,7 +185,7 @@ export const getUnembeddedMessagesForUser = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
     const requestedLimit = toClampedLimit(args.limit, 1, 100, 50);
 
     return (
@@ -204,7 +205,7 @@ export const getMessage = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const message = await ctx.db.get(args.messageId);
-    if (!message || message.userId !== identity.subject) return null;
+    if (!message || message.userId !== stableUserId(identity.subject)) return null;
     return message;
   },
 });
@@ -244,7 +245,7 @@ export const searchMessages = action({
   handler: async (ctx, args): Promise<SearchMessageResult[]> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
 
     const channel = normalizeText(args.channel);
     const limit = toClampedLimit(args.limit, 1, 100, 10);

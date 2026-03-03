@@ -1,3 +1,4 @@
+import { stableUserId } from "./auth";
 import { internalQuery, mutation, query } from "../_generated/server";
 import { v } from "convex/values";
 
@@ -17,7 +18,7 @@ export const createApiKey = mutation({
   handler: async (ctx, { label }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
     const rawKey = generateKey();
     const keyHash = await sha256Hex(rawKey);
     await ctx.db.insert("crystalApiKeys", {
@@ -38,7 +39,7 @@ export const listApiKeys = query({
     if (!identity) throw new Error("Unauthenticated");
     const keys = await ctx.db
       .query("crystalApiKeys")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", stableUserId(identity.subject)))
       .collect();
     return keys.map(({ keyHash: _kh, ...rest }) => rest);
   },
@@ -50,7 +51,7 @@ export const revokeApiKey = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const key = await ctx.db.get(keyId);
-    if (!key || key.userId !== identity.subject) throw new Error("Not found");
+    if (!key || key.userId !== stableUserId(identity.subject)) throw new Error("Not found");
     await ctx.db.patch(keyId, { active: false });
   },
 });
@@ -60,7 +61,7 @@ export const regenerateApiKey = mutation({
   handler: async (ctx, { oldKeyId, label }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
 
     const oldKey = await ctx.db.get(oldKeyId);
     if (!oldKey || oldKey.userId !== userId) throw new Error("Not found");

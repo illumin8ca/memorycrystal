@@ -1,3 +1,4 @@
+import { stableUserId } from "./auth";
 import { v } from "convex/values";
 import { action, internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
@@ -41,7 +42,7 @@ export const upsertAssociation = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
 
     if (args.fromMemoryId === args.toMemoryId) throw new Error("Cannot associate a memory with itself");
 
@@ -81,7 +82,7 @@ export const getAssociationsForMemory = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
 
     const memory = await ctx.db.get(args.memoryId);
     if (!memory || memory.userId !== userId) return [];
@@ -116,7 +117,7 @@ export const removeAssociation = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
 
     const existing = await ctx.db.get(args.associationId);
     if (!existing) return null;

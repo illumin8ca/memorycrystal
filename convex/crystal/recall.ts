@@ -1,3 +1,4 @@
+import { stableUserId } from "./auth";
 import { v } from "convex/values";
 import { action } from "../_generated/server";
 import { internal } from "../_generated/api";
@@ -168,7 +169,7 @@ export const recallMemories = action({
 
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
 
     const vectorResults = (await ctx.vectorSearch("crystalMemories", "by_embedding", {
       vector: args.embedding,

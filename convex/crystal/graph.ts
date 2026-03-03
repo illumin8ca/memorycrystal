@@ -1,3 +1,4 @@
+import { stableUserId } from "./auth";
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 
@@ -186,7 +187,7 @@ export const getKnowledgeGraphFoundationStatus = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
 
     return {
       memories: (await ctx.db.query("crystalMemories").withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false)).take(200)).length,
@@ -207,7 +208,7 @@ export const seedKnowledgeGraphFromMemory = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
 
     const includeAssociations = args.includeAssociations ?? true;
     const maxMemories = Math.floor(clamp(args.maxMemories ?? 400, 1, 5000));

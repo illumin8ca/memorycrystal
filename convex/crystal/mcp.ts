@@ -1,4 +1,4 @@
-import { httpAction, internalMutation, internalQuery } from "../_generated/server";
+import { httpAction, internalAction, internalMutation, internalQuery } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 
@@ -99,7 +99,7 @@ export const captureMemory = internalMutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    return await ctx.db.insert("crystalMemories", {
+    const id = await ctx.db.insert("crystalMemories", {
       userId: args.userId,
       title: args.title,
       content: args.content,
@@ -118,6 +118,9 @@ export const captureMemory = internalMutation({
       archived: false,
       embedding: [],
     });
+    // Schedule async embedding generation
+    await ctx.scheduler.runAfter(0, internal.crystal.mcp.embedMemory, { memoryId: id });
+    return id;
   },
 });
 
@@ -348,3 +351,115 @@ export const mcpAuth = httpAction(async (ctx, request) => {
   if (!auth) return json({ error: "Unauthorized" }, 401);
   return json({ ok: true, userId: auth.userId });
 });
+
+// ── Embedding pipeline ──────────────────────────────────────────────
+
+const OPENAI_EMBEDDING_ENDPOINT = "https://api.openai.com/v1/embeddings";
+const OPENAI_EMBEDDING_MODEL = "text-embedding-3-small";
+
+export const embedMemory = internalAction({
+  args: { memoryId: v.id("crystalMemories") },
+  handler: async (ctx, { memoryId }) => {
+    const memory = await ctx.runQuery(internal.crystal.mcp.getMemoryById, { memoryId });
+    if (!memory || !memory.content?.trim()) return;
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) return;
+
+    const response = await fetch(OPENAI_EMBEDDING_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: OPENAI_EMBEDDING_MODEL,
+        input: memory.content,
+        encoding_format: "float",
+      }),
+    });
+
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload) return;
+
+    const vector = payload.data?.[0]?.embedding;
+    if (!Array.isArray(vector)) return;
+
+    await ctx.runMutation(internal.crystal.mcp.patchMemoryEmbedding, {
+      memoryId,
+      embedding: vector,
+    });
+  },
+});
+
+export const getMemoryById = internalQuery({
+  args: { memoryId: v.id("crystalMemories") },
+  handler: async (ctx, { memoryId }) => ctx.db.get(memoryId),
+});
+
+export const patchMemoryEmbedding = internalMutation({
+  args: { memoryId: v.id("crystalMemories"), embedding: v.array(v.float64()) },
+  handler: async (ctx, { memoryId, embedding }) => {
+    await ctx.db.patch(memoryId, { embedding });
+  },
+});
+
+// ── Backfill: assign userId to orphaned memories ────────────────────
+
+export const backfillUserIdOnMemories = internalMutation({
+  args: { userId: v.string(), limit: v.optional(v.number()) },
+  handler: async (ctx, { userId, limit }) => {
+    const max = limit ?? 500;
+    const all = await ctx.db.query("crystalMemories").take(max);
+    let patched = 0;
+    for (const doc of all) {
+      if (!doc.userId) {
+        await ctx.db.patch(doc._id, { userId });
+        patched++;
+      }
+    }
+    return { patched };
+  },
+});
+
+export const backfillEmbeddings = internalAction({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit }): Promise<{ processed: number; succeeded: number }> => {
+    const memories = await ctx.runQuery(internal.crystal.mcp.listEmptyEmbeddingMemories, { limit: limit ?? 50 });
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) return { processed: 0, succeeded: 0 };
+    let succeeded = 0;
+    for (const mem of memories) {
+      if (!mem.content?.trim()) continue;
+      try {
+        const res = await fetch(OPENAI_EMBEDDING_ENDPOINT, {
+          method: "POST",
+          headers: { "content-type": "application/json", Authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify({ model: OPENAI_EMBEDDING_MODEL, input: mem.content, encoding_format: "float" }),
+        });
+        const data = await res.json().catch(() => null);
+        const vec = data?.data?.[0]?.embedding;
+        if (Array.isArray(vec)) {
+          await ctx.runMutation(internal.crystal.mcp.patchMemoryEmbedding, { memoryId: mem._id, embedding: vec });
+          succeeded++;
+        }
+      } catch {}
+    }
+    return { processed: memories.length, succeeded };
+  },
+});
+
+export const listEmptyEmbeddingMemories = internalQuery({
+  args: { limit: v.number() },
+  handler: async (ctx, { limit }) => {
+    const all = await ctx.db.query("crystalMemories").take(limit * 3);
+    return all.filter((m) => !m.embedding || m.embedding.length === 0).slice(0, limit);
+  },
+});
+
+
+
+
+
+
+

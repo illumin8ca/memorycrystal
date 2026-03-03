@@ -1,3 +1,4 @@
+import { stableUserId } from "./auth";
 import type { Id } from "../_generated/dataModel";
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
@@ -37,7 +38,7 @@ export const createCheckpoint = mutation({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
 
     const requestedLimit = Math.min(Math.max(args.maxMemories ?? 12, 1), 50);
     const chosenIds = args.memoryIds?.length
@@ -78,7 +79,7 @@ export const getCheckpoint = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const checkpoint = await ctx.db.get(args.checkpointId);
-    if (!checkpoint || checkpoint.userId !== identity.subject) return null;
+    if (!checkpoint || checkpoint.userId !== stableUserId(identity.subject)) return null;
     return checkpoint;
   },
 });
@@ -88,7 +89,7 @@ export const listCheckpoints = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
     const requestedLimit = Math.min(Math.max(args.limit ?? 20, 1), 100);
 
     const checkpoints = await ctx.db

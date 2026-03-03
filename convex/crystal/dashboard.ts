@@ -1,3 +1,4 @@
+import { stableUserId } from "./auth";
 import { query } from "../_generated/server";
 import { v } from "convex/values";
 
@@ -6,7 +7,7 @@ export const getStats = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
 
     const allMemories = await ctx.db
       .query("crystalMemories")
@@ -47,7 +48,7 @@ export const listMemories = query({
   handler: async (ctx, { limit = 50, store, archived = false }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
 
     const all = await ctx.db
       .query("crystalMemories")
@@ -70,7 +71,7 @@ export const listMessages = query({
   handler: async (ctx, { limit = 100, sinceMs }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = identity.subject;
+    const userId = stableUserId(identity.subject);
 
     const msgs = await ctx.db
       .query("crystalMessages")
