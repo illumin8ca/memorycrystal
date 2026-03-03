@@ -1,21 +1,29 @@
 import { Polar } from "@polar-sh/sdk";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-export async function GET() {
+const PRODUCT_IDS: Record<string, string | undefined> = {
+  free: process.env.POLAR_PRODUCT_ID_FREE,
+  pro: process.env.POLAR_PRODUCT_ID_PRO,
+  ultra: process.env.POLAR_PRODUCT_ID_ULTRA,
+};
+
+export async function GET(request: NextRequest) {
   const accessToken = process.env.POLAR_ACCESS_TOKEN;
-  const productId = process.env.POLAR_PRODUCT_ID;
+  const { searchParams } = new URL(request.url);
+  const plan = searchParams.get("plan") ?? "pro";
+  const productId = PRODUCT_IDS[plan] ?? process.env.POLAR_PRODUCT_ID_PRO;
 
   if (!accessToken || !productId) {
-    // Fallback to manual checkout page if not configured
     return NextResponse.redirect("https://polar.sh/illumin8ca/products");
   }
 
   const polar = new Polar({ accessToken });
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://memorycrystal.ai";
 
   try {
     const checkout = await polar.checkouts.create({
       products: [productId],
-      successUrl: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://memorycrystal.ai"}/dashboard?subscribed=1`,
+      successUrl: `${appUrl}/dashboard?subscribed=1`,
     });
     return NextResponse.redirect(checkout.url);
   } catch {
