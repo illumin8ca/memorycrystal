@@ -1,0 +1,25 @@
+{
+  "name": "Memory Crystal",
+  "short_name": "Crystal",
+  "description": "Persistent memory for AI agents — Claude Code, Codex & OpenClaw",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d1820",
+  "theme_color": "#0d1820",
+  "categories": ["productivity", "developer tools"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
