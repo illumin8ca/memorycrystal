@@ -21,8 +21,10 @@ export default function SettingsPage() {
   const apiKeys = useQuery(api.crystal.apiKeys.listApiKeys, userId ? {} : "skip");
   const createApiKey = useMutation(api.crystal.apiKeys.createApiKey);
   const revokeApiKey = useMutation(api.crystal.apiKeys.revokeApiKey);
+  const regenerateApiKeyMutation = useMutation(api.crystal.apiKeys.regenerateApiKey);
 
   const [isCreating, setIsCreating] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -63,6 +65,19 @@ export default function SettingsPage() {
     }
   };
 
+  const handleRegenerate = async (keyId: Id<"crystalApiKeys">, label?: string) => {
+    if (!userId) return;
+    setIsRegenerating(keyId);
+    try {
+      const newKey = await regenerateApiKeyMutation({ oldKeyId: keyId, label });
+      setCreatedKey(newKey);
+    } catch (e) {
+      alert("Failed to regenerate: " + String(e));
+    } finally {
+      setIsRegenerating(null);
+    }
+  };
+
   return (
     <div>
       <h1 className="font-mono font-bold text-xl sm:text-2xl text-primary mb-6 sm:mb-8 tracking-wide">SETTINGS</h1>
@@ -94,13 +109,23 @@ export default function SettingsPage() {
                     <p>Created: {k.createdAt ? new Date(k.createdAt).toLocaleDateString("en-US") : "-"}</p>
                     <p>Last Used: {k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleDateString("en-US") : "Never"}</p>
                   </div>
-                  <button
-                    onClick={() => handleRevoke(k._id)}
-                    disabled={!k.active}
-                    className="text-secondary hover:text-red-400 text-xs mt-3 transition-colors min-h-11 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    {k.active ? "Revoke" : "Already revoked"}
-                  </button>
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      onClick={() => handleRegenerate(k._id, k.label)}
+                      disabled={isRegenerating === k._id}
+                      className="btn-secondary text-xs px-3 py-2 min-h-9 disabled:opacity-60"
+                    >
+                      {isRegenerating === k._id ? "Regenerating..." : "Regenerate"}
+                    </button>
+                    {k.active ? (
+                      <button
+                        onClick={() => handleRevoke(k._id)}
+                        className="text-secondary hover:text-red-400 text-xs transition-colors min-h-9"
+                      >
+                        Revoke
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               ))
             : <div className="border border-white/[0.07] p-4 text-secondary text-sm">Loading...</div>}

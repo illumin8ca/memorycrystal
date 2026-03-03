@@ -55,6 +55,34 @@ export const revokeApiKey = mutation({
   },
 });
 
+export const regenerateApiKey = mutation({
+  args: { oldKeyId: v.id("crystalApiKeys"), label: v.optional(v.string()) },
+  handler: async (ctx, { oldKeyId, label }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = identity.subject;
+
+    const oldKey = await ctx.db.get(oldKeyId);
+    if (!oldKey || oldKey.userId !== userId) throw new Error("Not found");
+
+    if (oldKey.active) {
+      await ctx.db.patch(oldKeyId, { active: false });
+    }
+
+    const rawKey = generateKey();
+    const keyHash = await sha256Hex(rawKey);
+    await ctx.db.insert("crystalApiKeys", {
+      userId,
+      keyHash,
+      label: label ?? oldKey.label,
+      createdAt: Date.now(),
+      active: true,
+    });
+
+    return rawKey;
+  },
+});
+
 export const validateApiKey = internalQuery({
   args: { keyHash: v.string() },
   handler: async (ctx, { keyHash }) => {
