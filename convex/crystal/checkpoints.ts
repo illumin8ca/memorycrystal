@@ -3,19 +3,9 @@ import type { Id } from "../_generated/dataModel";
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 
-const snapshotInput = v.object({
+const createInput = v.object({
   label: v.string(),
   description: v.optional(v.string()),
-  sessionId: v.optional(v.id("crystalSessions")),
-  memoryIds: v.optional(v.array(v.id("crystalMemories"))),
-  semanticSummary: v.optional(v.string()),
-  tags: v.optional(v.array(v.string())),
-  maxMemories: v.optional(v.number()),
-});
-
-const listInput = v.object({
-  sessionId: v.optional(v.id("crystalSessions")),
-  limit: v.optional(v.number()),
 });
 
 const listMemoryIds = async (ctx: any, memoryIds: string[]) => {
@@ -34,24 +24,22 @@ const listMemoryIds = async (ctx: any, memoryIds: string[]) => {
 };
 
 export const createCheckpoint = mutation({
-  args: snapshotInput,
-  handler: async (ctx, args) => {
+  args: createInput,
+  handler: async (ctx, { label, description }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const userId = stableUserId(identity.subject);
 
-    const requestedLimit = Math.min(Math.max(args.maxMemories ?? 12, 1), 50);
-    const chosenIds = args.memoryIds?.length
-      ? args.memoryIds
-      : (
-          await ctx.db
-            .query("crystalMemories")
-            .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
-            .take(requestedLimit)
-        )
-          .sort((a, b) => b.lastAccessedAt - a.lastAccessedAt)
-          .slice(0, requestedLimit)
-          .map((memory) => memory._id);
+    const requestedLimit = 12;
+    const chosenIds = (
+      await ctx.db
+        .query("crystalMemories")
+        .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
+        .take(requestedLimit)
+    )
+      .sort((a, b) => b.lastAccessedAt - a.lastAccessedAt)
+      .slice(0, requestedLimit)
+      .map((memory) => memory._id);
 
     const snapshot = await listMemoryIds(ctx, chosenIds);
     const defaultSummary = snapshot
@@ -61,14 +49,13 @@ export const createCheckpoint = mutation({
 
     return ctx.db.insert("crystalCheckpoints", {
       userId,
-      label: args.label,
-      description: args.description,
+      label,
+      description,
       createdAt: Date.now(),
       createdBy: userId,
-      sessionId: args.sessionId,
       memorySnapshot: snapshot,
-      semanticSummary: args.semanticSummary ?? defaultSummary,
-      tags: args.tags ?? [],
+      semanticSummary: defaultSummary,
+      tags: [],
     });
   },
 });
@@ -85,19 +72,15 @@ export const getCheckpoint = query({
 });
 
 export const listCheckpoints = query({
-  args: listInput,
-  handler: async (ctx, args) => {
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const userId = stableUserId(identity.subject);
-    const requestedLimit = Math.min(Math.max(args.limit ?? 20, 1), 100);
-
-    const checkpoints = await ctx.db
+    return ctx.db
       .query("crystalCheckpoints")
-      .withIndex("by_user", (q) => q.eq("userId", userId).gte("createdAt", 0))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc")
-      .take(requestedLimit);
-
-    return checkpoints.sort((a, b) => b.createdAt - a.createdAt);
+      .take(limit ?? 50);
   },
 });

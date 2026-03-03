@@ -149,12 +149,7 @@ export default function SettingsPage() {
           >
             Manage with Polar →
           </a>
-          <button
-            type="button"
-            className="text-secondary hover:text-primary transition-colors text-left min-h-11"
-          >
-            Cancel
-          </button>
+
         </div>
       </section>
 
