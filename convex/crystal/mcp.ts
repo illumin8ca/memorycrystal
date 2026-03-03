@@ -168,6 +168,51 @@ export const listRecentCheckpoints = internalQuery({
   },
 });
 
+export const semanticSearch = internalAction({
+  args: {
+    userId: v.string(),
+    queryEmbedding: v.array(v.float64()),
+    limit: v.number(),
+  },
+  handler: async (ctx, { userId, queryEmbedding, limit }): Promise<
+    Array<{
+      _id: string;
+      title: string;
+      content: string;
+      store: string;
+      category: string;
+      tags: string[];
+      createdAt: number;
+      score: number;
+    }>
+  > => {
+    const results = (await ctx.vectorSearch("crystalMemories", "by_embedding", {
+      vector: queryEmbedding,
+      limit: Math.min(Math.max(limit, 1), 20),
+      filter: (q: any) => q.eq("userId", userId),
+    })) as Array<{ _id: string; _score: number }>;
+
+    const docs = await Promise.all(
+      results.map(async (r) => {
+        const doc = await ctx.runQuery(internal.crystal.mcp.getMemoryById, { memoryId: r._id as any });
+        if (!doc || doc.archived) return null;
+        return {
+          _id: String(r._id),
+          title: doc.title,
+          content: doc.content,
+          store: doc.store,
+          category: doc.category,
+          tags: doc.tags ?? [],
+          createdAt: doc.createdAt,
+          score: r._score,
+        };
+      })
+    );
+
+    return docs.filter((d): d is NonNullable<typeof d> => d !== null);
+  },
+});
+
 export const getMemoryStoreStats = internalQuery({
   args: { userId: v.string() },
   handler: async (ctx, { userId }) => {
@@ -194,7 +239,55 @@ export const getMemoryStoreStats = internalQuery({
   },
 });
 
-async function requireAuth(ctx: any, request: Request): Promise<{ userId: string; key: any } | null> {
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 60;
+
+export const checkAndIncrementRateLimit = internalMutation({
+  args: { key: v.string() },
+  handler: async (ctx, { key }): Promise<{ allowed: boolean; remaining: number }> => {
+    const now = Date.now();
+    const existing = await ctx.db
+      .query("crystalRateLimits")
+      .withIndex("by_key", (q) => q.eq("key", key))
+      .first();
+
+    if (!existing || now - existing.windowStart > RATE_LIMIT_WINDOW_MS) {
+      if (existing) {
+        await ctx.db.patch(existing._id, { windowStart: now, count: 1 });
+      } else {
+        await ctx.db.insert("crystalRateLimits", { key, windowStart: now, count: 1 });
+      }
+      return { allowed: true, remaining: RATE_LIMIT_MAX - 1 };
+    }
+
+    if (existing.count >= RATE_LIMIT_MAX) {
+      return { allowed: false, remaining: 0 };
+    }
+
+    await ctx.db.patch(existing._id, { count: existing.count + 1 });
+    return { allowed: true, remaining: RATE_LIMIT_MAX - existing.count - 1 };
+  },
+});
+
+async function withRateLimit(ctx: any, keyHash: string): Promise<Response | null> {
+  const result = await ctx.runMutation(internal.crystal.mcp.checkAndIncrementRateLimit, {
+    key: `mcp:${keyHash}`,
+  });
+  if (!result.allowed) {
+    return new Response(JSON.stringify({ error: "Rate limit exceeded. Max 60 requests/minute." }), {
+      status: 429,
+      headers: {
+        "content-type": "application/json",
+        "Retry-After": "60",
+        "X-RateLimit-Limit": "60",
+        "X-RateLimit-Remaining": "0",
+      },
+    });
+  }
+  return null;
+}
+
+async function requireAuth(ctx: any, request: Request): Promise<{ userId: string; key: any; keyHash: string } | null> {
   const rawKey = extractBearerToken(request);
   if (!rawKey) return null;
   const keyHash = await sha256Hex(rawKey);
@@ -203,12 +296,15 @@ async function requireAuth(ctx: any, request: Request): Promise<{ userId: string
 
   const keyRecord = await ctx.runQuery(internal.crystal.mcp.getApiKeyRecord, { keyHash });
   if (!keyRecord || !keyRecord.active || !keyRecord.userId) return null;
-  return { userId: keyRecord.userId, key: keyRecord };
+  return { userId: keyRecord.userId, key: keyRecord, keyHash };
 }
 
 export const mcpCapture = httpAction(async (ctx, request) => {
   const auth = await requireAuth(ctx, request);
   if (!auth) return json({ error: "Unauthorized" }, 401);
+
+  const rateLimitResponse = await withRateLimit(ctx, auth.keyHash);
+  if (rateLimitResponse) return rateLimitResponse;
 
   const body = await parseBody(request);
   if (!body?.title || !body?.content) return json({ error: "title and content are required" }, 400);
@@ -230,36 +326,64 @@ export const mcpRecall = httpAction(async (ctx, request) => {
   const auth = await requireAuth(ctx, request);
   if (!auth) return json({ error: "Unauthorized" }, 401);
 
+  const rateLimitResponse = await withRateLimit(ctx, auth.keyHash);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const body = await parseBody(request);
-  const queryText = String(body?.query ?? "").trim();
-  if (!queryText) return json({ memories: [] });
+  const query = String(body?.query ?? "").trim();
+  const limit = Math.min(Number(body?.limit ?? 10), 50);
+  if (!query) return json({ error: "query is required" }, 400);
 
-  const requestedLimit = Number(body?.limit ?? 10);
-  const limit = Math.min(Math.max(Number.isFinite(requestedLimit) ? requestedLimit : 10, 1), 50);
-  const memories = await ctx.runQuery(internal.crystal.mcp.listRecentMemories, { userId: auth.userId, limit });
+  const apiKey = process.env.OPENAI_API_KEY;
+  let memories: any[] = [];
 
-  const terms = queryText.toLowerCase().split(/\s+/).filter(Boolean);
-  const filtered = memories.filter((memory: any) => {
-    const haystack = `${memory.title} ${memory.content}`.toLowerCase();
-    return terms.every((term) => haystack.includes(term));
-  });
+  if (apiKey) {
+    try {
+      const res = await fetch(OPENAI_EMBEDDING_ENDPOINT, {
+        method: "POST",
+        headers: { "content-type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: OPENAI_EMBEDDING_MODEL,
+          input: query,
+          encoding_format: "float",
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      const vec = data?.data?.[0]?.embedding;
+      if (Array.isArray(vec)) {
+        memories = await ctx.runAction(internal.crystal.mcp.semanticSearch, {
+          userId: auth.userId,
+          queryEmbedding: vec,
+          limit,
+        });
+      }
+    } catch {}
+  }
 
-  return json({
-    memories: filtered.map((memory: any) => ({
-      id: memory._id,
-      title: memory.title,
-      content: memory.content,
-      store: memory.store,
-      category: memory.category,
-      tags: memory.tags,
-      createdAt: memory.createdAt,
-    })),
-  });
+  // Lexical fallback
+  if (memories.length === 0) {
+    const all = await ctx.runQuery(internal.crystal.mcp.listRecentMemories, {
+      userId: auth.userId,
+      limit: 100,
+    });
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+    memories = all
+      .filter(
+        (m) => words.some((w) => m.content?.toLowerCase().includes(w) || m.title?.toLowerCase().includes(w))
+      )
+      .slice(0, limit)
+      .map((m) => ({ ...m, score: 0 }));
+  }
+
+  return json({ memories });
 });
 
 export const mcpCheckpoint = httpAction(async (ctx, request) => {
   const auth = await requireAuth(ctx, request);
   if (!auth) return json({ error: "Unauthorized" }, 401);
+
+  const rateLimitResponse = await withRateLimit(ctx, auth.keyHash);
+  if (rateLimitResponse) return rateLimitResponse;
 
   const body = await parseBody(request);
   if (!body?.label) return json({ error: "label is required" }, 400);
@@ -276,6 +400,9 @@ export const mcpCheckpoint = httpAction(async (ctx, request) => {
 const wakeHandler = httpAction(async (ctx, request) => {
   const auth = await requireAuth(ctx, request);
   if (!auth) return json({ error: "Unauthorized" }, 401);
+
+  const rateLimitResponse = await withRateLimit(ctx, auth.keyHash);
+  if (rateLimitResponse) return rateLimitResponse;
 
   const recentMemories = await ctx.runQuery(internal.crystal.mcp.listRecentMemories, {
     userId: auth.userId,
@@ -321,6 +448,9 @@ export const mcpWakePost = wakeHandler;
 export const mcpStats = httpAction(async (ctx, request) => {
   const auth = await requireAuth(ctx, request);
   if (!auth) return json({ error: "Unauthorized" }, 401);
+
+  const rateLimitResponse = await withRateLimit(ctx, auth.keyHash);
+  if (rateLimitResponse) return rateLimitResponse;
 
   const stats = await ctx.runQuery(internal.crystal.mcp.getMemoryStoreStats, {
     userId: auth.userId,

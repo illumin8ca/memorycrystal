@@ -87,7 +87,7 @@ export default defineSchema({
     .vectorIndex("by_embedding", {
       vectorField: "embedding",
       dimensions: 1536,
-      filterFields: ["userId", "store", "category", "archived"],
+      filterFields: ["userId", "archived"],
     })
     .index("by_user", ["userId", "archived"])
     .index("by_store_category", ["store", "category", "archived"])
@@ -274,4 +274,10 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_key_hash", ["keyHash"]),
+
+  crystalRateLimits: defineTable({
+    key: v.string(),
+    windowStart: v.number(),
+    count: v.number(),
+  }).index("by_key", ["key"]),
 });
