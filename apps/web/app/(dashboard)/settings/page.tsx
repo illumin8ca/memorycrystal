@@ -141,15 +141,14 @@ export default function SettingsPage() {
           <span className="text-primary">Pay as you go — $20/month</span>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm">
-          <button
-            type="button"
-            onClick={() => {
-              window.location.href = "#";
-            }}
+          <a
+            href="https://polar.sh/illumin8ca/portal"
+            target="_blank"
+            rel="noreferrer"
             className="text-accent underline text-left min-h-11"
           >
             Manage with Polar →
-          </button>
+          </a>
           <button
             type="button"
             className="text-secondary hover:text-primary transition-colors text-left min-h-11"

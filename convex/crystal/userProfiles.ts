@@ -31,6 +31,58 @@ export const createOrGet = mutation({
   },
 });
 
+export const grantUnlimitedByUserId = internalMutation({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    const profile = await ctx.db
+      .query("crystalUserProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+    if (!profile) {
+      // Create profile if it doesn't exist
+      const now = Date.now();
+      await ctx.db.insert("crystalUserProfiles", {
+        userId,
+        subscriptionStatus: "unlimited",
+        plan: "unlimited",
+        createdAt: now,
+        updatedAt: now,
+      });
+      return { created: true };
+    }
+    await ctx.db.patch(profile._id, {
+      subscriptionStatus: "unlimited",
+      plan: "unlimited",
+      updatedAt: Date.now(),
+    });
+    return { updated: true };
+  },
+});
+
+export const grantUnlimitedBySelf = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const UNLIMITED_EMAILS = ["andy@illumin8.ca", "admin@illumin8.ca"];
+    if (!UNLIMITED_EMAILS.includes((identity.email ?? "").toLowerCase())) {
+      throw new Error("Not authorized for unlimited plan");
+    }
+    const userId = stableUserId(identity.subject);
+    const profile = await ctx.db
+      .query("crystalUserProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+    if (!profile) throw new Error("No profile found — visit /dashboard first");
+    await ctx.db.patch(profile._id, {
+      subscriptionStatus: "unlimited",
+      plan: "unlimited",
+      updatedAt: Date.now(),
+    });
+    return { ok: true };
+  },
+});
+
 export const getByUser = query({
   args: {},
   handler: async (ctx) => {

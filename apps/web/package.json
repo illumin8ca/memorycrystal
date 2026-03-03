@@ -11,7 +11,7 @@
   "dependencies": {
     "@auth/core": "^0.37.0",
     "@convex-dev/auth": "0.0.91",
-    "@polar-sh/sdk": "^0.45.1",
+    "@polar-sh/sdk": "^0.45.2",
     "convex": "^1.24.1",
     "framer-motion": "^12.34.5",
     "next": "15.5.12",
