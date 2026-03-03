@@ -182,13 +182,27 @@ export default function SettingsPage() {
                 Cancel
               </button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       ) : null}
+      </AnimatePresence>
 
+      <AnimatePresence>
       {createdKey ? (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-xl border border-white/[0.07] bg-surface p-5 sm:p-6">
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            className="w-full max-w-xl p-5 sm:p-6"
+            style={{ backgroundColor: "#0f1e29", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 24px 64px rgba(0,0,0,0.6)" }}
+          >
             <p className="text-primary font-mono font-bold mb-2">NEW API KEY</p>
             <p className="text-secondary text-sm mb-4">Copy this key now. It won&apos;t be shown again.</p>
             <p className="text-primary bg-elevated border border-white/[0.07] p-3 text-sm break-all mb-6">
@@ -210,9 +224,10 @@ export default function SettingsPage() {
                 Dismiss
               </button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       ) : null}
+      </AnimatePresence>
     </div>
   );
 }

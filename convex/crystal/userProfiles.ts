@@ -15,9 +15,14 @@ export const createOrGet = mutation({
     if (existing) return existing;
 
     const now = Date.now();
+    // Auto-grant unlimited plan to allowlisted emails
+    const UNLIMITED_EMAILS = ["andy@illumin8.ca", "admin@illumin8.ca"];
+    const isUnlimited = UNLIMITED_EMAILS.includes((identity.email ?? "").toLowerCase());
+
     const id = await ctx.db.insert("crystalUserProfiles", {
       userId,
-      subscriptionStatus: "inactive",
+      subscriptionStatus: isUnlimited ? "unlimited" : "inactive",
+      plan: isUnlimited ? "unlimited" : undefined,
       createdAt: now,
       updatedAt: now,
     });
@@ -44,7 +49,7 @@ export const isSubscribed = query({
       .query("crystalUserProfiles")
       .withIndex("by_user", (q) => q.eq("userId", identity.subject))
       .first();
-    return profile?.subscriptionStatus === "active" || profile?.subscriptionStatus === "trialing";
+    return profile?.subscriptionStatus === "active" || profile?.subscriptionStatus === "trialing" || profile?.subscriptionStatus === "unlimited";
   },
 });
 
@@ -87,7 +92,7 @@ export const listAllUserIds = internalQuery({
   args: {},
   handler: async (ctx) => {
     const profiles = await ctx.db.query("crystalUserProfiles").collect();
-    return profiles.map((p) => p.userId);
+    return profiles.map((p) => p.userId).filter((id): id is string => !!id);
   },
 });
 
