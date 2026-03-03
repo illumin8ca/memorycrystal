@@ -10,9 +10,9 @@ import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 
 const nav = [
-  { label: "Dashboard", href: "/dashboard", icon: "▦" },
+  { label: "Dashboard", href: "/dashboard", icon: "⊞" },
   { label: "Memories", href: "/memories", icon: "◈" },
-  { label: "Messages", href: "/messages", icon: "◻" },
+  { label: "Messages", href: "/messages", icon: "✉" },
   { label: "Checkpoints", href: "/checkpoints", icon: "◎" },
   { label: "Settings", href: "/settings", icon: "⚙" },
 ];
