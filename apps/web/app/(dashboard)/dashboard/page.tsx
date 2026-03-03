@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 
@@ -8,6 +9,8 @@ const formatTime = (value: number) =>
 
 export default function DashboardPage() {
   const stats = useQuery(api.crystal.dashboard.getStats, {});
+  const recentMemories = useQuery(api.crystal.dashboard.listMemories, { limit: 5 });
+  const recentMessages = useQuery(api.crystal.dashboard.listMessages, { limit: 3 });
 
   const cards = [
     {
@@ -46,28 +49,75 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
-      <p className="text-secondary text-xs tracking-widest uppercase mb-3 sm:mb-4">RECENT ACTIVITY</p>
-      <div className="space-y-2">
-        {stats?.recentActivity && stats.recentActivity.length > 0
-          ? stats.recentActivity.map((m) => (
-              <div
-                key={`${m.title}-${m.createdAt}`}
-                className="bg-surface border border-white/[0.07] p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
-              >
-                <div className="flex items-start sm:items-center gap-2 sm:gap-3 min-w-0">
-                  <span className="text-primary text-sm font-medium truncate">{m.title}</span>
-                  <span className="text-accent text-[10px] sm:text-xs border border-accent px-2 py-0.5 font-mono shrink-0">
-                    {m.store}
-                  </span>
-                </div>
-                <span className="text-secondary text-xs shrink-0">{formatTime(m.createdAt)}</span>
-              </div>
-            ))
-          : !stats
-            ? (
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <section>
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <p className="text-secondary text-xs tracking-widest uppercase">Recent Memories</p>
+            <Link href="/memories" className="text-accent text-xs font-mono hover:underline">
+              VIEW ALL
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {!recentMemories ? (
               <div className="text-secondary text-sm px-2">Loading...</div>
-            )
-            : null}
+            ) : recentMemories.length === 0 ? (
+              <div className="text-secondary text-sm px-2">No memories yet.</div>
+            ) : (
+              recentMemories.map((m) => (
+                <Link
+                  key={m._id}
+                  href="/memories"
+                  className="block bg-surface border border-white/[0.07] p-3 sm:p-4 hover:border-accent/60 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <p className="text-primary text-sm font-medium line-clamp-1">{m.title || "Untitled"}</p>
+                    <span className="text-accent text-[10px] sm:text-xs border border-accent px-2 py-0.5 font-mono shrink-0">
+                      {m.store}
+                    </span>
+                  </div>
+                  <p className="text-secondary text-xs line-clamp-2">{m.content}</p>
+                </Link>
+              ))
+            )}
+          </div>
+        </section>
+
+        <section>
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <p className="text-secondary text-xs tracking-widest uppercase">Recent Messages</p>
+            <Link href="/messages" className="text-accent text-xs font-mono hover:underline">
+              VIEW ALL
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {!recentMessages ? (
+              <div className="text-secondary text-sm px-2">Loading...</div>
+            ) : recentMessages.length === 0 ? (
+              <div className="text-secondary text-sm px-2">No messages yet.</div>
+            ) : (
+              recentMessages.map((m) => (
+                <Link
+                  key={m._id}
+                  href="/messages"
+                  className="block bg-surface border border-white/[0.07] p-3 sm:p-4 hover:border-accent/60 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <span
+                      className={`text-[10px] sm:text-xs font-mono border px-2 py-0.5 shrink-0 ${
+                        m.role === "user" ? "text-accent border-accent" : "text-secondary border-white/[0.14]"
+                      }`}
+                    >
+                      {m.role === "user" ? "USER" : m.role === "assistant" ? "AI" : m.role.toUpperCase()}
+                    </span>
+                    <span className="text-secondary text-xs">{formatTime(m.timestamp)}</span>
+                  </div>
+                  <p className="text-primary text-sm line-clamp-2">{m.content}</p>
+                </Link>
+              ))
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );
