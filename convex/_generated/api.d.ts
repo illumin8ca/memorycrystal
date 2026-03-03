@@ -18,6 +18,7 @@ import type * as crystal_consolidate from "../crystal/consolidate.js";
 import type * as crystal_dashboard from "../crystal/dashboard.js";
 import type * as crystal_decay from "../crystal/decay.js";
 import type * as crystal_graph from "../crystal/graph.js";
+import type * as crystal_mcp from "../crystal/mcp.js";
 import type * as crystal_memories from "../crystal/memories.js";
 import type * as crystal_messages from "../crystal/messages.js";
 import type * as crystal_recall from "../crystal/recall.js";
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   "crystal/dashboard": typeof crystal_dashboard;
   "crystal/decay": typeof crystal_decay;
   "crystal/graph": typeof crystal_graph;
+  "crystal/mcp": typeof crystal_mcp;
   "crystal/memories": typeof crystal_memories;
   "crystal/messages": typeof crystal_messages;
   "crystal/recall": typeof crystal_recall;
