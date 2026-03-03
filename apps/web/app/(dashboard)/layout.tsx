@@ -30,7 +30,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen" style={{ backgroundColor: "#0d1820" }}>
 
       {/* Mobile top bar */}
-      <div className="lg:hidden sticky top-0 z-40 h-14 px-4 flex items-center justify-between" style={{ backgroundColor: "#0d1820", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+      <div className="lg:hidden sticky top-0 z-40 h-14 px-4 flex items-center justify-between" style={{ backgroundColor: "#0d1820", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
         <Link href="/dashboard" className="flex items-center gap-2 font-logo tracking-wide neon-text whitespace-nowrap">
           <CrystalIcon size={22} glow />
           <span className="text-sm font-bold">MEMORY CRYSTAL</span>
@@ -72,10 +72,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
               className="absolute right-0 top-0 h-full w-72 flex flex-col"
-              style={{ backgroundColor: "#0d1820", borderLeft: "1px solid rgba(255,255,255,0.1)" }}
+              style={{ backgroundColor: "#0d1820", borderLeft: "1px solid rgba(255,255,255,0.07)" }}
             >
               {/* Drawer header with X */}
-              <div className="h-14 px-5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+              <div className="h-14 px-5 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                 <span className="text-xs font-mono text-white/40 tracking-widest uppercase">Navigation</span>
                 <button
                   type="button"
@@ -122,14 +122,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.28, duration: 0.22 }}
                 className="px-5 py-6"
-                style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}
+                style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
               >
                 <p className="text-xs text-white/40 truncate mb-3">{currentEmail}</p>
                 <button
                   type="button"
                   onClick={async () => { setMobileOpen(false); await signOut(); }}
-                  className="w-full py-3 text-center text-xs font-mono tracking-widest"
-                  style={{ border: "1px solid rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.7)" }}
+                  className="btn-secondary w-full py-3 text-center text-xs tracking-widest"
+                  
                 >
                   SIGN OUT
                 </button>
@@ -141,8 +141,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <div className="flex min-h-screen">
         {/* Desktop sidebar */}
-        <aside className="hidden lg:flex fixed top-0 left-0 h-screen w-56 flex-col z-40" style={{ backgroundColor: "#0d1820", borderRight: "1px solid rgba(255,255,255,0.1)" }}>
-          <div className="px-6 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+        <aside className="hidden lg:flex fixed top-0 left-0 h-screen w-56 flex-col z-40" style={{ backgroundColor: "#0d1820", borderRight: "1px solid rgba(255,255,255,0.07)" }}>
+          <div className="px-6 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
             <Link href="/dashboard" className="flex items-center gap-2 font-logo tracking-wide neon-text whitespace-nowrap">
               <CrystalIcon size={20} glow />
               <span className="text-sm">MEMORY CRYSTAL</span>
@@ -165,7 +165,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </Link>
             ))}
           </nav>
-          <div className="px-6 py-4" style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+          <div className="px-6 py-4" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
             <p className="text-xs text-white/40 truncate">{currentEmail}</p>
             <button type="button" onClick={() => signOut()} className="text-xs mt-2 hover:underline" style={{ color: "#2180d6" }}>
               Sign out
@@ -177,7 +177,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       {/* Bottom tab bar — mobile only */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40" style={{ backgroundColor: "#0d1820", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40" style={{ backgroundColor: "#0d1820", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
         <ul className="grid grid-cols-5">
           {nav.map((item) => (
             <li key={item.href}>

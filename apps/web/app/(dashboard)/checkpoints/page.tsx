@@ -30,7 +30,7 @@ export default function CheckpointsPage() {
 
       <div className="space-y-3">
         {checkpoints.map((checkpoint) => (
-          <article key={checkpoint.title} className="border border-border bg-surface p-4 sm:p-5">
+          <article key={checkpoint.title} className="border border-white/[0.07] bg-surface p-4 sm:p-5">
             <div className="flex items-start justify-between gap-3 mb-2">
               <span className="text-primary font-medium">{checkpoint.title}</span>
               <span className="w-fit text-accent text-[10px] sm:text-xs font-mono border border-accent px-2 py-1 shrink-0">

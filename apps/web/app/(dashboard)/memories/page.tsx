@@ -22,7 +22,7 @@ export default function MemoriesPage() {
       <p className="text-secondary text-sm mb-6 sm:mb-8">Search and review memories pulled from Convex.</p>
       <input
         placeholder="Search memories..."
-        className="w-full bg-elevated border border-border text-primary p-3 min-h-11 text-sm mb-5 outline-none focus:border-accent placeholder:text-secondary"
+        className="w-full bg-elevated border border-white/[0.07] text-primary p-3 min-h-11 text-sm mb-5 outline-none focus:border-accent focus:shadow-[0_0_0_1px_#2180D6,0_0_12px_rgba(33,128,214,0.2)] placeholder:text-secondary"
         style={{ borderRadius: 0 }}
       />
       <div className="flex gap-2 flex-wrap mb-6">
@@ -30,7 +30,7 @@ export default function MemoriesPage() {
           <button
             key={store}
             onClick={() => setActive(store)}
-            className={`px-3 py-2 min-h-11 text-xs font-mono border transition-colors ${activeStore === store ? "bg-accent text-white border-accent" : "bg-elevated text-secondary border-border hover:text-primary"}`}
+            className={`px-3 py-2 min-h-11 text-xs font-mono border transition-colors ${activeStore === store ? "bg-accent text-white border-accent" : "bg-elevated text-secondary border-white/[0.07] hover:text-primary"}`}
             style={{ borderRadius: 0 }}
           >
             {store}
@@ -40,7 +40,7 @@ export default function MemoriesPage() {
       <div className="space-y-3">
         {memories
           ? memories.map((m) => (
-              <div key={m._id} className="bg-surface border border-border p-4 sm:p-5 min-w-0">
+              <div key={m._id} className="bg-surface border border-white/[0.07] p-4 sm:p-5 min-w-0">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
                   <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     <span className="text-primary font-medium truncate">{m.title}</span>
@@ -58,7 +58,7 @@ export default function MemoriesPage() {
                 <p className="text-secondary text-sm mb-3 break-words">{m.content}</p>
                 <div className="flex gap-2 flex-wrap">
                   {m.tags?.map((t: string) => (
-                    <span key={t} className="border border-border text-secondary text-xs px-2 py-1 font-mono break-all">
+                    <span key={t} className="border border-white/[0.07] text-secondary text-xs px-2 py-1 font-mono break-all">
                       {t}
                     </span>
                   ))}

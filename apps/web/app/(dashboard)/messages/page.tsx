@@ -16,14 +16,14 @@ export default function MessagesPage() {
       <div className="space-y-2">
         {messages
           ? messages.map((m) => (
-              <div key={m._id} className="bg-surface border border-border p-3 sm:p-4 flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-start min-w-0">
+              <div key={m._id} className="bg-surface border border-white/[0.07] p-3 sm:p-4 flex flex-col sm:flex-row gap-2 sm:gap-4 sm:items-start min-w-0">
                 <div className="flex items-center gap-2 sm:contents">
                   <span className="neon-text text-xs font-mono shrink-0 sm:w-20 sm:pt-0.5">
                     {formatTime(m.timestamp)}
                   </span>
                   <span
                     className={`text-[10px] sm:text-xs font-mono border px-2 py-1 shrink-0 ${
-                      m.role === "user" ? "text-accent border-accent" : "text-secondary border-border"
+                      m.role === "user" ? "text-accent border-accent" : "text-secondary border-white/[0.07]"
                     }`}
                   >
                     {m.role === "user" ? "USER" : m.role === "assistant" ? "AI" : m.role.toUpperCase()}

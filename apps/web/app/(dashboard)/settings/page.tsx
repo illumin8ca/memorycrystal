@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -73,7 +74,7 @@ export default function SettingsPage() {
         <button
           onClick={() => setShowCreateModal(true)}
           disabled={!userId || isCreating}
-          className="bg-accent hover:bg-accent-dim text-white px-4 py-2 min-h-11 text-sm font-semibold mb-6 transition-colors disabled:opacity-60"
+          className="btn-primary px-4 py-2 min-h-11 text-sm mb-6 disabled:opacity-60"
           style={{ borderRadius: 0 }}
         >
           {isCreating ? "Loading..." : "+ CREATE NEW KEY"}
@@ -82,7 +83,7 @@ export default function SettingsPage() {
         <div className="space-y-3">
           {apiKeys
             ? apiKeys.map((k: ApiKeyRow) => (
-                <div key={k._id} className="border border-border bg-surface p-4">
+                <div key={k._id} className="border border-white/[0.07] bg-surface p-4">
                   <div className="flex items-start justify-between gap-3">
                     <span className="text-primary font-medium">{k.label ?? "Untitled Key"}</span>
                     <span className="text-accent text-[10px] sm:text-xs font-mono border border-accent px-2 py-1 w-fit">
@@ -102,11 +103,11 @@ export default function SettingsPage() {
                   </button>
                 </div>
               ))
-            : <div className="border border-border p-4 text-secondary text-sm">Loading...</div>}
+            : <div className="border border-white/[0.07] p-4 text-secondary text-sm">Loading...</div>}
         </div>
       </section>
 
-      <div className="h-px bg-border mb-8 sm:mb-10" />
+      <div className="h-px bg-white/[0.06] mb-8 sm:mb-10" />
 
       <section>
         <h2 className="font-mono font-bold text-lg text-primary mb-4">SUBSCRIPTION</h2>
@@ -133,9 +134,22 @@ export default function SettingsPage() {
         </div>
       </section>
 
+      <AnimatePresence>
       {showCreateModal ? (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md border border-border bg-surface p-5 sm:p-6">
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            className="w-full max-w-md p-5 sm:p-6"
+            style={{ backgroundColor: "#0f1e29", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 24px 64px rgba(0,0,0,0.6)" }}
+          >
             <p className="text-primary font-mono font-bold mb-2">CREATE API KEY</p>
             <p className="text-secondary text-sm mb-4">Add a label so you can recognize this key later.</p>
             <label className="block text-xs font-mono text-secondary mb-2">Key Label</label>
@@ -144,7 +158,7 @@ export default function SettingsPage() {
               value={newKeyLabel}
               onChange={(e) => setNewKeyLabel(e.target.value)}
               placeholder="e.g. OpenClaw Beta Tester"
-              className="w-full bg-elevated border border-border text-primary px-3 py-3 text-sm mb-5 outline-none focus:border-accent"
+              className="w-full bg-elevated border border-white/[0.07] text-primary px-3 py-3 text-sm mb-5 outline-none focus:border-accent focus:shadow-[0_0_0_1px_#2180D6,0_0_12px_rgba(33,128,214,0.2)]"
               maxLength={64}
             />
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -152,7 +166,7 @@ export default function SettingsPage() {
                 type="button"
                 onClick={handleCreate}
                 disabled={isCreating}
-                className="bg-accent text-white px-4 py-2 min-h-11 text-sm hover:bg-accent-dim transition-colors disabled:opacity-60"
+                className="btn-primary px-4 py-2 min-h-11 text-sm disabled:opacity-60"
               >
                 {isCreating ? "Creating..." : "Create Key"}
               </button>
@@ -163,7 +177,7 @@ export default function SettingsPage() {
                   setShowCreateModal(false);
                   setNewKeyLabel("");
                 }}
-                className="bg-elevated text-primary px-4 py-2 min-h-11 text-sm border border-border"
+                className="btn-secondary px-4 py-2 min-h-11 text-sm"
               >
                 Cancel
               </button>
@@ -174,24 +188,24 @@ export default function SettingsPage() {
 
       {createdKey ? (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-xl border border-border bg-surface p-5 sm:p-6">
+          <div className="w-full max-w-xl border border-white/[0.07] bg-surface p-5 sm:p-6">
             <p className="text-primary font-mono font-bold mb-2">NEW API KEY</p>
             <p className="text-secondary text-sm mb-4">Copy this key now. It won&apos;t be shown again.</p>
-            <p className="text-primary bg-elevated border border-border p-3 text-sm break-all mb-6">
+            <p className="text-primary bg-elevated border border-white/[0.07] p-3 text-sm break-all mb-6">
               {createdKey}
             </p>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <button
                 type="button"
                 onClick={handleCopy}
-                className="bg-accent text-white px-4 py-2 min-h-11 text-sm hover:bg-accent-dim transition-colors"
+                className="btn-primary px-4 py-2 min-h-11 text-sm"
               >
                 Copy to clipboard
               </button>
               <button
                 type="button"
                 onClick={() => setCreatedKey(null)}
-                className="bg-elevated text-primary px-4 py-2 min-h-11 text-sm border border-border hover:bg-elevated transition-colors"
+                className="btn-secondary px-4 py-2 min-h-11 text-sm"
               >
                 Dismiss
               </button>

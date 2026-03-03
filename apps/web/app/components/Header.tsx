@@ -16,7 +16,7 @@ export default function Header() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0d1820]">
+    <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#0d1820]/90 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
 
         {/* Logo */}
@@ -102,7 +102,7 @@ export default function Header() {
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
               className="absolute right-0 top-0 h-full w-72 flex flex-col"
-              style={{ backgroundColor: "#0d1820", borderLeft: "1px solid rgba(255,255,255,0.1)" }}
+              style={{ backgroundColor: "#0d1820", borderLeft: "1px solid rgba(255,255,255,0.07)" }}
             >
               {/* Nav links — staggered in */}
               <nav className="flex flex-col px-4 pt-6 gap-1">

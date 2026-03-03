@@ -317,7 +317,6 @@ export default function HomePage() {
               <FadeInStagger className="grid gap-4 md:grid-cols-3 relative">
                 {workflowSteps.map((step, index) => (
                   <FadeInItem key={step.number}><article
-                    key={step.number}
                     className="glass-card border border-white/[0.07] p-7 relative"
                   >
                     <div className="text-xs font-mono neon-text">{step.number}</div>
@@ -448,7 +447,7 @@ export default function HomePage() {
                 </article></FadeInItem>
               ))}
             </FadeInStagger>
-          </div>
+          </FadeIn>
         </section>
 
         <FadeIn className="relative py-24 overflow-hidden">
