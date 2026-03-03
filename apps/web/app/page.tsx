@@ -5,6 +5,7 @@ import Link from "next/link";
 import CrystalIcon from "./components/CrystalIcon";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import { FadeIn, FadeInItem, FadeInStagger } from "./components/FadeIn";
 
 const problemCards = [
   {
@@ -83,7 +84,7 @@ const pricingPlans = [
       "Community support",
       "OpenClaw plugin",
     ],
-    borderClass: "border-border/25",
+    borderClass: "border-white/[0.06]",
   },
   {
     name: "PRO",
@@ -115,7 +116,7 @@ const pricingPlans = [
       "Custom retention policies",
       "Dedicated support + SLA",
     ],
-    borderClass: "border-border/50",
+    borderClass: "border-white/[0.07]",
   },
 ];
 
@@ -248,7 +249,7 @@ export default function HomePage() {
       </div>
 
       <main>
-        <section className="relative min-h-[100vh] overflow-hidden border-b border-border/25 pt-16">
+        <section className="relative min-h-[100vh] overflow-hidden border-b border-white/[0.06] pt-16">
           <div className="crystal-bg">
             <div className="gradient-pulse" />
             <div className="crystal-lattice" />
@@ -270,13 +271,13 @@ export default function HomePage() {
             <div className="mt-10 flex flex-col sm:flex-row gap-4">
               <Link
                 href="/signup"
-                className="inline-flex items-center justify-center px-6 py-3 text-xs font-mono bg-accent text-white shadow-[0_0_30px_rgba(33,128,214,0.35)] hover:shadow-[0_0_46px_rgba(33,128,214,0.55)] transition-all"
+                className="btn-primary inline-flex items-center justify-center px-6 py-3 text-xs"
               >
                 START FOR FREE
               </Link>
               <Link
                 href="/docs"
-                className="inline-flex items-center justify-center px-6 py-3 text-xs font-mono glass-card neon-border text-accent hover:bg-accent/8 transition-colors"
+                className="btn-secondary inline-flex items-center justify-center px-6 py-3 text-xs"
               >
                 SEE HOW IT WORKS
               </Link>
@@ -285,37 +286,39 @@ export default function HomePage() {
           <ScrollIndicator />
         </section>
 
-        <section className="border-y border-border/25 py-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section className="border-y border-white/[0.06] py-20">
+          <FadeIn className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <BracketHeading>THE PROBLEM</BracketHeading>
             <h2 className="mt-2 font-heading text-3xl md:text-5xl">Your AI is brilliant in the moment.<br/>And completely amnesiac the next.</h2>
             <p className="mt-4 text-secondary max-w-2xl">Context compaction, session resets, workspace switches — every one of them erases the shared understanding you built. The model hasn&apos;t gotten dumber. It just can&apos;t remember. Memory Crystal fixes that.</p>
-            <div className="mt-10 grid gap-4 md:grid-cols-3">
+            <FadeInStagger className="mt-10 grid gap-4 md:grid-cols-3">
               {problemCards.map((card) => (
-                <article key={card.title} className="glass-card border-border p-7">
+                <FadeInItem key={card.title}>
+                <article className="glass-card border border-white/[0.07] p-7">
                   <CrystalIcon size={28} glow />
                   <h3 className="mt-3 font-heading text-2xl">{card.title}</h3>
                   <p className="mt-3 text-secondary leading-relaxed">{card.copy}</p>
                 </article>
+                </FadeInItem>
               ))}
-            </div>
-          </div>
+            </FadeInStagger>
+          </FadeIn>
         </section>
 
         <section className="relative py-20">
           <div className="absolute inset-0 pointer-events-none">
             <div className="crystal-grid h-full w-full opacity-35" />
           </div>
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <FadeIn className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <BracketHeading>HOW IT WORKS</BracketHeading>
             <h2 className="mt-2 font-heading text-3xl md:text-5xl">Persistent memory that survives everything.</h2>
             <div className="mt-10 relative">
               <div className="hidden md:block absolute left-24 right-24 top-11 h-[1px] bg-[rgba(33,128,214,0.28)]" />
-              <div className="grid gap-4 md:grid-cols-3 relative">
+              <FadeInStagger className="grid gap-4 md:grid-cols-3 relative">
                 {workflowSteps.map((step, index) => (
-                  <article
+                  <FadeInItem key={step.number}><article
                     key={step.number}
-                    className="glass-card border-border/40 p-7 relative"
+                    className="glass-card border border-white/[0.07] p-7 relative"
                   >
                     <div className="text-xs font-mono neon-text">{step.number}</div>
                     <h3 className="mt-3 font-logo text-2xl">{step.title}</h3>
@@ -326,54 +329,54 @@ export default function HomePage() {
                     {index < workflowSteps.length - 1 ? (
                       <span className="hidden md:block absolute right-[-0.5rem] top-[2.05rem] w-2 h-2 border border-accent bg-void" />
                     ) : null}
-                  </article>
+                  </article></FadeInItem>
                 ))}
-              </div>
+              </FadeInStagger>
             </div>
-          </div>
+          </FadeIn>
         </section>
 
-        <section className="border-y border-border/25 py-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section className="border-y border-white/[0.06] py-20">
+          <FadeIn className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <BracketHeading>SUPPORTED PLATFORMS</BracketHeading>
             <h2 className="mt-2 font-heading text-3xl md:text-5xl">One memory layer. Every AI coding agent.</h2>
-            <div className="mt-10 grid gap-4 md:grid-cols-3">
+            <FadeInStagger className="mt-10 grid gap-4 md:grid-cols-3">
               {platformCards.map((platform) => (
-                <article key={platform.name} className="glass-card border-border/40 p-6">
+                <FadeInItem key={platform.name}><article className="glass-card border border-white/[0.07] p-6">
                   <h3 className="font-heading text-2xl">{platform.name}</h3>
                   <p className="mt-3 text-secondary">{platform.copy}</p>
-                </article>
+                </article></FadeInItem>
               ))}
-            </div>
+            </FadeInStagger>
             <p className="mt-6 text-sm font-mono text-secondary">Any MCP-compatible agent is supported. More native integrations shipping in Q2 2026.</p>
-          </div>
+          </FadeIn>
         </section>
 
         <section className="relative py-20">
           <div className="absolute inset-0 pointer-events-none">
             <div className="crystal-grid h-full w-full opacity-25" />
           </div>
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <FadeIn className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <BracketHeading>WHAT YOU GET</BracketHeading>
             <h2 className="mt-2 font-heading text-3xl md:text-5xl">Not just storage — a complete memory system.</h2>
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <FadeInStagger className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {featureCards.map((feature) => (
-                <article key={feature.title} className="glass-card border-border/45 p-6">
+                <FadeInItem key={feature.title}><article className="glass-card border border-white/[0.07] p-6">
                   <CrystalIcon size={28} glow />
                   <h3 className="mt-3 font-heading text-2xl">{feature.title}</h3>
                   <p className="mt-3 text-secondary leading-relaxed">{feature.copy}</p>
-                </article>
+                </article></FadeInItem>
               ))}
-            </div>
-          </div>
+            </FadeInStagger>
+          </FadeIn>
         </section>
 
-        <section id="pricing" className="relative border-y border-border/25 py-20">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section id="pricing" className="relative border-y border-white/[0.06] py-20">
+          <FadeIn className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <BracketHeading>PRICING</BracketHeading>
             <div className="mt-2 flex flex-wrap items-center gap-5 justify-between">
               <h2 className="font-heading text-3xl md:text-5xl">Start free. Scale when ready.</h2>
-              <div className="inline-flex border border-border/45">
+              <div className="inline-flex border border-white/[0.07] bg-white/[0.02]">
                 <button
                   type="button"
                   onClick={() => setAnnualBilling(false)}
@@ -398,11 +401,11 @@ export default function HomePage() {
               {annualBilling ? "Save ~30% by going annual" : "Monthly billing"}
             </div>
 
-            <div className="mt-10 grid gap-4 lg:grid-cols-3">
-              {pricingPlans.map((plan) => (
-                <article
-                  key={plan.name}
-                  className={`glass-card p-8 border ${plan.borderClass} flex flex-col relative`}
+            <FadeInStagger className="mt-10 grid gap-4 lg:grid-cols-3">
+              {pricingPlans.map((plan, index) => (
+                <FadeInItem key={plan.name} className="h-full"><article
+                  className={`glass-card p-8 border ${plan.borderClass} flex flex-col relative h-full`}
+                  style={{ transitionDelay: `${index * 70}ms` }}
                 >
                   {plan.isFeatured ? (
                     <span className="absolute top-0 right-0 -translate-y-1/2 bg-accent px-3 py-1 text-[10px] font-mono text-white">
@@ -423,32 +426,32 @@ export default function HomePage() {
                   </ul>
                   <Link
                     href="/signup"
-                    className="mt-7 inline-flex items-center justify-center px-5 py-3 text-xs font-mono border border-border/50 bg-border/5 hover:bg-accent/12 hover:border-accent transition-colors"
+                    className="btn-primary mt-7 inline-flex items-center justify-center px-5 py-3 text-xs"
                   >
                     {plan.button}
                   </Link>
-                </article>
+                </article></FadeInItem>
               ))}
-            </div>
-          </div>
+            </FadeInStagger>
+          </FadeIn>
         </section>
 
-        <section className="relative border-b border-border/25 py-20">
+        <section className="relative border-b border-white/[0.06] py-20">
           <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_50%_25%,rgba(33,128,214,0.2),transparent_60%)]" />
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <FadeIn className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <BracketHeading>ROADMAP</BracketHeading>
             <h2 className="mt-2 font-heading text-3xl md:text-5xl">Where we&apos;re going.</h2>
-            <div className="mt-8 grid gap-4">
+            <FadeInStagger className="mt-8 grid gap-4">
               {roadmapItems.map((item) => (
-                <article key={item} className="glass-card p-6 border border-border/45">
+                <FadeInItem key={item}><article className="glass-card p-6 border border-white/[0.07]">
                   <p className="text-primary font-heading text-xl">{item}</p>
-                </article>
+                </article></FadeInItem>
               ))}
-            </div>
+            </FadeInStagger>
           </div>
         </section>
 
-        <section className="relative py-24 overflow-hidden">
+        <FadeIn className="relative py-24 overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle,_rgba(33,128,214,0.28)_0%,_rgba(28,39,47,0.95)_65%)]" />
           {/* Decorative crystal in CTA */}
           <div className="absolute left-1/2 top-6 -translate-x-1/2 opacity-20 crystal-drift">
@@ -459,12 +462,12 @@ export default function HomePage() {
             <p className="mt-4 text-secondary">Start free. No credit card required.</p>
             <Link
               href="/signup"
-              className="mt-8 inline-flex px-10 py-3 bg-accent text-white text-xs font-mono shadow-[0_0_40px_rgba(33,128,214,0.45)] hover:brightness-110"
+              className="btn-primary mt-8 inline-flex px-10 py-3 text-xs"
             >
               GET STARTED FREE
             </Link>
           </div>
-        </section>
+        </FadeIn>
       </main>
 
       <Footer />

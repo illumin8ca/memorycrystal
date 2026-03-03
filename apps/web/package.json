@@ -9,25 +9,26 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@auth/core": "^0.37.0",
+    "@convex-dev/auth": "0.0.91",
+    "@polar-sh/sdk": "^0.45.1",
+    "convex": "^1.24.1",
+    "framer-motion": "^12.34.5",
     "next": "15.5.12",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "convex": "^1.24.1",
-    "@convex-dev/auth": "0.0.91",
-    "@auth/core": "^0.37.0",
-    "react-icons": "*",
-    "@polar-sh/sdk": "^0.45.1"
+    "react-icons": "*"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@tailwindcss/postcss": "^4.2.1",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.12",
+    "postcss": "^8.5.3",
     "tailwindcss": "^4.2.1",
-    "@tailwindcss/postcss": "^4.2.1",
-    "postcss": "^8.5.3"
+    "typescript": "^5"
   },
   "engines": {
     "node": ">=20.9.0"
