@@ -24,14 +24,21 @@ export default function SettingsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState("");
   const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newKeyLabel, setNewKeyLabel] = useState("");
 
   const handleCreate = async () => {
     if (!userId) return;
     setError("");
     setIsCreating(true);
     try {
-      const key = await createApiKey({});
+      const cleanedLabel = newKeyLabel.trim();
+      const key = await createApiKey({
+        ...(cleanedLabel ? { label: cleanedLabel } : {}),
+      });
       setCreatedKey(key);
+      setShowCreateModal(false);
+      setNewKeyLabel("");
     } catch (err) {
       setError((err as Error).message ?? "Failed to create key");
     } finally {
@@ -47,7 +54,12 @@ export default function SettingsPage() {
 
   const handleRevoke = async (keyId: Id<"crystalApiKeys">) => {
     if (!userId) return;
-    await revokeApiKey({ keyId });
+    setError("");
+    try {
+      await revokeApiKey({ keyId });
+    } catch (err) {
+      setError((err as Error).message ?? "Failed to revoke key");
+    }
   };
 
   return (
@@ -59,7 +71,7 @@ export default function SettingsPage() {
         <p className="text-secondary text-sm mb-6">Use these keys to connect OpenClaw and other integrations to your Memory Crystal memory.</p>
         {error ? <p className="text-red-400 text-sm mb-4">{error}</p> : null}
         <button
-          onClick={handleCreate}
+          onClick={() => setShowCreateModal(true)}
           disabled={!userId || isCreating}
           className="bg-accent hover:bg-accent-dim text-white px-4 py-2 min-h-11 text-sm font-semibold mb-6 transition-colors disabled:opacity-60"
           style={{ borderRadius: 0 }}
@@ -83,9 +95,10 @@ export default function SettingsPage() {
                   </div>
                   <button
                     onClick={() => handleRevoke(k._id)}
-                    className="text-secondary hover:text-red-400 text-xs mt-3 transition-colors min-h-11"
+                    disabled={!k.active}
+                    className="text-secondary hover:text-red-400 text-xs mt-3 transition-colors min-h-11 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    Revoke
+                    {k.active ? "Revoke" : "Already revoked"}
                   </button>
                 </div>
               ))
@@ -119,6 +132,45 @@ export default function SettingsPage() {
           </button>
         </div>
       </section>
+
+      {showCreateModal ? (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md border border-border bg-surface p-5 sm:p-6">
+            <p className="text-primary font-mono font-bold mb-2">CREATE API KEY</p>
+            <p className="text-secondary text-sm mb-4">Add a label so you can recognize this key later.</p>
+            <label className="block text-xs font-mono text-secondary mb-2">Key Label</label>
+            <input
+              type="text"
+              value={newKeyLabel}
+              onChange={(e) => setNewKeyLabel(e.target.value)}
+              placeholder="e.g. OpenClaw Beta Tester"
+              className="w-full bg-elevated border border-border text-primary px-3 py-3 text-sm mb-5 outline-none focus:border-accent"
+              maxLength={64}
+            />
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <button
+                type="button"
+                onClick={handleCreate}
+                disabled={isCreating}
+                className="bg-accent text-white px-4 py-2 min-h-11 text-sm hover:bg-accent-dim transition-colors disabled:opacity-60"
+              >
+                {isCreating ? "Creating..." : "Create Key"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (isCreating) return;
+                  setShowCreateModal(false);
+                  setNewKeyLabel("");
+                }}
+                className="bg-elevated text-primary px-4 py-2 min-h-11 text-sm border border-border"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {createdKey ? (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
