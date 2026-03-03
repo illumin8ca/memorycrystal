@@ -27,7 +27,6 @@ const toSubscriptionStatus = (
 
 export async function POST(request: NextRequest) {
   const secret = process.env.POLAR_WEBHOOK_SECRET;
-  // TODO: Set POLAR_WEBHOOK_SECRET env var before going live
   if (!secret) {
     return NextResponse.json({ error: "Missing POLAR_WEBHOOK_SECRET" }, { status: 500 });
   }

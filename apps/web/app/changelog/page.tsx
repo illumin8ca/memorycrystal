@@ -3,34 +3,17 @@ import Footer from "../components/Footer";
 
 const changelogEntries = [
   {
-    version: "v1.0.0",
-    title: "Phase 5: Spreading activation, crystal_wake, MEMORY.md migration",
-    details:
-      "Introduced graph-aware scoring for recall plus session wake-up briefings and full migration tooling for MEMORY.md stores.",
-  },
-  {
-    version: "v0.9.0",
-    title: "Phase 4: Auth, dashboard, Railway deployment, Polar billing",
-    details:
-      "Production dashboard workflows, Stripe-ready pricing paths, and stable deployment path for hosted rollout.",
-  },
-  {
-    version: "v0.8.0",
-    title: "Phase 3: Knowledge graph foundation, typed entities and relations",
-    details:
-      "Added type-aware relation tables and graph hydration during memory ingestion and recall scoring.",
-  },
-  {
-    version: "v0.7.0",
-    title: "Phase 2: Obsidian sync, Notion integration, 1,525 seed memories",
-    details:
-      "Expanded connector ecosystem and seeded synthetic memory sets for realistic baseline behavior.",
-  },
-  {
-    version: "v0.6.0",
-    title: "Phase 1: Core MCP tools, Convex backend, plugin wiring",
-    details:
-      "Shipped initial memory pipeline, schema contracts, and plugin hooks for capture and recall capture.",
+    version: "v0.1.0",
+    date: "March 3, 2026",
+    items: [
+      "Memory Crystal beta launched",
+      "MCP HTTP API (capture, recall, checkpoint, wake, stats)",
+      "OpenClaw one-liner installer: curl -fsSL https://memorycrystal.ai/install | bash",
+      "Real-time semantic search with OpenAI embeddings",
+      "Per-API-key rate limiting (60 req/min)",
+      "Polar billing integration (Free / Pro / Ultra)",
+      "PWA support — installable on iOS and Android",
+    ],
   },
 ];
 
@@ -55,9 +38,12 @@ export default function ChangelogPage() {
         <section className="mt-10 space-y-5">
           {changelogEntries.map((entry) => (
             <article key={entry.version} className="glass-card border border-border/45 p-6">
-              <div className="font-mono text-accent text-sm">{entry.version}</div>
-              <h2 className="mt-2 text-2xl font-heading">{entry.title}</h2>
-              <p className="mt-3 text-secondary leading-relaxed">{entry.details}</p>
+              <div className="font-mono text-accent text-sm">{entry.version} — {entry.date}</div>
+              <ul className="mt-4 space-y-2 text-secondary leading-relaxed list-disc pl-5">
+                {entry.items.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
             </article>
           ))}
         </section>
