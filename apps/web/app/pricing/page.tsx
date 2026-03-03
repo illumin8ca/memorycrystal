@@ -11,6 +11,7 @@ const pricingPlans = [
     name: "FREE",
     price: "$0 forever",
     button: "START FREE",
+    checkoutHref: "/api/polar/checkout?plan=free",
     features: [
       "500 memories stored",
       "7-day message history",
@@ -25,6 +26,7 @@ const pricingPlans = [
     price: "$20/mo",
     priceAnnual: "$168/yr",
     button: "START PRO",
+    checkoutHref: "/api/polar/checkout?plan=pro",
     isFeatured: true,
     features: [
       "Unlimited memories",
@@ -42,6 +44,7 @@ const pricingPlans = [
     price: "$100/mo",
     priceAnnual: "$840/yr",
     button: "START ULTRA",
+    checkoutHref: "/api/polar/checkout?plan=ultra",
     features: [
       "Everything in Pro",
       "Multi-agent memory isolation",
@@ -145,7 +148,7 @@ export default function PricingPage() {
                 ))}
               </ul>
               <Link
-                href="/signup"
+                href={plan.checkoutHref}
                 className="mt-7 inline-flex items-center justify-center px-5 py-3 text-xs font-mono border border-border/50 bg-border/5 hover:bg-accent/12 hover:border-accent transition-colors"
               >
                 {plan.button}

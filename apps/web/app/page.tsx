@@ -77,6 +77,7 @@ const pricingPlans = [
     name: "FREE",
     price: "$0 forever",
     button: "START FREE",
+    checkoutHref: "/api/polar/checkout?plan=free",
     features: [
       "500 memories stored",
       "7-day message history",
@@ -91,6 +92,7 @@ const pricingPlans = [
     price: "$20/mo",
     priceAnnual: "$168/yr",
     button: "START PRO",
+    checkoutHref: "/api/polar/checkout?plan=pro",
     isFeatured: true,
     features: [
       "Unlimited memories",
@@ -108,6 +110,7 @@ const pricingPlans = [
     price: "$100/mo",
     priceAnnual: "$840/yr",
     button: "START ULTRA",
+    checkoutHref: "/api/polar/checkout?plan=ultra",
     features: [
       "Everything in Pro",
       "Multi-agent memory isolation",
@@ -270,7 +273,7 @@ export default function HomePage() {
             </p>
             <div className="mt-10 flex flex-col sm:flex-row gap-4">
               <Link
-                href="/signup"
+                href="/api/polar/checkout?plan=free"
                 className="btn-primary inline-flex items-center justify-center px-6 py-3 text-xs"
               >
                 START FOR FREE
@@ -424,7 +427,7 @@ export default function HomePage() {
                     ))}
                   </ul>
                   <Link
-                    href="/signup"
+                    href={plan.checkoutHref}
                     className="btn-primary mt-7 inline-flex items-center justify-center px-5 py-3 text-xs"
                   >
                     {plan.button}
@@ -460,7 +463,7 @@ export default function HomePage() {
             <h2 className="font-heading text-4xl md:text-5xl">Your AI Deserves to Remember</h2>
             <p className="mt-4 text-secondary">Start free. No credit card required.</p>
             <Link
-              href="/signup"
+              href="/api/polar/checkout?plan=free"
               className="btn-primary mt-8 inline-flex px-10 py-3 text-xs"
             >
               GET STARTED FREE
