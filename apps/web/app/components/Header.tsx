@@ -102,7 +102,7 @@ export default function Header() {
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
               className="absolute right-0 top-0 h-full w-72 flex flex-col"
-              style={{ backgroundColor: "#0d1820", borderLeft: "1px solid rgba(255,255,255,0.07)" }}
+              style={{ backgroundColor: "#0d1820", borderLeft: "1px solid rgba(255,255,255,0.1)", boxShadow: "-8px 0 32px rgba(0,0,0,0.6)" }}
             >
               {/* Nav links — staggered in */}
               <nav className="flex flex-col px-4 pt-6 gap-1">
