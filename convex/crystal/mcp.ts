@@ -466,6 +466,30 @@ const wakeHandler = httpAction(async (ctx, request) => {
 export const mcpWakeGet = wakeHandler;
 export const mcpWakePost = wakeHandler;
 
+export const mcpLog = httpAction(async (ctx, request) => {
+  const auth = await requireAuth(ctx, request);
+  if (!auth) return json({ error: "Unauthorized" }, 401);
+
+  const rateLimitResponse = await withRateLimit(ctx, auth.keyHash);
+  if (rateLimitResponse) return rateLimitResponse;
+
+  const body = await parseBody(request);
+  const role = body?.role === "user" ? "user" : body?.role === "system" ? "system" : "assistant";
+  const content = String(body?.content ?? "").trim();
+  if (!content) return json({ error: "content is required" }, 400);
+
+  const id = await ctx.runMutation(internal.crystal.messages.logMessageInternal, {
+    userId: auth.userId,
+    role,
+    content,
+    channel: body?.channel ? String(body.channel) : undefined,
+    sessionKey: body?.sessionKey ? String(body.sessionKey) : undefined,
+    ttlDays: 14,
+  });
+
+  return json({ ok: true, id });
+});
+
 export const mcpStats = httpAction(async (ctx, request) => {
   const auth = await requireAuth(ctx, request);
   if (!auth) return json({ error: "Unauthorized" }, 401);
