@@ -278,12 +278,12 @@ export default function HomePage() {
               >
                 START FOR FREE
               </Link>
-              <Link
-                href="/docs"
+              <a
+                href="#how-it-works"
                 className="btn-secondary inline-flex items-center justify-center px-6 py-3 text-xs"
               >
                 SEE HOW IT WORKS
-              </Link>
+              </a>
             </div>
           </div>
           <ScrollIndicator />
@@ -308,7 +308,7 @@ export default function HomePage() {
           </FadeIn>
         </section>
 
-        <section className="relative py-20">
+        <section id="how-it-works" className="relative py-20">
           <div className="absolute inset-0 pointer-events-none">
             <div className="crystal-grid h-full w-full opacity-35" />
           </div>
