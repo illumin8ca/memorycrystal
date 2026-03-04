@@ -22,11 +22,11 @@ async function request(config, method, path, body) {
 }
 
 async function injectWakeBriefing(api, event, ctx) {
-  const sessionKey = ctx?.sessionKey;
+  const sessionKey = ctx?.sessionKey || event?.conversationId;
   if (!sessionKey || wakeInjectedSessions.has(sessionKey)) return;
 
   const wake = await request(ctx?.config, "POST", "/api/mcp/wake", {
-    channel: ctx?.messageProvider || event?.channel || "openclaw",
+    channel: event?.channelId || ctx?.messageProvider || "openclaw",
   });
 
   const briefing = wake?.briefing || wake?.summary || wake?.text;
@@ -38,40 +38,47 @@ async function injectWakeBriefing(api, event, ctx) {
 }
 
 module.exports = (api) => {
-  api.on("message_received", async (event, ctx) => {
-    const text = event?.text || event?.content || "";
-    const sessionKey = ctx?.sessionKey;
+  // Buffer inbound user message + inject wake briefing on first turn
+  api.registerHook(
+    "message:received",
+    async (event, ctx) => {
+      const text = event?.content || event?.text || "";
+      const sessionKey = ctx?.sessionKey || event?.conversationId || "";
+      if (text && sessionKey) {
+        pendingUserMessages.set(sessionKey, String(text));
+      }
+      await injectWakeBriefing(api, event, ctx);
+    },
+    { name: "crystal-memory.message-received", description: "Buffer messages + inject wake briefing" }
+  );
 
-    if (text && sessionKey) {
-      pendingUserMessages.set(sessionKey, String(text));
-    }
+  // Capture AI response as memory
+  api.registerHook(
+    "message:sent",
+    async (event, ctx) => {
+      const assistantText = (event?.content || event?.text || "").trim();
+      if (!assistantText) return;
 
-    await injectWakeBriefing(api, event, ctx);
-  });
+      const sessionKey = ctx?.sessionKey || event?.conversationId || "";
+      const userMessage = sessionKey ? (pendingUserMessages.get(sessionKey) || "") : "";
+      if (sessionKey) pendingUserMessages.delete(sessionKey);
 
-  api.on("llm_output", async (event, ctx) => {
-    const assistantText = (event?.assistantTexts || []).join("\n").trim() || String(event?.outputText || "").trim();
-    if (!assistantText) return;
+      const content = [
+        userMessage ? `User: ${userMessage}` : null,
+        `Assistant: ${assistantText}`,
+      ].filter(Boolean).join("\n\n");
 
-    const sessionKey = ctx?.sessionKey || "";
-    const userMessage = sessionKey ? pendingUserMessages.get(sessionKey) || "" : "";
-    if (sessionKey) pendingUserMessages.delete(sessionKey);
+      await request(ctx?.config, "POST", "/api/mcp/capture", {
+        title: `OpenClaw turn ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
+        content,
+        store: "sensory",
+        category: "conversation",
+        tags: ["openclaw", "auto-capture"],
+        channel: event?.channelId || ctx?.messageProvider || "openclaw",
+      });
+    },
+    { name: "crystal-memory.message-sent", description: "Capture AI response to Memory Crystal" }
+  );
 
-    const content = [
-      userMessage ? `User: ${userMessage}` : null,
-      `Assistant: ${assistantText}`,
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-
-    await request(ctx?.config, "POST", "/api/mcp/capture", {
-      title: `OpenClaw turn ${new Date().toISOString()}`,
-      content,
-      store: "sensory",
-      category: "conversation",
-      tags: ["openclaw", "auto-capture"],
-    });
-  });
-
-  api.logger?.info?.("[crystal-memory] hooks registered: message_received, llm_output");
+  api.logger?.info?.("[crystal-memory] hooks registered: message:received + message:sent");
 };
