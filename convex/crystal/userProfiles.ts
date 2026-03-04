@@ -9,10 +9,11 @@ export const createOrGet = mutation({
     if (!identity) throw new Error("Unauthenticated");
     const userId = stableUserId(identity.subject);
 
-    const existing = await ctx.db
+    const existingProfiles = await ctx.db
       .query("crystalUserProfiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
+      .collect();
+    const existing = existingProfiles.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
     if (existing) return existing;
 
     const now = Date.now();
@@ -69,10 +70,11 @@ export const grantUnlimitedBySelf = mutation({
       throw new Error("Not authorized for unlimited plan");
     }
     const userId = stableUserId(identity.subject);
-    const profile = await ctx.db
+    const profiles = await ctx.db
       .query("crystalUserProfiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
+      .collect();
+    const profile = profiles.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
     if (!profile) throw new Error("No profile found — visit /dashboard first");
     await ctx.db.patch(profile._id, {
       subscriptionStatus: "unlimited",
@@ -88,7 +90,12 @@ export const getByUser = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    return ctx.db.query("crystalUserProfiles").withIndex("by_user", (q) => q.eq("userId", stableUserId(identity.subject))).first();
+    const userId = stableUserId(identity.subject);
+    const profiles = await ctx.db
+      .query("crystalUserProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    return profiles.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0] ?? null;
   },
 });
 
@@ -98,10 +105,12 @@ export const isSubscribed = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
 
-    const profile = await ctx.db
+    const userId = stableUserId(identity.subject);
+    const profiles = await ctx.db
       .query("crystalUserProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", stableUserId(identity.subject)))
-      .first();
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    const profile = profiles.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
     return profile?.subscriptionStatus === "active" || profile?.subscriptionStatus === "trialing" || profile?.subscriptionStatus === "unlimited";
   },
 });

@@ -2,12 +2,31 @@ import { stableUserId } from "./auth";
 import { query } from "../_generated/server";
 import { v } from "convex/values";
 
+async function hasActiveSubscription(ctx: any, userId: string): Promise<boolean> {
+  const profiles = await ctx.db
+    .query("crystalUserProfiles")
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .collect();
+  const profile = profiles.sort((a: any, b: any) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
+  const status = profile?.subscriptionStatus;
+  return status === "active" || status === "trialing" || status === "unlimited";
+}
+
 export const getStats = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const userId = stableUserId(identity.subject);
+    if (!(await hasActiveSubscription(ctx, userId))) {
+      return {
+        totalMemories: 0,
+        totalMessages: 0,
+        memoriesByStore: {},
+        activeStores: 0,
+        recentActivity: [],
+      };
+    }
 
     const allMemories = await ctx.db
       .query("crystalMemories")
@@ -49,6 +68,7 @@ export const listMemories = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const userId = stableUserId(identity.subject);
+    if (!(await hasActiveSubscription(ctx, userId))) return [];
 
     const all = await ctx.db
       .query("crystalMemories")
@@ -72,6 +92,7 @@ export const listMessages = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const userId = stableUserId(identity.subject);
+    if (!(await hasActiveSubscription(ctx, userId))) return [];
 
     const msgs = await ctx.db
       .query("crystalMessages")

@@ -87,6 +87,24 @@ export const getApiKeyRecord = internalQuery({
   },
 });
 
+export const issueApiKeyForUser = internalMutation({
+  args: { userId: v.string(), label: v.optional(v.string()) },
+  handler: async (ctx, { userId, label }) => {
+    const rawKey = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    const keyHash = await sha256Hex(rawKey);
+    await ctx.db.insert("crystalApiKeys", {
+      userId,
+      keyHash,
+      label: label ?? "internal-test-key",
+      createdAt: Date.now(),
+      active: true,
+    });
+    return rawKey;
+  },
+});
+
 export const captureMemory = internalMutation({
   args: {
     userId: v.string(),
@@ -331,7 +349,10 @@ export const mcpRecall = httpAction(async (ctx, request) => {
 
   const body = await parseBody(request);
   const query = String(body?.query ?? "").trim();
-  const limit = Math.min(Number(body?.limit ?? 10), 50);
+  const requestedLimit = Number(body?.limit ?? 10);
+  const limit = Number.isFinite(requestedLimit)
+    ? Math.min(Math.max(Math.trunc(requestedLimit), 1), 50)
+    : 10;
   if (!query) return json({ error: "query is required" }, 400);
 
   const apiKey = process.env.OPENAI_API_KEY;
@@ -584,6 +605,55 @@ export const listEmptyEmbeddingMemories = internalQuery({
   handler: async (ctx, { limit }) => {
     const all = await ctx.db.query("crystalMemories").take(limit * 3);
     return all.filter((m) => !m.embedding || m.embedding.length === 0).slice(0, limit);
+  },
+});
+
+export const listMemoryUserIds = internalQuery({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit }) => {
+    const max = Math.min(Math.max(limit ?? 50, 1), 500);
+    const docs = await ctx.db.query("crystalMemories").take(max);
+    return docs.map((m) => ({ id: m._id, userId: m.userId ?? null, hasPipe: typeof m.userId === "string" && m.userId.includes("|") }));
+  },
+});
+
+export const listApiKeyUserIds = internalQuery({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit }) => {
+    const max = Math.min(Math.max(limit ?? 50, 1), 500);
+    const docs = await ctx.db.query("crystalApiKeys").take(max);
+    return docs.map((k) => ({ id: k._id, userId: k.userId ?? null, hasPipe: typeof k.userId === "string" && k.userId.includes("|") }));
+  },
+});
+
+export const auditDataIntegrity = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const memories = await ctx.db.query("crystalMemories").collect();
+    const apiKeys = await ctx.db.query("crystalApiKeys").collect();
+    const profiles = await ctx.db.query("crystalUserProfiles").collect();
+
+    const memoriesMissingUserId = memories.filter((m) => !m.userId).length;
+    const memoryUserIdsWithPipe = memories.filter((m) => typeof m.userId === "string" && m.userId.includes("|")).length;
+    const apiKeysMissingUserId = apiKeys.filter((k) => !k.userId).length;
+    const apiKeyUserIdsWithPipe = apiKeys.filter((k) => typeof k.userId === "string" && k.userId.includes("|")).length;
+
+    const duplicateProfiles = profiles.reduce((acc: Record<string, number>, p) => {
+      if (!p.userId) return acc;
+      acc[p.userId] = (acc[p.userId] ?? 0) + 1;
+      return acc;
+    }, {});
+    const usersWithDuplicateProfiles = Object.entries(duplicateProfiles)
+      .filter(([, count]) => count > 1)
+      .map(([userId, count]) => ({ userId, count }));
+
+    return {
+      memoriesMissingUserId,
+      memoryUserIdsWithPipe,
+      apiKeysMissingUserId,
+      apiKeyUserIdsWithPipe,
+      usersWithDuplicateProfiles,
+    };
   },
 });
 
