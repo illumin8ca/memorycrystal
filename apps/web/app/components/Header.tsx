@@ -85,14 +85,15 @@ export default function Header() {
       {/* Mobile drawer */}
       <AnimatePresence>
         {open && (
-          <div className="md:hidden fixed inset-0 top-16 z-40">
+          <div className="md:hidden fixed inset-0 top-16 z-[9999]">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="absolute inset-0 bg-black/60"
+              className="absolute inset-0"
+              style={{ backgroundColor: "rgba(0,0,0,0.75)" }}
               onClick={() => setOpen(false)}
             />
             {/* Drawer panel */}
@@ -101,8 +102,8 @@ export default function Header() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
-              className="absolute right-0 top-0 h-full w-72 flex flex-col"
-              style={{ backgroundColor: "#0d1820", borderLeft: "1px solid rgba(255,255,255,0.1)", boxShadow: "-8px 0 32px rgba(0,0,0,0.6)" }}
+              className="absolute right-0 top-0 h-full w-72 flex flex-col bg-[#0d1820]"
+              style={{ backgroundColor: "#0d1820", borderLeft: "1px solid rgba(255,255,255,0.1)", boxShadow: "-8px 0 32px rgba(0,0,0,0.8)", isolation: "isolate" }}
             >
               {/* Nav links — staggered in */}
               <nav className="flex flex-col px-4 pt-6 gap-1">
