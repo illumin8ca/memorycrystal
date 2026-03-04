@@ -1,0 +1,11 @@
+{
+  "name": "crystal-memory",
+  "version": "0.1.0",
+  "description": "Memory Crystal OpenClaw plugin",
+  "main": "index.js",
+  "openclaw": {
+    "extensions": [
+      "./index.js"
+    ]
+  }
+}

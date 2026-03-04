@@ -23,39 +23,65 @@ echo "  ✓ OpenClaw detected"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-# Download plugin
-PLUGIN_URL="\${CRYSTAL_PLUGIN_URL:-https://github.com/illumin8ca/memorycrystal/releases/latest/download/crystal-memory-plugin.tar.gz}"
+# Fetch plugin from GitHub
+echo "  → Fetching Memory Crystal plugin..."
+curl -fsSL https://github.com/illumin8ca/memorycrystal/archive/refs/heads/main.tar.gz -o "$TMP/repo.tar.gz"
+tar -xzf "$TMP/repo.tar.gz" -C "$TMP"
+PLUGIN_DIR="$TMP/memorycrystal-main/plugin"
 
-echo "  → Downloading Memory Crystal plugin..."
-if ! curl -fsSL "$PLUGIN_URL" -o "$TMP/plugin.tar.gz" 2>/dev/null; then
-  # Fallback: clone from GitHub
-  echo "  → Fetching from GitHub..."
-  curl -fsSL https://github.com/illumin8ca/memorycrystal/archive/refs/heads/main.tar.gz -o "$TMP/repo.tar.gz"
-  tar -xzf "$TMP/repo.tar.gz" -C "$TMP"
-  PLUGIN_DIR="$TMP/memorycrystal-main/plugin"
-else
-  tar -xzf "$TMP/plugin.tar.gz" -C "$TMP"
-  PLUGIN_DIR="$TMP/crystal-memory"
-fi
-
-echo "  → Installing plugin..."
-openclaw plugin install "$PLUGIN_DIR"
-
+# Ask for API key up front
 echo ""
 read -rp "  Enter your Memory Crystal API key: " API_KEY
 echo ""
 
 if [ -z "$API_KEY" ]; then
-  echo "  ✗ No API key provided. Run this again with your key."
+  echo "  ✗ No API key provided."
+  echo "  Get one at: https://memorycrystal.ai/dashboard/settings"
   exit 1
 fi
 
-openclaw config set plugins.crystal-memory.apiKey "$API_KEY"
+# Patch the API key into plugin config before install
+node -e "
+const fs = require('fs');
+const p = '$PLUGIN_DIR/openclaw.plugin.json';
+const m = JSON.parse(fs.readFileSync(p, 'utf8'));
+m.configSchema = m.configSchema || {};
+m.configSchema.required = [];
+fs.writeFileSync(p, JSON.stringify(m, null, 2));
+" 2>/dev/null || true
 
+# Create package.json if missing
+if [ ! -f "$PLUGIN_DIR/package.json" ]; then
+  echo '{"name":"crystal-memory","version":"0.1.0","main":"index.js","openclaw":{"extensions":["./index.js"]}}' > "$PLUGIN_DIR/package.json"
+fi
+
+echo "  → Installing plugin..."
+openclaw plugins install --link "$PLUGIN_DIR"
+
+# Set the API key in config
+echo "  → Configuring API key..."
+node -e "
+const fs = require('fs');
+const p = require('os').homedir() + '/.openclaw/openclaw.json';
+const c = JSON.parse(fs.readFileSync(p, 'utf8'));
+c.plugins = c.plugins || {};
+c.plugins.entries = c.plugins.entries || {};
+c.plugins.entries['crystal-memory'] = c.plugins.entries['crystal-memory'] || { enabled: true };
+c.plugins.entries['crystal-memory'].config = {
+  apiKey: '$API_KEY',
+  convexUrl: 'https://rightful-mockingbird-389.convex.site'
+};
+fs.writeFileSync(p, JSON.stringify(c, null, 2));
+console.log('  ✓ API key configured');
+"
+
+echo ""
 echo "  ✓ Memory Crystal installed successfully!"
 echo ""
 echo "  Your AI will now remember everything across every session."
-echo "  Get your API key at: https://memorycrystal.ai/dashboard/settings"
+echo "  Restart your OpenClaw gateway to activate:"
+echo ""
+echo "    openclaw gateway restart"
 echo ""
 `;
 

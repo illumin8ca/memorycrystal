@@ -7,7 +7,7 @@ PLUGIN_URL="${CRYSTAL_PLUGIN_URL:-https://github.com/illumin8ca/memorycrystal/re
 TMP=$(mktemp -d)
 curl -fsSL "$PLUGIN_URL" -o "$TMP/plugin.tar.gz"
 tar -xzf "$TMP/plugin.tar.gz" -C "$TMP"
-openclaw plugin install "$TMP/crystal-memory"
+openclaw plugins install "$TMP/crystal-memory"
 read -rp "Enter your Memory Crystal API key: " API_KEY
 openclaw config set plugins.crystal-memory.apiKey "$API_KEY"
 echo "✓ Memory Crystal installed. Your AI will now remember everything."
