@@ -18,6 +18,7 @@ type ApiKeyRow = {
 export default function SettingsPage() {
   const user = useQuery(api.crystal.userProfiles.getCurrentUser, {});
   const userId = user?.userId ?? null;
+  const subscribed = useQuery(api.crystal.userProfiles.isSubscribed);
   const apiKeys = useQuery(api.crystal.apiKeys.listApiKeys, userId ? {} : "skip");
   const createApiKey = useMutation(api.crystal.apiKeys.createApiKey);
   const revokeApiKey = useMutation(api.crystal.apiKeys.revokeApiKey);
@@ -139,8 +140,14 @@ export default function SettingsPage() {
       <section>
         <h2 className="font-mono font-bold text-lg text-primary mb-4">SUBSCRIPTION</h2>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
-          <span className="text-accent text-sm font-mono border border-accent px-3 py-2">ACTIVE</span>
-          <span className="text-primary">Pay as you go — $20/month</span>
+          {subscribed === undefined ? (
+            <span className="text-white/30 text-sm font-mono border border-white/10 px-3 py-2">LOADING…</span>
+          ) : subscribed ? (
+            <span className="text-accent text-sm font-mono border border-accent px-3 py-2">ACTIVE</span>
+          ) : (
+            <span className="text-red-400 text-sm font-mono border border-red-400/50 px-3 py-2">INACTIVE</span>
+          )}
+          <span className="text-primary">{subscribed ? "Your vault is active" : "No active subscription"}</span>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm">
           <a

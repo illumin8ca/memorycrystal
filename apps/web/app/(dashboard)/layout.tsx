@@ -195,7 +195,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </ul>
       </nav>
 
-      {subscribed === false && (
+      {subscribed !== undefined && subscribed === false && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-6"
           style={{ backgroundColor: "rgba(13,24,32,0.97)", backdropFilter: "blur(12px)" }}
