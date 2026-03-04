@@ -27,6 +27,7 @@ export default function SettingsPage() {
   const [isRegenerating, setIsRegenerating] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [createdKey, setCreatedKey] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newKeyLabel, setNewKeyLabel] = useState("");
 
@@ -52,7 +53,8 @@ export default function SettingsPage() {
   const handleCopy = async () => {
     if (!createdKey) return;
     await navigator.clipboard.writeText(createdKey);
-    setError("Key copied to clipboard");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
   };
 
   const handleRevoke = async (keyId: Id<"crystalApiKeys">) => {
@@ -236,9 +238,9 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={handleCopy}
-                className="btn-primary px-4 py-2 min-h-11 text-sm"
+                className={`px-4 py-2 min-h-11 text-sm transition-all ${copied ? "btn-secondary" : "btn-primary"}`}
               >
-                Copy to clipboard
+                {copied ? "✓ Copied!" : "Copy to clipboard"}
               </button>
               <button
                 type="button"
