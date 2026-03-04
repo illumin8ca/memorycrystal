@@ -37,7 +37,12 @@ export const getStats = query({
 
     const totalMessages = await ctx.db
       .query("crystalMessages")
-      .filter((q) => q.eq(q.field("userId"), userId))
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("userId"), userId),
+          q.eq(q.field("userId"), undefined)
+        )
+      )
       .collect();
 
     const recent = [...allMemories]
@@ -112,7 +117,12 @@ export const listMessages = query({
       .query("crystalMessages")
       .withIndex("by_timestamp")
       .order("desc")
-      .filter((q) => q.eq(q.field("userId"), userId))
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("userId"), userId),
+          q.eq(q.field("userId"), undefined)
+        )
+      )
       .collect();
 
     const filtered = role ? all.filter((m) => m.role === role) : all;
