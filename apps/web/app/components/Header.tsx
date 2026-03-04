@@ -96,20 +96,15 @@ export default function Header() {
               style={{ backgroundColor: "rgba(0,0,0,0.75)" }}
               onClick={() => setOpen(false)}
             />
-            {/* Drawer shell (static solid paint layer) */}
-            <div
-              className="absolute right-0 top-0 h-full w-72 overflow-hidden"
-              style={{ backgroundColor: "#0d1820", borderLeft: "1px solid rgba(255,255,255,0.1)", boxShadow: "-8px 0 32px rgba(0,0,0,0.8)", isolation: "isolate", zIndex: 1 }}
+            {/* Drawer panel */}
+            <motion.div
+              initial={{ x: "100%", backgroundColor: "#0d1820" }}
+              animate={{ x: 0, backgroundColor: "#0d1820" }}
+              exit={{ x: "100%", backgroundColor: "#0d1820" }}
+              transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
+              className="absolute right-0 top-0 h-full w-72 flex flex-col"
+              style={{ borderLeft: "1px solid rgba(255,255,255,0.1)", boxShadow: "-8px 0 32px rgba(0,0,0,0.8)" }}
             >
-              {/* Animated content layer */}
-              <motion.div
-                initial={{ x: "100%" }}
-                animate={{ x: 0 }}
-                exit={{ x: "100%" }}
-                transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
-                className="h-full w-full flex flex-col"
-                style={{ backgroundColor: "#0d1820" }}
-              >
                 {/* Nav links — staggered in */}
                 <nav className="flex flex-col px-4 pt-6 gap-1">
                   {navItems.map((item, i) => (
@@ -153,8 +148,7 @@ export default function Header() {
                     SIGN IN
                   </Link>
                 </motion.div>
-              </motion.div>
-            </div>
+            </motion.div>
           </div>
         )}
       </AnimatePresence>
