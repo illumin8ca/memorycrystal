@@ -23,7 +23,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const currentUser = useQuery(api.crystal.userProfiles.getCurrentUser, {});
   const subscribed = useQuery(api.crystal.userProfiles.isSubscribed);
   const { signOut } = useAuthActions();
-  const currentEmail = currentUser?.email ?? "Loading...";
+  const currentEmail = currentUser?.email ?? "";
 
   const isActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`);
 
@@ -125,7 +125,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 className="px-5 py-6"
                 style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
               >
-                <p className="text-xs text-white/40 truncate mb-3">{currentEmail}</p>
+                {currentEmail && <p className="text-xs text-white/40 truncate mb-3">{currentEmail}</p>}
                 <button
                   type="button"
                   onClick={async () => { setMobileOpen(false); await signOut(); }}
@@ -167,7 +167,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             ))}
           </nav>
           <div className="px-6 py-4" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-            <p className="text-xs text-white/40 truncate">{currentEmail}</p>
+            {currentEmail && <p className="text-xs text-white/40 truncate">{currentEmail}</p>}
             <button type="button" onClick={() => signOut()} className="text-xs mt-2 hover:underline" style={{ color: "#2180d6" }}>
               Sign out
             </button>
