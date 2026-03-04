@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import { createPortal } from "react-dom";
 import CrystalIcon from "./CrystalIcon";
 
 const navItems = [
@@ -14,8 +15,14 @@ const navItems = [
 
 export default function Header() {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
+    <>
     <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#0d1820]/90 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
 
@@ -82,76 +89,80 @@ export default function Header() {
         </button>
       </div>
 
-      {/* Mobile drawer */}
-      <AnimatePresence>
-        {open && (
-          <div className="md:hidden fixed inset-0 top-16 z-[9999]">
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="absolute inset-0"
-              style={{ backgroundColor: "rgba(0,0,0,0.75)" }}
-              onClick={() => setOpen(false)}
-            />
-            {/* Drawer panel */}
-            <motion.div
-              initial={{ x: "100%", backgroundColor: "#0d1820" }}
-              animate={{ x: 0, backgroundColor: "#0d1820" }}
-              exit={{ x: "100%", backgroundColor: "#0d1820" }}
-              transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
-              className="absolute right-0 top-0 h-full w-72 flex flex-col"
-              style={{ borderLeft: "1px solid rgba(255,255,255,0.1)", boxShadow: "-8px 0 32px rgba(0,0,0,0.8)" }}
-            >
-                {/* Nav links — staggered in */}
-                <nav className="flex flex-col px-4 pt-6 gap-1">
-                  {navItems.map((item, i) => (
-                    <motion.div
-                      key={item.href}
-                      initial={{ opacity: 0, x: 16 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.06 + i * 0.055, duration: 0.25 }}
-                    >
-                      <Link
-                        href={item.href}
-                        onClick={() => setOpen(false)}
-                        className="flex items-center gap-3 px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded transition-colors"
-                      >
-                        <span className="text-[#2180d6] text-xs">◈</span>
-                        {item.label}
-                      </Link>
-                    </motion.div>
-                  ))}
-                </nav>
-
-                {/* CTA buttons */}
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.22, duration: 0.28 }}
-                  className="mt-auto px-4 py-8 flex flex-col gap-3"
-                >
-                  <Link
-                    href="/signup"
-                    onClick={() => setOpen(false)}
-                    className="btn-primary w-full py-3 text-center text-xs font-mono font-bold tracking-widest"
-                  >
-                    GET STARTED FREE
-                  </Link>
-                  <Link
-                    href="/login"
-                    onClick={() => setOpen(false)}
-                    className="btn-secondary w-full py-3 text-center text-xs font-mono tracking-widest"
-                  >
-                    SIGN IN
-                  </Link>
-                </motion.div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </header>
+
+    {mounted &&
+      createPortal(
+        <AnimatePresence>
+          {open && (
+            <div className="md:hidden fixed inset-0 top-16 z-[9999]">
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="absolute inset-0 bg-black/75"
+                onClick={() => setOpen(false)}
+              />
+              {/* Drawer panel */}
+              <motion.div
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
+                className="absolute right-0 top-0 h-full w-72 flex flex-col bg-[#0d1820]"
+                style={{ borderLeft: "1px solid rgba(255,255,255,0.1)", boxShadow: "-8px 0 32px rgba(0,0,0,0.8)" }}
+              >
+                  {/* Nav links — staggered in */}
+                  <nav className="flex flex-col px-4 pt-6 gap-1">
+                    {navItems.map((item, i) => (
+                      <motion.div
+                        key={item.href}
+                        initial={{ opacity: 0, x: 16 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.06 + i * 0.055, duration: 0.25 }}
+                      >
+                        <Link
+                          href={item.href}
+                          onClick={() => setOpen(false)}
+                          className="flex items-center gap-3 px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded transition-colors"
+                        >
+                          <span className="text-[#2180d6] text-xs">◈</span>
+                          {item.label}
+                        </Link>
+                      </motion.div>
+                    ))}
+                  </nav>
+
+                  {/* CTA buttons */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.22, duration: 0.28 }}
+                    className="mt-auto px-4 py-8 flex flex-col gap-3"
+                  >
+                    <Link
+                      href="/signup"
+                      onClick={() => setOpen(false)}
+                      className="btn-primary w-full py-3 text-center text-xs font-mono font-bold tracking-widest"
+                    >
+                      GET STARTED FREE
+                    </Link>
+                    <Link
+                      href="/login"
+                      onClick={() => setOpen(false)}
+                      className="btn-secondary w-full py-3 text-center text-xs font-mono tracking-widest"
+                    >
+                      SIGN IN
+                    </Link>
+                  </motion.div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
+    </>
   );
 }
