@@ -62,7 +62,7 @@ export default defineSchema({
   ...authTables,
 
   crystalMemories: defineTable({
-    userId: v.optional(v.string()),
+    userId: v.string(),
     store: memoryStore,
     category: memoryCategory,
     title: v.string(),
@@ -98,6 +98,7 @@ export default defineSchema({
   crystalAssociations: defineTable({
     fromMemoryId: v.id("crystalMemories"),
     toMemoryId: v.id("crystalMemories"),
+    userId: v.optional(v.string()),
     relationshipType: v.union(
       v.literal("supports"),
       v.literal("contradicts"),
@@ -111,10 +112,11 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_from", ["fromMemoryId"])
-    .index("by_to", ["toMemoryId"]),
+    .index("by_to", ["toMemoryId"])
+    .index("by_user", ["userId"]),
 
   crystalNodes: defineTable({
-    userId: v.optional(v.string()),
+    userId: v.string(),
     label: v.string(),
     nodeType: graphNodeType,
     alias: v.array(v.string()),
@@ -136,7 +138,7 @@ export default defineSchema({
     .index("by_status", ["status"]),
 
   crystalRelations: defineTable({
-    userId: v.optional(v.string()),
+    userId: v.string(),
     fromNodeId: v.id("crystalNodes"),
     toNodeId: v.id("crystalNodes"),
     relationType: graphRelationType,
@@ -163,7 +165,7 @@ export default defineSchema({
     .index("by_from_to_relation", ["fromNodeId", "toNodeId", "relationType"]),
 
   crystalMemoryNodeLinks: defineTable({
-    userId: v.optional(v.string()),
+    userId: v.string(),
     memoryId: v.id("crystalMemories"),
     nodeId: v.id("crystalNodes"),
     role: graphLinkRole,
@@ -175,7 +177,7 @@ export default defineSchema({
     .index("by_node", ["nodeId"]),
 
   crystalSessions: defineTable({
-    userId: v.optional(v.string()),
+    userId: v.string(),
     channel: v.string(),
     channelId: v.optional(v.string()),
     startedAt: v.number(),
@@ -192,7 +194,7 @@ export default defineSchema({
     .index("by_channel", ["channel", "lastActiveAt"]),
 
   crystalCheckpoints: defineTable({
-    userId: v.optional(v.string()),
+    userId: v.string(),
     label: v.string(),
     description: v.optional(v.string()),
     createdAt: v.number(),
@@ -213,7 +215,7 @@ export default defineSchema({
     .index("by_created", ["createdAt"]),
 
   crystalWakeState: defineTable({
-    userId: v.optional(v.string()),
+    userId: v.string(),
     sessionId: v.id("crystalSessions"),
     injectedMemoryIds: v.array(v.id("crystalMemories")),
     wakePrompt: v.string(),
@@ -246,7 +248,7 @@ export default defineSchema({
     }),
 
   crystalUserProfiles: defineTable({
-    userId: v.optional(v.string()),
+    userId: v.string(),
     polarSubscriptionId: v.optional(v.string()),
     polarCustomerId: v.optional(v.string()),
     subscriptionStatus: v.union(
@@ -265,7 +267,7 @@ export default defineSchema({
     .index("by_polar_customer", ["polarCustomerId"]),
 
   crystalApiKeys: defineTable({
-    userId: v.optional(v.string()),
+    userId: v.string(),
     keyHash: v.string(),
     label: v.optional(v.string()),
     lastUsedAt: v.optional(v.number()),

@@ -2,6 +2,8 @@ import { stableUserId } from "./auth";
 import { query } from "../_generated/server";
 import { v } from "convex/values";
 
+const PAGE_SIZE = 25;
+
 async function hasActiveSubscription(ctx: any, userId: string): Promise<boolean> {
   const profiles = await ctx.db
     .query("crystalUserProfiles")
@@ -63,23 +65,30 @@ export const listMemories = query({
     limit: v.optional(v.number()),
     store: v.optional(v.string()),
     archived: v.optional(v.boolean()),
+    page: v.optional(v.number()),
   },
-  handler: async (ctx, { limit = 50, store, archived = false }) => {
+  handler: async (ctx, { limit = PAGE_SIZE, store, archived = false, page = 0 }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const userId = stableUserId(identity.subject);
     if (!(await hasActiveSubscription(ctx, userId))) return [];
 
+    const pageSize = Math.min(limit ?? PAGE_SIZE, 100);
+    const skip = page * pageSize;
+
     const all = await ctx.db
       .query("crystalMemories")
       .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", archived))
-      .take(Math.min((limit ?? 50) * 4, 800));
+      .order("desc")
+      .collect();
 
-    const filtered = all
-      .filter((m) => !store || m.store === store)
-      .slice(0, limit);
+    const filtered = store ? all.filter((m) => m.store === store) : all;
+    const page_items = filtered.slice(skip, skip + pageSize);
 
-    return filtered.map(({ embedding: _e, ...rest }) => rest);
+    return page_items.map(({ embedding: _e, ...rest }) => ({
+      ...rest,
+      totalCount: filtered.length,
+    }));
   },
 });
 
@@ -87,21 +96,29 @@ export const listMessages = query({
   args: {
     limit: v.optional(v.number()),
     sinceMs: v.optional(v.number()),
+    page: v.optional(v.number()),
+    role: v.optional(v.string()),
   },
-  handler: async (ctx, { limit = 100, sinceMs }) => {
+  handler: async (ctx, { limit = PAGE_SIZE, sinceMs, page = 0, role }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const userId = stableUserId(identity.subject);
     if (!(await hasActiveSubscription(ctx, userId))) return [];
 
-    const msgs = await ctx.db
+    const pageSize = Math.min(limit ?? PAGE_SIZE, 100);
+    const skip = page * pageSize;
+
+    const all = await ctx.db
       .query("crystalMessages")
       .withIndex("by_timestamp")
       .order("desc")
       .filter((q) => q.eq(q.field("userId"), userId))
-      .take(limit);
+      .collect();
 
-    if (sinceMs) return msgs.filter((m) => m.timestamp >= sinceMs);
-    return msgs;
+    const filtered = role ? all.filter((m) => m.role === role) : all;
+    const since = sinceMs ? filtered.filter((m) => m.timestamp >= sinceMs) : filtered;
+    const page_items = since.slice(skip, skip + pageSize);
+
+    return page_items.map((m) => ({ ...m, totalCount: since.length }));
   },
 });
