@@ -96,59 +96,65 @@ export default function Header() {
               style={{ backgroundColor: "rgba(0,0,0,0.75)" }}
               onClick={() => setOpen(false)}
             />
-            {/* Drawer panel */}
-            <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
-              className="absolute right-0 top-0 h-full w-72 flex flex-col bg-[#0d1820]"
-              style={{ backgroundColor: "#0d1820", borderLeft: "1px solid rgba(255,255,255,0.1)", boxShadow: "-8px 0 32px rgba(0,0,0,0.8)", isolation: "isolate" }}
+            {/* Drawer shell (static solid paint layer) */}
+            <div
+              className="absolute right-0 top-0 h-full w-72 overflow-hidden"
+              style={{ backgroundColor: "#0d1820", borderLeft: "1px solid rgba(255,255,255,0.1)", boxShadow: "-8px 0 32px rgba(0,0,0,0.8)", isolation: "isolate", zIndex: 1 }}
             >
-              {/* Nav links — staggered in */}
-              <nav className="flex flex-col px-4 pt-6 gap-1">
-                {navItems.map((item, i) => (
-                  <motion.div
-                    key={item.href}
-                    initial={{ opacity: 0, x: 16 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.06 + i * 0.055, duration: 0.25 }}
-                  >
-                    <Link
-                      href={item.href}
-                      onClick={() => setOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded transition-colors"
-                    >
-                      <span className="text-[#2180d6] text-xs">◈</span>
-                      {item.label}
-                    </Link>
-                  </motion.div>
-                ))}
-              </nav>
-
-              {/* CTA buttons */}
+              {/* Animated content layer */}
               <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.22, duration: 0.28 }}
-                className="mt-auto px-4 py-8 flex flex-col gap-3"
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
+                className="h-full w-full flex flex-col"
+                style={{ backgroundColor: "#0d1820" }}
               >
-                <Link
-                  href="/signup"
-                  onClick={() => setOpen(false)}
-                  className="btn-primary w-full py-3 text-center text-xs font-mono font-bold tracking-widest"
+                {/* Nav links — staggered in */}
+                <nav className="flex flex-col px-4 pt-6 gap-1">
+                  {navItems.map((item, i) => (
+                    <motion.div
+                      key={item.href}
+                      initial={{ opacity: 0, x: 16 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.06 + i * 0.055, duration: 0.25 }}
+                    >
+                      <Link
+                        href={item.href}
+                        onClick={() => setOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded transition-colors"
+                      >
+                        <span className="text-[#2180d6] text-xs">◈</span>
+                        {item.label}
+                      </Link>
+                    </motion.div>
+                  ))}
+                </nav>
+
+                {/* CTA buttons */}
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.22, duration: 0.28 }}
+                  className="mt-auto px-4 py-8 flex flex-col gap-3"
                 >
-                  GET STARTED FREE
-                </Link>
-                <Link
-                  href="/login"
-                  onClick={() => setOpen(false)}
-                  className="btn-secondary w-full py-3 text-center text-xs font-mono tracking-widest"
-                >
-                  SIGN IN
-                </Link>
+                  <Link
+                    href="/signup"
+                    onClick={() => setOpen(false)}
+                    className="btn-primary w-full py-3 text-center text-xs font-mono font-bold tracking-widest"
+                  >
+                    GET STARTED FREE
+                  </Link>
+                  <Link
+                    href="/login"
+                    onClick={() => setOpen(false)}
+                    className="btn-secondary w-full py-3 text-center text-xs font-mono tracking-widest"
+                  >
+                    SIGN IN
+                  </Link>
+                </motion.div>
               </motion.div>
-            </motion.div>
+            </div>
           </div>
         )}
       </AnimatePresence>
