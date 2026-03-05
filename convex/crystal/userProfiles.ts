@@ -4,7 +4,7 @@ import { stableUserId } from "./auth";
 
 export type UserTier = "free" | "starter" | "pro" | "ultra" | "unlimited";
 
-const UNLIMITED_EMAILS = ["andy@illumin8.ca", "admin@illumin8.ca"];
+const UNLIMITED_EMAILS = ["andy@illumin8.ca", "admin@illumin8.ca", "andydoucet@gmail.com"];
 const PRO_PRODUCT_ID = "f78ee82b-719e-4de8-850a-3e9eea3db4b0";
 const ULTRA_PRODUCT_ID = "9d59dd76-5026-4079-95f7-bf594f71121b";
 
@@ -123,7 +123,7 @@ export const isSubscribed = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthenticated");
+    if (!identity) return false;
 
     const userId = stableUserId(identity.subject);
     const profiles = await ctx.db
@@ -131,7 +131,11 @@ export const isSubscribed = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
     const profile = pickLatestProfile(profiles);
-    return profile?.subscriptionStatus === "active" || profile?.subscriptionStatus === "trialing" || profile?.subscriptionStatus === "unlimited";
+    return (
+      profile?.subscriptionStatus === "active" ||
+      profile?.subscriptionStatus === "trialing" ||
+      profile?.subscriptionStatus === "unlimited"
+    );
   },
 });
 
