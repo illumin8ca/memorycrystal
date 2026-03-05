@@ -28,7 +28,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const currentUser = useQuery(api.crystal.userProfiles.getCurrentUser, {});
-  const subscribed = useQuery(api.crystal.userProfiles.isSubscribed);
+  const isAuthenticatedForQueries = Boolean(currentUser?.userId);
+  const subscribed = useQuery(
+    api.crystal.userProfiles.isSubscribed,
+    isAuthenticatedForQueries ? {} : "skip"
+  );
   const router = useRouter();
   const { signOut } = useAuthActions();
   const currentEmail = currentUser?.email ?? "";
@@ -225,7 +229,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </ul>
       </nav>
 
-      {subscribed !== undefined && !isAllowed && (
+      {isAuthenticatedForQueries && subscribed !== undefined && !isAllowed && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-6"
           style={{ backgroundColor: "rgba(13,24,32,0.97)", backdropFilter: "blur(12px)" }}
