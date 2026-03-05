@@ -21,14 +21,16 @@ const MESSAGE_TTL_DAYS: Record<UserTier, number> = {
 
 const PAGE_SIZE = 25;
 
-async function hasActiveSubscription(ctx: any, userId: string): Promise<boolean> {
+async function isAllowedUser(ctx: any, userId: string): Promise<boolean> {
   const profiles = await ctx.db
     .query("crystalUserProfiles")
     .withIndex("by_user", (q: any) => q.eq("userId", userId))
     .collect();
   const profile = profiles.sort((a: any, b: any) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
-  const status = profile?.subscriptionStatus;
-  return status === "active" || status === "trialing" || status === "unlimited";
+
+  if (!profile) return true;
+  if (profile.subscriptionStatus === "cancelled") return false;
+  return true;
 }
 
 export const getStats = query({
@@ -45,7 +47,7 @@ export const getStats = query({
       };
     }
     const userId = stableUserId(identity.subject);
-    if (!(await hasActiveSubscription(ctx, userId))) {
+    if (!(await isAllowedUser(ctx, userId))) {
       return {
         totalMemories: 0,
         totalMessages: 0,
@@ -96,7 +98,7 @@ export const listMemories = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
     const userId = stableUserId(identity.subject);
-    if (!(await hasActiveSubscription(ctx, userId))) return [];
+    if (!(await isAllowedUser(ctx, userId))) return [];
 
     const pageSize = Math.min(Math.max(Math.trunc(limit ?? PAGE_SIZE), 1), 100);
     const safePage = Math.max(Math.trunc(page ?? 0), 0);
@@ -129,7 +131,7 @@ export const listMessages = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
     const userId = stableUserId(identity.subject);
-    if (!(await hasActiveSubscription(ctx, userId))) return [];
+    if (!(await isAllowedUser(ctx, userId))) return [];
 
     const pageSize = Math.min(Math.max(Math.trunc(limit ?? PAGE_SIZE), 1), 100);
     const safePage = Math.max(Math.trunc(page ?? 0), 0);
