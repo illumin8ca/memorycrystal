@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import CrystalIcon from "./components/CrystalIcon";
 import Header from "./components/Header";
@@ -65,7 +65,7 @@ const featureCards = [
 ];
 
 const roadmapItems = [
-  "Q1 2026 — Launch. OpenClaw, Claude Code, and Codex support. Free, Pro, and Ultra tiers. The memory layer your AI was missing.",
+  "Q1 2026 — Launch. OpenClaw, Claude Code, and Codex support. Free, Starter, Pro, and Ultra tiers. The memory layer your AI was missing.",
   "Q2 2026 — Memory Caching. Hot memories pre-loaded before your session starts. Sub-100ms recall. Like prompt caching, but for everything your AI knows about you.",
   "Q3 2026 — True Knowledge Graph. Typed entity resolution. Relation inference from conversation patterns. Ask \"what did we decide about X?\" and get the real answer.",
   "Q4 2026 — Team Memory. Shared memory spaces across agents and collaborators. One team, one context, no repeated explanations.",
@@ -75,50 +75,37 @@ const roadmapItems = [
 const pricingPlans = [
   {
     name: "FREE",
-    price: "$0 forever",
+    price: "$0/forever",
     button: "START FREE",
     checkoutHref: "/api/polar/checkout?plan=free",
-    features: [
-      "500 memories stored",
-      "7-day message history",
-      "1 channel",
-      "Community support",
-      "OpenClaw plugin",
-    ],
+    features: ["500 memories", "500 messages", "30-day message retention"],
     borderClass: "border-white/[0.06]",
   },
   {
+    name: "STARTER",
+    price: "$10/mo",
+    button: "COMING SOON",
+    comingSoon: true,
+    badge: "COMING SOON!",
+    features: ["10,000 memories", "5,000 messages", "60-day message retention"],
+    borderClass: "border-white/[0.07]",
+  },
+  {
     name: "PRO",
-    price: "$20/mo",
-    priceAnnual: "$168/yr",
+    price: "$25/mo",
     button: "START PRO",
     checkoutHref: "/api/polar/checkout?plan=pro",
+    badge: "MOST POPULAR",
     isFeatured: true,
-    features: [
-      "Unlimited memories",
-      "90-day message history",
-      "All channels",
-      "Spreading activation recall",
-      "API access + keys",
-      "Obsidian vault sync",
-      "Priority support",
-    ],
+    features: ["25,000 memories", "25,000 messages", "90-day message retention"],
     borderClass: "neon-border glow-pulse",
   },
   {
     name: "ULTRA",
-    price: "$100/mo",
-    priceAnnual: "$840/yr",
+    price: "$50/mo",
     button: "START ULTRA",
     checkoutHref: "/api/polar/checkout?plan=ultra",
-    features: [
-      "Everything in Pro",
-      "Multi-agent memory isolation",
-      "Knowledge graph",
-      "Wake briefings",
-      "Custom retention policies",
-      "Dedicated support + SLA",
-    ],
+    features: ["Unlimited memories", "Unlimited messages", "365-day message retention"],
     borderClass: "border-white/[0.07]",
   },
 ];
@@ -230,7 +217,6 @@ function BouncingCrystals() {
 }
 
 export default function HomePage() {
-  const [annualBilling, setAnnualBilling] = useState(true);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -377,46 +363,23 @@ export default function HomePage() {
           <FadeIn className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <BracketHeading>PRICING</BracketHeading>
             <div className="mt-2 flex flex-wrap items-center gap-5 justify-between">
-              <h2 className="font-heading text-3xl md:text-5xl">Start free. Scale when ready.</h2>
-              <div className="inline-flex border border-white/[0.07] bg-white/[0.02]">
-                <button
-                  type="button"
-                  onClick={() => setAnnualBilling(false)}
-                  className={`px-4 py-2 text-[11px] font-mono ${
-                    !annualBilling ? "bg-accent text-white" : "text-secondary"
-                  }`}
-                >
-                  MONTHLY
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAnnualBilling(true)}
-                  className={`px-4 py-2 text-[11px] font-mono ${
-                    annualBilling ? "bg-accent text-white" : "text-secondary"
-                  }`}
-                >
-                  ANNUAL
-                </button>
-              </div>
-            </div>
-            <div className="mt-3 text-xs font-mono text-accent">
-              {annualBilling ? "Save ~30% by going annual" : "Monthly billing"}
+              <h2 className="font-heading text-3xl md:text-5xl">Simple pricing. Built to scale.</h2>
             </div>
 
-            <FadeInStagger className="mt-10 grid gap-4 lg:grid-cols-3">
+            <FadeInStagger className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {pricingPlans.map((plan, index) => (
                 <FadeInItem key={plan.name} className="h-full"><article
                   className={`glass-card p-8 border ${plan.borderClass} flex flex-col relative h-full`}
                   style={{ transitionDelay: `${index * 70}ms` }}
                 >
-                  {plan.isFeatured ? (
+                  {plan.badge ? (
                     <span className="absolute top-0 right-0 -translate-y-1/2 bg-accent px-3 py-1 text-[10px] font-mono text-white">
-                      RECOMMENDED
+                      {plan.badge}
                     </span>
                   ) : null}
                   <h3 className="font-logo text-2xl">{plan.name}</h3>
                   <div className="mt-5">
-                    <p className="text-4xl font-mono neon-text">{annualBilling ? plan.priceAnnual ?? plan.price : plan.price}</p>
+                    <p className="text-4xl font-mono neon-text">{plan.price}</p>
                   </div>
                   <ul className="mt-7 space-y-3 text-sm text-secondary flex-1">
                     {plan.features.map((feature) => (
@@ -426,12 +389,18 @@ export default function HomePage() {
                       </li>
                     ))}
                   </ul>
-                  <Link
-                    href={plan.checkoutHref}
-                    className="btn-primary mt-7 inline-flex items-center justify-center px-5 py-3 text-xs"
-                  >
-                    {plan.button}
-                  </Link>
+                  {plan.comingSoon ? (
+                    <div className="mt-7 inline-flex items-center justify-center px-5 py-3 text-xs font-mono border border-accent/60 text-accent bg-accent/10">
+                      COMING SOON!
+                    </div>
+                  ) : (
+                    <Link
+                      href={plan.checkoutHref!}
+                      className="btn-primary mt-7 inline-flex items-center justify-center px-5 py-3 text-xs"
+                    >
+                      {plan.button}
+                    </Link>
+                  )}
                 </article></FadeInItem>
               ))}
             </FadeInStagger>

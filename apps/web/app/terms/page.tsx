@@ -30,7 +30,7 @@ export default function TermsPage() {
 
           <section>
             <h2 className="font-heading text-2xl text-primary mb-3">4. Subscriptions and Billing</h2>
-            <p className="mb-3">Memory Crystal offers Free, Pro, and Ultra plans. Paid plans are billed monthly or annually through Polar.sh. You may cancel at any time; access continues through the end of the billing period.</p>
+            <p className="mb-3">Memory Crystal offers Free, Starter (coming soon), Pro, and Ultra plans. Paid plans are billed monthly through Polar.sh. You may cancel at any time; access continues through the end of the billing period.</p>
             <p>We reserve the right to modify pricing with 30 days&apos; notice. Price changes do not affect existing billing periods.</p>
           </section>
 

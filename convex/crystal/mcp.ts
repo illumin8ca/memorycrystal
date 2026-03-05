@@ -38,10 +38,11 @@ const CATEGORY_VALUES: MemoryCategory[] = [
   "workflow",
 ];
 
-type UserTier = "free" | "pro" | "ultra" | "unlimited";
+type UserTier = "free" | "starter" | "pro" | "ultra" | "unlimited";
 
 const STORAGE_LIMITS: Record<UserTier, number | null> = {
   free: 500,
+  starter: 10_000,
   pro: 25_000,
   ultra: null,
   unlimited: null,
@@ -49,13 +50,15 @@ const STORAGE_LIMITS: Record<UserTier, number | null> = {
 
 const MESSAGE_LIMITS: Record<UserTier, number | null> = {
   free: 500,
-  pro: null,
+  starter: 5_000,
+  pro: 25_000,
   ultra: null,
   unlimited: null,
 };
 
 const MESSAGE_TTL_DAYS: Record<UserTier, number> = {
   free: 30,
+  starter: 60,
   pro: 90,
   ultra: 365,
   unlimited: 365,

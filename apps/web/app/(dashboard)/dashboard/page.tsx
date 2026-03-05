@@ -38,7 +38,7 @@ export default function DashboardPage() {
     {
       label: "MESSAGES CAPTURED",
       value: stats ? String(stats.totalMessages) : "Loading...",
-      sub: stats ? "last 14 days" : "Loading...",
+      sub: usage ? `${usage.tier.toUpperCase()} • ${usage.messageTtlDays}-day retention` : "Loading...",
     },
     {
       label: "MEMORY STORES",

@@ -152,12 +152,21 @@ export default function SettingsPage() {
             {usage ? `Tier: ${usage.tier.toUpperCase()} • Message TTL: ${usage.messageTtlDays} days` : ""}
           </p>
           {usage && usage.tier !== "ultra" && usage.tier !== "unlimited" ? (
-            <a
-              href="/api/polar/checkout?plan=pro"
-              className="btn-primary inline-flex px-4 py-2 text-xs mt-3"
-            >
-              Upgrade
-            </a>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {(usage.tier === "free" || usage.tier === "starter") ? (
+                <a href="/api/polar/checkout?plan=pro" className="btn-primary inline-flex px-4 py-2 text-xs">
+                  Upgrade to Pro
+                </a>
+              ) : null}
+              {usage.tier === "pro" ? (
+                <a href="/api/polar/checkout?plan=ultra" className="btn-primary inline-flex px-4 py-2 text-xs">
+                  Upgrade to Ultra
+                </a>
+              ) : null}
+              <span className="inline-flex items-center px-3 py-2 text-[10px] font-mono border border-accent/60 text-accent bg-accent/10">
+                STARTER COMING SOON!
+              </span>
+            </div>
           ) : null}
         </div>
 

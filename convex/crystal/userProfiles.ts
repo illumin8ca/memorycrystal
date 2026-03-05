@@ -2,7 +2,7 @@ import { internalMutation, internalQuery, mutation, query } from "../_generated/
 import { v } from "convex/values";
 import { stableUserId } from "./auth";
 
-export type UserTier = "free" | "pro" | "ultra" | "unlimited";
+export type UserTier = "free" | "starter" | "pro" | "ultra" | "unlimited";
 
 const UNLIMITED_EMAILS = ["andy@illumin8.ca", "admin@illumin8.ca"];
 const PRO_PRODUCT_ID = "f78ee82b-719e-4de8-850a-3e9eea3db4b0";
@@ -19,6 +19,7 @@ function deriveTier(profile: { subscriptionStatus?: string; plan?: string } | nu
   const plan = (profile?.plan ?? "").toLowerCase();
   if (plan === ULTRA_PRODUCT_ID || plan === "ultra") return "ultra";
   if (plan === PRO_PRODUCT_ID || plan === "pro") return "pro";
+  if (plan === "starter") return "starter";
 
   return "pro";
 }

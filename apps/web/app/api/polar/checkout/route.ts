@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const PRODUCT_IDS: Record<string, string | undefined> = {
   free: process.env.POLAR_PRODUCT_ID_FREE,
+  starter: undefined,
   pro: process.env.POLAR_PRODUCT_ID_PRO,
   ultra: process.env.POLAR_PRODUCT_ID_ULTRA,
 };
@@ -11,7 +12,11 @@ export async function GET(request: NextRequest) {
   const accessToken = process.env.POLAR_ACCESS_TOKEN;
   const { searchParams } = new URL(request.url);
   const plan = searchParams.get("plan") ?? "pro";
-  const productId = PRODUCT_IDS[plan] ?? process.env.POLAR_PRODUCT_ID_PRO;
+  const productId = PRODUCT_IDS[plan];
+
+  if (plan === "starter") {
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL ?? "https://memorycrystal.ai"}/pricing?comingSoon=starter`);
+  }
 
   if (!accessToken || !productId) {
     return NextResponse.redirect("https://polar.sh/illumin8ca/products");
