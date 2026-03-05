@@ -407,12 +407,17 @@ export const mcpCheckpoint = httpAction(async (ctx, request) => {
   if (rateLimitResponse) return rateLimitResponse;
 
   const body = await parseBody(request);
-  if (!body?.label) return json({ error: "label is required" }, 400);
+  const label = String(body?.label ?? body?.title ?? "").trim();
+  if (!label) return json({ error: "label (or title) is required" }, 400);
 
   const id = await ctx.runMutation(internal.crystal.mcp.createCheckpointExternal, {
     userId: auth.userId,
-    label: String(body.label),
-    description: body.description ? String(body.description) : undefined,
+    label,
+    description: body.description
+      ? String(body.description)
+      : body.content
+      ? String(body.content)
+      : undefined,
   });
 
   return json({ ok: true, id });

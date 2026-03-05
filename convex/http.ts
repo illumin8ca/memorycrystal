@@ -23,6 +23,9 @@ http.route({ path: "/api/mcp/wake", method: "POST", handler: mcpWakePost });
 http.route({ path: "/api/mcp/log", method: "POST", handler: mcpLog });
 http.route({ path: "/api/mcp/stats", method: "GET", handler: mcpStats });
 http.route({ path: "/api/mcp/stats", method: "POST", handler: mcpStats });
+// Backwards-compatible auth aliases
 http.route({ path: "/api/mcp-auth", method: "POST", handler: mcpAuth });
+http.route({ path: "/api/mcp/auth", method: "GET", handler: mcpAuth });
+http.route({ path: "/api/mcp/auth", method: "POST", handler: mcpAuth });
 
 export default http;

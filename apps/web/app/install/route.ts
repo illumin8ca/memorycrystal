@@ -84,12 +84,12 @@ short-term memory (Messages tab) and long-term sensory memory in real-time.
 - AI responses  → crystalMessages (role: assistant) + sensory memory capture
 HOOKMD
 
-# handler.js — the actual hook logic (API key substituted in)
-cat > "$HOOK_DIR/handler.js" << HANDLEREOF
+# handler.js — write static template first (avoid shell interpolation in heredoc)
+cat > "$HOOK_DIR/handler.js" << 'HANDLEREOF'
 const { appendFileSync, readFileSync, writeFileSync } = require("node:fs");
 
-const log = (m) => appendFileSync("/tmp/crystal-hook-log.txt", \`[\${new Date().toISOString()}] \${m}\\n\`);
-const API_KEY = "$API_KEY";
+const log = (m) => appendFileSync("/tmp/crystal-hook-log.txt", `[${new Date().toISOString()}] ${m}\n`);
+const API_KEY = "__MC_API_KEY__";
 const BASE_URL = "https://rightful-mockingbird-389.convex.site";
 const PENDING_FILE = "/tmp/crystal-pending.json";
 
@@ -158,6 +158,15 @@ module.exports = async function handler(event, ctx) {
 };
 HANDLEREOF
 
+# Inject API key safely into handler template
+node -e '
+const fs = require("fs");
+const path = process.argv[1];
+const key = process.argv[2];
+const src = fs.readFileSync(path, "utf8");
+fs.writeFileSync(path, src.replaceAll("__MC_API_KEY__", key));
+' "$HOOK_DIR/handler.js" "$API_KEY"
+
 echo "  ✓ Hook files written"
 
 # ── Enable internal hooks in openclaw.json ────────────────────────────────────
@@ -174,13 +183,10 @@ fs.writeFileSync(p, JSON.stringify(c, null, 2));
 console.log('  ✓ Internal hooks enabled');
 "
 
-# ── Restart gateway ───────────────────────────────────────────────────────────
+# ── Finalize ──────────────────────────────────────────────────────────────────
 echo ""
-echo "  → Restarting OpenClaw gateway..."
-openclaw gateway restart > /dev/null 2>&1 &
-sleep 4
-
-echo "  ✓ Gateway restarted"
+echo "  → Hook installed. If your gateway is already running, restart to apply:"
+echo "    openclaw gateway restart"
 echo ""
 echo "  ┌─────────────────────────────────────────────────────┐"
 echo "  │  ◈  Memory Crystal is active!                       │"
