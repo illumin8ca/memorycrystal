@@ -95,3 +95,15 @@ export const validateApiKey = internalQuery({
     return key.userId;
   },
 });
+
+export const deleteApiKey = mutation({
+  args: { keyId: v.id("crystalApiKeys") },
+  handler: async (ctx, { keyId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = stableUserId(identity.subject);
+    const key = await ctx.db.get(keyId);
+    if (!key || key.userId !== userId) throw new Error("Key not found");
+    await ctx.db.delete(keyId);
+  },
+});

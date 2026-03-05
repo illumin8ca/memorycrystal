@@ -23,6 +23,7 @@ export default function SettingsPage() {
   const apiKeys = useQuery(api.crystal.apiKeys.listApiKeys, userId ? {} : "skip");
   const createApiKey = useMutation(api.crystal.apiKeys.createApiKey);
   const revokeApiKey = useMutation(api.crystal.apiKeys.revokeApiKey);
+  const deleteApiKey = useMutation(api.crystal.apiKeys.deleteApiKey);
   const regenerateApiKeyMutation = useMutation(api.crystal.apiKeys.regenerateApiKey);
 
   const [isCreating, setIsCreating] = useState(false);
@@ -105,7 +106,11 @@ export default function SettingsPage() {
                 <div key={k._id} className="border border-white/[0.07] bg-surface p-4">
                   <div className="flex items-start justify-between gap-3">
                     <span className="text-primary font-medium">{k.label ?? "Untitled Key"}</span>
-                    <span className="text-accent text-[10px] sm:text-xs font-mono border border-accent px-2 py-1 w-fit">
+                    <span className={`text-[10px] sm:text-xs font-mono border px-2 py-1 w-fit ${
+                      k.active
+                        ? "text-accent border-accent"
+                        : "text-white/30 border-white/15 bg-white/[0.04]"
+                    }`}>
                       {k.active ? "ACTIVE" : "REVOKED"}
                     </span>
                   </div>
@@ -128,7 +133,18 @@ export default function SettingsPage() {
                       >
                         Revoke
                       </button>
-                    ) : null}
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          if (!confirm("Permanently delete this API key?")) return;
+                          try { await deleteApiKey({ keyId: k._id }); }
+                          catch (err) { setError((err as Error).message ?? "Failed to delete key"); }
+                        }}
+                        className="text-secondary hover:text-red-400 text-xs transition-colors min-h-9"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               ))
