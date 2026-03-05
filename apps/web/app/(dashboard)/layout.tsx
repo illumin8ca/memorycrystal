@@ -65,15 +65,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       {/* Mobile drawer overlay */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {mobileOpen && (
-          <div className="lg:hidden fixed inset-0 z-50">
+          <motion.div
+            key="mobile-drawer"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="lg:hidden fixed inset-0 z-50"
+          >
             {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+            <div
               className="absolute inset-0"
               style={{ backgroundColor: "rgba(0,0,0,0.65)" }}
               onClick={() => setMobileOpen(false)}
@@ -152,7 +155,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </button>
               </motion.div>
             </motion.aside>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
