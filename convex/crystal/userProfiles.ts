@@ -30,22 +30,33 @@ export const createOrGet = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const userId = stableUserId(identity.subject);
+    const normalizedEmail = (identity.email ?? "").toLowerCase();
+    const isUnlimitedEmail = UNLIMITED_EMAILS.includes(normalizedEmail);
 
     const existingProfiles = await ctx.db
       .query("crystalUserProfiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
     const existing = pickLatestProfile(existingProfiles);
-    if (existing) return existing;
+
+    if (existing) {
+      if (isUnlimitedEmail && existing.subscriptionStatus !== "unlimited") {
+        await ctx.db.patch(existing._id, {
+          subscriptionStatus: "unlimited",
+          plan: "unlimited",
+          updatedAt: Date.now(),
+        });
+      }
+      return existing.subscriptionStatus === "unlimited" || isUnlimitedEmail
+        ? { ...existing, subscriptionStatus: "unlimited", plan: "unlimited", updatedAt: Date.now() }
+        : existing;
+    }
 
     const now = Date.now();
-    // Auto-grant unlimited plan to allowlisted emails
-    const isUnlimited = UNLIMITED_EMAILS.includes((identity.email ?? "").toLowerCase());
-
     const id = await ctx.db.insert("crystalUserProfiles", {
       userId,
-      subscriptionStatus: isUnlimited ? "unlimited" : "inactive",
-      plan: isUnlimited ? "unlimited" : undefined,
+      subscriptionStatus: isUnlimitedEmail ? "unlimited" : "inactive",
+      plan: isUnlimitedEmail ? "unlimited" : undefined,
       createdAt: now,
       updatedAt: now,
     });
