@@ -24,8 +24,11 @@ const inter = Inter({
 });
 
 export const viewport = {
-  themeColor: "#0d1820",
-  colorScheme: "dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f5f9ff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d1820" },
+  ],
+  colorScheme: "light dark",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -62,14 +65,17 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon-dark", media: "(prefers-color-scheme: dark)", type: "image/png" },
+      { url: "/icon-light", media: "(prefers-color-scheme: light)", type: "image/png" },
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
     apple: [
+      { url: "/apple-dark", media: "(prefers-color-scheme: dark)", sizes: "180x180", type: "image/png" },
+      { url: "/apple-light", media: "(prefers-color-scheme: light)", sizes: "180x180", type: "image/png" },
       { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
-    shortcut: "/icons/icon-192.png",
+    shortcut: "/icon-dark",
   },
   manifest: "/manifest.json",
 };
