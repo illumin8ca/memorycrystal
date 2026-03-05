@@ -18,12 +18,7 @@ type ApiKeyRow = {
 export default function SettingsPage() {
   const user = useQuery(api.crystal.userProfiles.getCurrentUser, {});
   const userId = user?.userId ?? null;
-  const userEmail = user?.email ?? "";
-  const isAdminEmail = ["andy@illumin8.ca", "admin@illumin8.ca", "andydoucet@gmail.com"].includes(
-    userEmail.trim().toLowerCase()
-  );
-  const subscribed = useQuery(api.crystal.userProfiles.isSubscribed);
-  const isAllowed = (subscribed ?? false) || isAdminEmail;
+  const userTier = useQuery(api.crystal.userProfiles.getCurrentUserTier, userId ? {} : "skip");
   const usage = useQuery(api.crystal.dashboard.getUsage, userId ? {} : "skip");
   const apiKeys = useQuery(api.crystal.apiKeys.listApiKeys, userId ? {} : "skip");
   const createApiKey = useMutation(api.crystal.apiKeys.createApiKey);
@@ -192,14 +187,12 @@ export default function SettingsPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
-          {subscribed === undefined ? (
+          {userTier === undefined ? (
             <span className="text-white/30 text-sm font-mono border border-white/10 px-3 py-2">LOADING…</span>
-          ) : isAllowed ? (
-            <span className="text-accent text-sm font-mono border border-accent px-3 py-2">ACTIVE</span>
           ) : (
-            <span className="text-red-400 text-sm font-mono border border-red-400/50 px-3 py-2">INACTIVE</span>
+            <span className="text-accent text-sm font-mono border border-accent px-3 py-2">ACTIVE</span>
           )}
-          <span className="text-primary">{isAllowed ? "Your vault is active" : "No active subscription"}</span>
+          <span className="text-primary">{userTier ? `Tier: ${userTier.toUpperCase()}` : "Preparing account"}</span>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm">
           <a

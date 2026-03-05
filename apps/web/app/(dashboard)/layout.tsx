@@ -28,19 +28,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const currentUser = useQuery(api.crystal.userProfiles.getCurrentUser, {});
-  const isAuthenticatedForQueries = Boolean(currentUser?.userId);
-  const subscribed = useQuery(
-    api.crystal.userProfiles.isSubscribed,
-    isAuthenticatedForQueries ? {} : "skip"
-  );
   const router = useRouter();
   const { signOut } = useAuthActions();
   const currentEmail = currentUser?.email ?? "";
   const currentName = currentUser?.name ?? "";
-  const isAdminEmail = ["andy@illumin8.ca", "admin@illumin8.ca", "andydoucet@gmail.com"].includes(
-    currentEmail.trim().toLowerCase()
-  );
-  const isAllowed = (subscribed ?? false) || isAdminEmail;
   const handleSignOut = async () => {
     await signOut();
     router.push("/");
@@ -229,38 +220,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </ul>
       </nav>
 
-      {isAuthenticatedForQueries && subscribed !== undefined && !isAllowed && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-6"
-          style={{ backgroundColor: "rgba(13,24,32,0.97)", backdropFilter: "blur(12px)" }}
-        >
-          <div className="max-w-md w-full text-center flex flex-col items-center gap-6">
-            <CrystalIcon size={48} glow />
-            <div>
-              <h2 className="text-xl font-mono font-bold text-white mb-2">Subscription Required</h2>
-              <p className="text-sm text-white/60">
-                Memory Crystal requires an active subscription to access your vault.
-              </p>
-            </div>
-            <a
-              href="/pricing"
-              className="btn-primary px-8 py-3 text-sm font-mono font-bold tracking-widest"
-            >
-              SUBSCRIBE NOW
-            </a>
-            <div className="flex flex-col items-center gap-2 text-xs">
-              <p className="text-white/30">Already subscribed? <a href="/dashboard" className="text-accent hover:underline">Refresh</a></p>
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="text-secondary hover:text-red-400 underline min-h-9"
-              >
-                Sign out
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
