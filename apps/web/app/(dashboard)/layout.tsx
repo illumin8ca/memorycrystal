@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Brain, Flag, LayoutDashboard, MessageSquare, Settings, type LucideIcon } from "lucide-react";
@@ -29,8 +29,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const currentUser = useQuery(api.crystal.userProfiles.getCurrentUser, {});
   const subscribed = useQuery(api.crystal.userProfiles.isSubscribed);
+  const router = useRouter();
   const { signOut } = useAuthActions();
   const currentEmail = currentUser?.email ?? "";
+  const currentName = currentUser?.name ?? "";
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/");
+  };
 
   const isActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`);
 
@@ -135,12 +141,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 className="px-5 py-6"
                 style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
               >
+                {currentName && <p className="text-sm text-white/70 truncate">{currentName}</p>}
                 {currentEmail && <p className="text-xs text-white/40 truncate mb-3">{currentEmail}</p>}
                 <button
                   type="button"
-                  onClick={async () => { setMobileOpen(false); await signOut(); }}
+                  onClick={async () => { setMobileOpen(false); await handleSignOut(); }}
                   className="btn-secondary w-full py-3 text-center text-xs tracking-widest"
-                  
                 >
                   SIGN OUT
                 </button>
@@ -180,8 +186,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             })}
           </nav>
           <div className="px-6 py-4" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+            {currentName && <p className="text-sm text-white/70 truncate">{currentName}</p>}
             {currentEmail && <p className="text-xs text-white/40 truncate">{currentEmail}</p>}
-            <button type="button" onClick={() => signOut()} className="text-xs mt-2 hover:underline" style={{ color: "#2180d6" }}>
+            <button type="button" onClick={handleSignOut} className="text-xs mt-2 hover:underline" style={{ color: "#2180d6" }}>
               Sign out
             </button>
           </div>
