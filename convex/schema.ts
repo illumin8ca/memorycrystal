@@ -237,6 +237,7 @@ export default defineSchema({
     metadata: v.optional(v.string()),
   })
     .index("by_timestamp", ["timestamp"])
+    .index("by_user_time", ["userId", "timestamp"])
     .index("by_channel_time", ["channel", "timestamp"])
     .index("by_session_time", ["sessionKey", "timestamp"])
     .index("by_embedded", ["embedded", "timestamp"])

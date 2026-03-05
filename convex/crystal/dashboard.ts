@@ -37,12 +37,7 @@ export const getStats = query({
 
     const totalMessages = await ctx.db
       .query("crystalMessages")
-      .filter((q) =>
-        q.or(
-          q.eq(q.field("userId"), userId),
-          q.eq(q.field("userId"), undefined)
-        )
-      )
+      .withIndex("by_user_time", (q) => q.eq("userId", userId))
       .collect();
 
     const recent = [...allMemories]
@@ -78,8 +73,9 @@ export const listMemories = query({
     const userId = stableUserId(identity.subject);
     if (!(await hasActiveSubscription(ctx, userId))) return [];
 
-    const pageSize = Math.min(limit ?? PAGE_SIZE, 100);
-    const skip = page * pageSize;
+    const pageSize = Math.min(Math.max(Math.trunc(limit ?? PAGE_SIZE), 1), 100);
+    const safePage = Math.max(Math.trunc(page ?? 0), 0);
+    const skip = safePage * pageSize;
 
     const all = await ctx.db
       .query("crystalMemories")
@@ -110,19 +106,14 @@ export const listMessages = query({
     const userId = stableUserId(identity.subject);
     if (!(await hasActiveSubscription(ctx, userId))) return [];
 
-    const pageSize = Math.min(limit ?? PAGE_SIZE, 100);
-    const skip = page * pageSize;
+    const pageSize = Math.min(Math.max(Math.trunc(limit ?? PAGE_SIZE), 1), 100);
+    const safePage = Math.max(Math.trunc(page ?? 0), 0);
+    const skip = safePage * pageSize;
 
     const all = await ctx.db
       .query("crystalMessages")
-      .withIndex("by_timestamp")
+      .withIndex("by_user_time", (q) => q.eq("userId", userId))
       .order("desc")
-      .filter((q) =>
-        q.or(
-          q.eq(q.field("userId"), userId),
-          q.eq(q.field("userId"), undefined)
-        )
-      )
       .collect();
 
     const filtered = role ? all.filter((m) => m.role === role) : all;

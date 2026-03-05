@@ -529,6 +529,10 @@ export const mcpAuth = httpAction(async (ctx, request) => {
   }
 
   if (!auth) return json({ error: "Unauthorized" }, 401);
+
+  const rateLimitResponse = await withRateLimit(ctx, auth.keyHash);
+  if (rateLimitResponse) return rateLimitResponse;
+
   return json({ ok: true, userId: auth.userId });
 });
 

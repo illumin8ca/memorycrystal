@@ -117,7 +117,7 @@ async function captureAssistant(text, sessionKey, channel) {
   const content = [userMessage ? "User: " + userMessage : null, "Assistant: " + text].filter(Boolean).join("\n\n");
   const r2 = await post("/api/mcp/capture", {
     title: "Conversation — " + new Date().toISOString().slice(0, 16).replace("T", " "),
-    content, store: "sensory", category: "conversation",
+    content, store: "sensory", category: "event",
     tags: ["openclaw", "auto-capture", channel], channel,
   });
   log("capture: " + r2.status);
