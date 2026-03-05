@@ -136,6 +136,9 @@ export const isSubscribed = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return false;
 
+    const email = (identity.email ?? "").toLowerCase();
+    if (UNLIMITED_EMAILS.includes(email)) return true;
+
     const userId = stableUserId(identity.subject);
     const profiles = await ctx.db
       .query("crystalUserProfiles")
@@ -167,8 +170,10 @@ export const getCurrentUserTier = query({
   handler: async (ctx): Promise<UserTier> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = stableUserId(identity.subject);
+    const email = (identity.email ?? "").toLowerCase();
+    if (UNLIMITED_EMAILS.includes(email)) return "unlimited";
 
+    const userId = stableUserId(identity.subject);
     const profiles = await ctx.db
       .query("crystalUserProfiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
