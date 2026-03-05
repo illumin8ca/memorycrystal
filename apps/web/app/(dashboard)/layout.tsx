@@ -5,16 +5,23 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { Brain, Flag, LayoutDashboard, MessageSquare, Settings, type LucideIcon } from "lucide-react";
 import CrystalIcon from "../components/CrystalIcon";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 
-const nav = [
-  { label: "Dashboard", href: "/dashboard", icon: "⊞" },
-  { label: "Memories", href: "/memories", icon: "◈" },
-  { label: "Messages", href: "/messages", icon: "✉" },
-  { label: "Checkpoints", href: "/checkpoints", icon: "◎" },
-  { label: "Settings", href: "/settings", icon: "⚙" },
+type NavItem = {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+};
+
+const nav: NavItem[] = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Memories", href: "/memories", icon: Brain },
+  { label: "Messages", href: "/messages", icon: MessageSquare },
+  { label: "Checkpoints", href: "/checkpoints", icon: Flag },
+  { label: "Settings", href: "/settings", icon: Settings },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -93,28 +100,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
               {/* Nav links — staggered */}
               <nav className="flex-1 flex flex-col px-4 py-4 gap-1">
-                {nav.map((item, i) => (
-                  <motion.div
-                    key={item.href}
-                    initial={{ opacity: 0, x: 16 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.06 + i * 0.05, duration: 0.22 }}
-                  >
-                    <Link
-                      href={item.href}
-                      onClick={() => setMobileOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 text-sm rounded transition-colors"
-                      style={{
-                        color: isActive(item.href) ? "#2180d6" : "rgba(255,255,255,0.65)",
-                        backgroundColor: isActive(item.href) ? "rgba(33,128,214,0.1)" : "transparent",
-                        borderLeft: isActive(item.href) ? "2px solid #2180d6" : "2px solid transparent",
-                      }}
+                {nav.map((item, i) => {
+                  const Icon = item.icon;
+                  return (
+                    <motion.div
+                      key={item.href}
+                      initial={{ opacity: 0, x: 16 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.06 + i * 0.05, duration: 0.22 }}
                     >
-                      <span className="text-base">{item.icon}</span>
-                      {item.label}
-                    </Link>
-                  </motion.div>
-                ))}
+                      <Link
+                        href={item.href}
+                        onClick={() => setMobileOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 text-sm rounded transition-colors"
+                        style={{
+                          color: isActive(item.href) ? "#2180d6" : "rgba(255,255,255,0.65)",
+                          backgroundColor: isActive(item.href) ? "rgba(33,128,214,0.1)" : "transparent",
+                          borderLeft: isActive(item.href) ? "2px solid #2180d6" : "2px solid transparent",
+                        }}
+                      >
+                        <Icon className="h-[1.05rem] w-[1.05rem]" />
+                        {item.label}
+                      </Link>
+                    </motion.div>
+                  );
+                })}
               </nav>
 
               {/* User + sign out */}
@@ -150,21 +160,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Link>
           </div>
           <nav className="flex-1 py-4">
-            {nav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-3 px-6 py-3 text-sm transition-colors"
-                style={{
-                  color: isActive(item.href) ? "#2180d6" : "rgba(255,255,255,0.55)",
-                  backgroundColor: isActive(item.href) ? "rgba(33,128,214,0.08)" : "transparent",
-                  borderLeft: isActive(item.href) ? "2px solid #2180d6" : "2px solid transparent",
-                }}
-              >
-                <span className="text-base">{item.icon}</span>
-                {item.label}
-              </Link>
-            ))}
+            {nav.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="flex items-center gap-3 px-6 py-3 text-sm transition-colors"
+                  style={{
+                    color: isActive(item.href) ? "#2180d6" : "rgba(255,255,255,0.55)",
+                    backgroundColor: isActive(item.href) ? "rgba(33,128,214,0.08)" : "transparent",
+                    borderLeft: isActive(item.href) ? "2px solid #2180d6" : "2px solid transparent",
+                  }}
+                >
+                  <Icon className="h-[1.05rem] w-[1.05rem]" />
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
           <div className="px-6 py-4" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
             {currentEmail && <p className="text-xs text-white/40 truncate">{currentEmail}</p>}
@@ -180,18 +193,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Bottom tab bar — mobile only */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40" style={{ backgroundColor: "#0d1820", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
         <ul className="grid grid-cols-5">
-          {nav.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className="min-h-14 px-1 py-2 flex flex-col items-center justify-center text-[10px] font-mono gap-1 transition-colors"
-                style={{ color: isActive(item.href) ? "#2180d6" : "rgba(255,255,255,0.45)" }}
-              >
-                <span className="text-sm leading-none">{item.icon}</span>
-                <span className="truncate max-w-full">{item.label}</span>
-              </Link>
-            </li>
-          ))}
+          {nav.map((item) => {
+            const Icon = item.icon;
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className="min-h-14 px-1 py-2 flex flex-col items-center justify-center text-[10px] font-mono gap-1 transition-colors"
+                  style={{ color: isActive(item.href) ? "#2180d6" : "rgba(255,255,255,0.45)" }}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="truncate max-w-full">{item.label}</span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 

@@ -27,7 +27,7 @@ export default function CookieBanner() {
     <div className="fixed bottom-0 inset-x-0 z-[60] border-t border-border bg-[#131E26] p-4 md:p-5">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
         <p className="text-sm text-secondary">
-          We use cookies to improve your experience.{" "}
+          Memory Crystal uses essential cookies for authentication and preferences. We do not use tracking cookies or share data with third parties.{" "}
           <Link href="/cookies" className="text-accent hover:underline">
             Cookie Policy
           </Link>

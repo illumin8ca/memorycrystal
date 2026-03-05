@@ -309,7 +309,7 @@ export default function HomePage() {
                     className="glass-card border border-white/[0.07] p-7 relative"
                   >
                     <div className="text-xs font-mono neon-text">{step.number}</div>
-                    <h3 className="mt-3 font-logo text-2xl">{step.title}</h3>
+                    <h3 className="mt-3 font-logo text-2xl text-[#4CC1E9]">{step.title}</h3>
                     <p className="mt-3 text-secondary">{step.copy}</p>
                     {index < workflowSteps.length - 1 ? (
                       <span className="hidden md:block absolute -right-5 top-8 w-5 h-px bg-[rgba(33,128,214,0.28)]" />
