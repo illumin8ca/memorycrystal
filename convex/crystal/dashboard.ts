@@ -1,6 +1,21 @@
 import { stableUserId } from "./auth";
 import { query } from "../_generated/server";
 import { v } from "convex/values";
+import { internal } from "../_generated/api";
+
+type UserTier = "free" | "pro" | "ultra" | "unlimited";
+const STORAGE_LIMITS: Record<UserTier, number | null> = {
+  free: 500,
+  pro: 25_000,
+  ultra: null,
+  unlimited: null,
+};
+const MESSAGE_TTL_DAYS: Record<UserTier, number> = {
+  free: 30,
+  pro: 90,
+  ultra: 365,
+  unlimited: 365,
+};
 
 const PAGE_SIZE = 25;
 
@@ -121,5 +136,28 @@ export const listMessages = query({
     const page_items = since.slice(skip, skip + pageSize);
 
     return page_items.map((m) => ({ ...m, totalCount: since.length }));
+  },
+});
+
+export const getUsage = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = stableUserId(identity.subject);
+
+    const tier = (await ctx.runQuery(internal.crystal.userProfiles.getUserTier, {
+      userId,
+    })) as UserTier;
+    const memoriesUsed = await ctx.runQuery(internal.crystal.mcp.getMemoryCount, {
+      userId,
+    });
+
+    return {
+      memoriesUsed,
+      memoriesLimit: STORAGE_LIMITS[tier],
+      tier,
+      messageTtlDays: MESSAGE_TTL_DAYS[tier],
+    };
   },
 });

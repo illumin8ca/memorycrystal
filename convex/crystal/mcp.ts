@@ -38,6 +38,29 @@ const CATEGORY_VALUES: MemoryCategory[] = [
   "workflow",
 ];
 
+type UserTier = "free" | "pro" | "ultra" | "unlimited";
+
+const STORAGE_LIMITS: Record<UserTier, number | null> = {
+  free: 500,
+  pro: 25_000,
+  ultra: null,
+  unlimited: null,
+};
+
+const MESSAGE_LIMITS: Record<UserTier, number | null> = {
+  free: 500,
+  pro: null,
+  ultra: null,
+  unlimited: null,
+};
+
+const MESSAGE_TTL_DAYS: Record<UserTier, number> = {
+  free: 30,
+  pro: 90,
+  ultra: 365,
+  unlimited: 365,
+};
+
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), {
     status,
@@ -116,6 +139,23 @@ export const captureMemory = internalMutation({
     channel: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const tier = (await ctx.runQuery(internal.crystal.userProfiles.getUserTier, {
+      userId: args.userId,
+    })) as UserTier;
+    const limit = STORAGE_LIMITS[tier];
+
+    if (limit !== null) {
+      const memoryCount = await ctx.runQuery(internal.crystal.mcp.getMemoryCount, {
+        userId: args.userId,
+      });
+      if (memoryCount >= limit) {
+        return {
+          error: "Storage limit reached. Upgrade at https://memorycrystal.ai/dashboard/settings",
+          limit,
+        };
+      }
+    }
+
     const now = Date.now();
     const id = await ctx.db.insert("crystalMemories", {
       userId: args.userId,
@@ -138,7 +178,7 @@ export const captureMemory = internalMutation({
     });
     // Schedule async embedding generation
     await ctx.scheduler.runAfter(0, internal.crystal.mcp.embedMemory, { memoryId: id });
-    return id;
+    return { id };
   },
 });
 
@@ -257,6 +297,21 @@ export const getMemoryStoreStats = internalQuery({
   },
 });
 
+export const getMemoryCount = internalQuery({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    const active = await ctx.db
+      .query("crystalMemories")
+      .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
+      .collect();
+    const archived = await ctx.db
+      .query("crystalMemories")
+      .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", true))
+      .collect();
+    return active.length + archived.length;
+  },
+});
+
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 60;
 
@@ -305,6 +360,11 @@ async function withRateLimit(ctx: any, keyHash: string): Promise<Response | null
   return null;
 }
 
+async function getTierAndLimit(ctx: any, userId: string): Promise<{ tier: UserTier; limit: number | null }> {
+  const tier = (await ctx.runQuery(internal.crystal.userProfiles.getUserTier, { userId })) as UserTier;
+  return { tier, limit: STORAGE_LIMITS[tier] };
+}
+
 async function requireAuth(ctx: any, request: Request): Promise<{ userId: string; key: any; keyHash: string } | null> {
   const rawKey = extractBearerToken(request);
   if (!rawKey) return null;
@@ -327,7 +387,23 @@ export const mcpCapture = httpAction(async (ctx, request) => {
   const body = await parseBody(request);
   if (!body?.title || !body?.content) return json({ error: "title and content are required" }, 400);
 
-  const id = await ctx.runMutation(internal.crystal.mcp.captureMemory, {
+  const { limit } = await getTierAndLimit(ctx, auth.userId);
+  if (limit !== null) {
+    const memoryCount = await ctx.runQuery(internal.crystal.mcp.getMemoryCount, {
+      userId: auth.userId,
+    });
+    if (memoryCount >= limit) {
+      return json(
+        {
+          error: "Storage limit reached. Upgrade at https://memorycrystal.ai/dashboard/settings",
+          limit,
+        },
+        403
+      );
+    }
+  }
+
+  const result = await ctx.runMutation(internal.crystal.mcp.captureMemory, {
     userId: auth.userId,
     title: String(body.title),
     content: String(body.content),
@@ -337,7 +413,17 @@ export const mcpCapture = httpAction(async (ctx, request) => {
     channel: body.channel ? String(body.channel) : undefined,
   });
 
-  return json({ ok: true, id });
+  if (result?.error) {
+    return json(
+      {
+        error: "Storage limit reached. Upgrade at https://memorycrystal.ai/dashboard/settings",
+        limit: result.limit,
+      },
+      403
+    );
+  }
+
+  return json({ ok: true, id: result.id });
 });
 
 export const mcpRecall = httpAction(async (ctx, request) => {
@@ -483,13 +569,33 @@ export const mcpLog = httpAction(async (ctx, request) => {
   const content = String(body?.content ?? "").trim();
   if (!content) return json({ error: "content is required" }, 400);
 
+  const tier = (await ctx.runQuery(internal.crystal.userProfiles.getUserTier, {
+    userId: auth.userId,
+  })) as UserTier;
+
+  const messageLimit = MESSAGE_LIMITS[tier];
+  if (messageLimit !== null) {
+    const messageCount = await ctx.runQuery(internal.crystal.messages.getMessageCount, {
+      userId: auth.userId,
+    });
+    if (messageCount >= messageLimit) {
+      return json(
+        {
+          error: "Storage limit reached. Upgrade at https://memorycrystal.ai/dashboard/settings",
+          limit: messageLimit,
+        },
+        403
+      );
+    }
+  }
+
   const id = await ctx.runMutation(internal.crystal.messages.logMessageInternal, {
     userId: auth.userId,
     role,
     content,
     channel: body?.channel ? String(body.channel) : undefined,
     sessionKey: body?.sessionKey ? String(body.sessionKey) : undefined,
-    ttlDays: 14,
+    ttlDays: MESSAGE_TTL_DAYS[tier],
   });
 
   return json({ ok: true, id });

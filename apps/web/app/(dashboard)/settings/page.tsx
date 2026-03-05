@@ -19,6 +19,7 @@ export default function SettingsPage() {
   const user = useQuery(api.crystal.userProfiles.getCurrentUser, {});
   const userId = user?.userId ?? null;
   const subscribed = useQuery(api.crystal.userProfiles.isSubscribed);
+  const usage = useQuery(api.crystal.dashboard.getUsage, userId ? {} : "skip");
   const apiKeys = useQuery(api.crystal.apiKeys.listApiKeys, userId ? {} : "skip");
   const createApiKey = useMutation(api.crystal.apiKeys.createApiKey);
   const revokeApiKey = useMutation(api.crystal.apiKeys.revokeApiKey);
@@ -139,6 +140,27 @@ export default function SettingsPage() {
 
       <section>
         <h2 className="font-mono font-bold text-lg text-primary mb-4">SUBSCRIPTION</h2>
+
+        <div className="border border-white/[0.07] bg-surface p-4 mb-4">
+          <p className="text-secondary text-xs tracking-widest uppercase mb-2">Usage</p>
+          <p className="text-primary text-sm">
+            {usage
+              ? `${usage.memoriesUsed} / ${usage.memoriesLimit === null ? "∞" : usage.memoriesLimit} memories used`
+              : "Loading usage..."}
+          </p>
+          <p className="text-secondary text-xs mt-1">
+            {usage ? `Tier: ${usage.tier.toUpperCase()} • Message TTL: ${usage.messageTtlDays} days` : ""}
+          </p>
+          {usage && usage.tier !== "ultra" && usage.tier !== "unlimited" ? (
+            <a
+              href="/api/polar/checkout?plan=pro"
+              className="btn-primary inline-flex px-4 py-2 text-xs mt-3"
+            >
+              Upgrade
+            </a>
+          ) : null}
+        </div>
+
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
           {subscribed === undefined ? (
             <span className="text-white/30 text-sm font-mono border border-white/10 px-3 py-2">LOADING…</span>

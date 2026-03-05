@@ -6,6 +6,21 @@ import { internal } from "../_generated/api";
 const DEFAULT_TTL_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
 const MAX_CONTENT_LENGTH = 8000; // truncate very long messages
 
+type UserTier = "free" | "pro" | "ultra" | "unlimited";
+const TIER_TTL_DAYS: Record<UserTier, number> = {
+  free: 30,
+  pro: 90,
+  ultra: 365,
+  unlimited: 365,
+};
+
+const MESSAGE_LIMITS: Record<UserTier, number | null> = {
+  free: 500,
+  pro: null,
+  ultra: null,
+  unlimited: null,
+};
+
 const roleEnum = v.union(v.literal("user"), v.literal("assistant"), v.literal("system"));
 
 const truncateContent = (content: string): string =>
@@ -44,11 +59,23 @@ export const logMessage = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const now = Date.now();
-    const ttlDays = Math.max(args.ttlDays ?? 14, 0);
+    const userId = stableUserId(identity.subject);
+    const tier = (await ctx.runQuery(internal.crystal.userProfiles.getUserTier, {
+      userId,
+    })) as UserTier;
+    const limit = MESSAGE_LIMITS[tier];
+    if (limit !== null) {
+      const existingCount = await ctx.runQuery(internal.crystal.messages.getMessageCount, { userId });
+      if (existingCount >= limit) {
+        throw new Error("Storage limit reached. Upgrade at https://memorycrystal.ai/dashboard/settings");
+      }
+    }
+
+    const ttlDays = Math.max(args.ttlDays ?? TIER_TTL_DAYS[tier], 0);
     const ttlMs = ttlDays * 24 * 60 * 60 * 1000;
 
     const messageId = await ctx.db.insert("crystalMessages", {
-      userId: stableUserId(identity.subject),
+      userId,
       role: args.role,
       content: truncateContent(args.content),
       channel: normalizeText(args.channel),
@@ -78,7 +105,18 @@ export const logMessageInternal = internalMutation({
   handler: async (ctx, args) => {
     const { userId, ...rest } = args;
     const now = Date.now();
-    const ttlDays = Math.max(rest.ttlDays ?? 14, 0);
+    const tier = (await ctx.runQuery(internal.crystal.userProfiles.getUserTier, {
+      userId,
+    })) as UserTier;
+    const limit = MESSAGE_LIMITS[tier];
+    if (limit !== null) {
+      const existingCount = await ctx.runQuery(internal.crystal.messages.getMessageCount, { userId });
+      if (existingCount >= limit) {
+        throw new Error("Storage limit reached. Upgrade at https://memorycrystal.ai/dashboard/settings");
+      }
+    }
+
+    const ttlDays = Math.max(rest.ttlDays ?? TIER_TTL_DAYS[tier], 0);
     const ttlMs = ttlDays * 24 * 60 * 60 * 1000;
 
     return ctx.db.insert("crystalMessages", {
@@ -162,6 +200,17 @@ export const getRecentMessages = query({
 });
 
 // Internal version for background jobs (no auth context)
+export const getMessageCount = internalQuery({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    const messages = await ctx.db
+      .query("crystalMessages")
+      .withIndex("by_user_time", (q) => q.eq("userId", userId))
+      .collect();
+    return messages.length;
+  },
+});
+
 export const getUnembeddedMessages = internalQuery({
   args: {
     limit: v.optional(v.number()),

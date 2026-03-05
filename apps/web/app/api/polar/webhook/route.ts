@@ -14,6 +14,8 @@ type SubscriptionLike = {
   user?: { id?: string };
   metadata?: Record<string, string>;
   productId?: string;
+  product_id?: string;
+  product?: { id?: string };
 };
 
 const toSubscriptionStatus = (
@@ -68,6 +70,8 @@ export async function POST(request: NextRequest) {
     subscription.customer?.id ??
     subscription.customer?.customerId;
   const subscriptionStatus = toSubscriptionStatus(subscription.status);
+  const productId =
+    subscription.productId ?? subscription.product_id ?? subscription.product?.id ?? undefined;
 
   const profile =
     (polarCustomerId
@@ -86,6 +90,7 @@ export async function POST(request: NextRequest) {
     polarSubscriptionId: polarSubscriptionId ? String(polarSubscriptionId) : undefined,
     polarCustomerId: polarCustomerId ? String(polarCustomerId) : undefined,
     subscriptionStatus,
+    plan: productId ? String(productId) : undefined,
     webhookToken: secret,
   });
 

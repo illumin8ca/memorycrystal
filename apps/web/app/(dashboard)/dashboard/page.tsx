@@ -7,8 +7,23 @@ import { api } from "../../../../../convex/_generated/api";
 const formatTime = (value: number) =>
   new Date(value).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
+type MemoryRow = {
+  _id: string;
+  title: string;
+  content: string;
+  store: string;
+};
+
+type MessageRow = {
+  _id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  timestamp: number;
+};
+
 export default function DashboardPage() {
   const stats = useQuery(api.crystal.dashboard.getStats, {});
+  const usage = useQuery(api.crystal.dashboard.getUsage, {});
   const recentMemories = useQuery(api.crystal.dashboard.listMemories, { limit: 5 });
   const recentMessages = useQuery(api.crystal.dashboard.listMessages, { limit: 3 });
 
@@ -16,7 +31,9 @@ export default function DashboardPage() {
     {
       label: "TOTAL MEMORIES",
       value: stats ? String(stats.totalMemories) : "Loading...",
-      sub: stats ? `across ${stats.activeStores} stores` : "Loading...",
+      sub: usage
+        ? `${usage.memoriesUsed} / ${usage.memoriesLimit === null ? "∞" : usage.memoriesLimit} memories used`
+        : "Loading...",
     },
     {
       label: "MESSAGES CAPTURED",
@@ -50,6 +67,16 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {usage && usage.memoriesLimit !== null && usage.memoriesUsed / usage.memoriesLimit >= 0.8 ? (
+        <div className="mb-8 sm:mb-10 bg-surface border border-accent/50 p-4 sm:p-5">
+          <p className="text-primary text-sm">You&apos;re using {usage.memoriesUsed} of {usage.memoriesLimit} memories.</p>
+          <p className="text-secondary text-xs mt-1 mb-3">Upgrade now to avoid capture interruptions.</p>
+          <Link href="/dashboard/settings" className="btn-primary inline-flex px-4 py-2 text-xs">
+            Upgrade
+          </Link>
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <section>
           <div className="flex items-center justify-between mb-3 sm:mb-4">
@@ -64,7 +91,7 @@ export default function DashboardPage() {
             ) : recentMemories.length === 0 ? (
               <div className="text-secondary text-sm px-2">No memories yet.</div>
             ) : (
-              recentMemories.map((m) => (
+              recentMemories.map((m: MemoryRow) => (
                 <Link
                   key={m._id}
                   href="/memories"
@@ -96,7 +123,7 @@ export default function DashboardPage() {
             ) : recentMessages.length === 0 ? (
               <div className="text-secondary text-sm px-2">No messages yet.</div>
             ) : (
-              recentMessages.map((m) => (
+              recentMessages.map((m: MessageRow) => (
                 <Link
                   key={m._id}
                   href="/messages"

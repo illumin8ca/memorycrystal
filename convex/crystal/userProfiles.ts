@@ -2,6 +2,27 @@ import { internalMutation, internalQuery, mutation, query } from "../_generated/
 import { v } from "convex/values";
 import { stableUserId } from "./auth";
 
+export type UserTier = "free" | "pro" | "ultra" | "unlimited";
+
+const UNLIMITED_EMAILS = ["andy@illumin8.ca", "admin@illumin8.ca"];
+const PRO_PRODUCT_ID = "f78ee82b-719e-4de8-850a-3e9eea3db4b0";
+const ULTRA_PRODUCT_ID = "9d59dd76-5026-4079-95f7-bf594f71121b";
+
+function pickLatestProfile<T extends { updatedAt?: number }>(profiles: T[]): T | undefined {
+  return profiles.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
+}
+
+function deriveTier(profile: { subscriptionStatus?: string; plan?: string } | null | undefined): UserTier {
+  if (profile?.subscriptionStatus === "unlimited") return "unlimited";
+  if (profile?.subscriptionStatus !== "active" && profile?.subscriptionStatus !== "trialing") return "free";
+
+  const plan = (profile?.plan ?? "").toLowerCase();
+  if (plan === ULTRA_PRODUCT_ID || plan === "ultra") return "ultra";
+  if (plan === PRO_PRODUCT_ID || plan === "pro") return "pro";
+
+  return "pro";
+}
+
 export const createOrGet = mutation({
   args: {},
   handler: async (ctx) => {
@@ -13,12 +34,11 @@ export const createOrGet = mutation({
       .query("crystalUserProfiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
-    const existing = existingProfiles.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
+    const existing = pickLatestProfile(existingProfiles);
     if (existing) return existing;
 
     const now = Date.now();
     // Auto-grant unlimited plan to allowlisted emails
-    const UNLIMITED_EMAILS = ["andy@illumin8.ca", "admin@illumin8.ca"];
     const isUnlimited = UNLIMITED_EMAILS.includes((identity.email ?? "").toLowerCase());
 
     const id = await ctx.db.insert("crystalUserProfiles", {
@@ -65,7 +85,6 @@ export const grantUnlimitedBySelf = mutation({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const UNLIMITED_EMAILS = ["andy@illumin8.ca", "admin@illumin8.ca"];
     if (!UNLIMITED_EMAILS.includes((identity.email ?? "").toLowerCase())) {
       throw new Error("Not authorized for unlimited plan");
     }
@@ -74,7 +93,7 @@ export const grantUnlimitedBySelf = mutation({
       .query("crystalUserProfiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
-    const profile = profiles.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
+    const profile = pickLatestProfile(profiles);
     if (!profile) throw new Error("No profile found — visit /dashboard first");
     await ctx.db.patch(profile._id, {
       subscriptionStatus: "unlimited",
@@ -95,7 +114,7 @@ export const getByUser = query({
       .query("crystalUserProfiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
-    return profiles.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0] ?? null;
+    return pickLatestProfile(profiles) ?? null;
   },
 });
 
@@ -110,8 +129,36 @@ export const isSubscribed = query({
       .query("crystalUserProfiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
-    const profile = profiles.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
+    const profile = pickLatestProfile(profiles);
     return profile?.subscriptionStatus === "active" || profile?.subscriptionStatus === "trialing" || profile?.subscriptionStatus === "unlimited";
+  },
+});
+
+export const getUserTier = internalQuery({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }): Promise<UserTier> => {
+    const profiles = await ctx.db
+      .query("crystalUserProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    return deriveTier(pickLatestProfile(profiles));
+  },
+});
+
+export const getCurrentUserTier = query({
+  args: {},
+  handler: async (ctx): Promise<UserTier> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = stableUserId(identity.subject);
+
+    const profiles = await ctx.db
+      .query("crystalUserProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    return deriveTier(pickLatestProfile(profiles));
   },
 });
 
