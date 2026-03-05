@@ -28,7 +28,12 @@ export default convexAuthNextjsMiddleware(async (request, { convexAuth }) => {
   }
 
   return;
-}, { verbose: true });
+}, {
+  verbose: true,
+  cookieConfig: {
+    maxAge: 60 * 60 * 24 * 30, // 30 days
+  },
+});
 
 export const config = {
   matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
