@@ -35,7 +35,15 @@ export const getStats = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthenticated");
+    if (!identity) {
+      return {
+        totalMemories: 0,
+        totalMessages: 0,
+        memoriesByStore: {},
+        activeStores: 0,
+        recentActivity: [],
+      };
+    }
     const userId = stableUserId(identity.subject);
     if (!(await hasActiveSubscription(ctx, userId))) {
       return {
@@ -86,7 +94,7 @@ export const listMemories = query({
   },
   handler: async (ctx, { limit = PAGE_SIZE, store, archived = false, page = 0 }) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthenticated");
+    if (!identity) return [];
     const userId = stableUserId(identity.subject);
     if (!(await hasActiveSubscription(ctx, userId))) return [];
 
@@ -119,7 +127,7 @@ export const listMessages = query({
   },
   handler: async (ctx, { limit = PAGE_SIZE, sinceMs, page = 0, role }) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthenticated");
+    if (!identity) return [];
     const userId = stableUserId(identity.subject);
     if (!(await hasActiveSubscription(ctx, userId))) return [];
 
@@ -150,7 +158,14 @@ export const getUsage = query({
     messageTtlDays: number;
   }> => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Unauthenticated");
+    if (!identity) {
+      return {
+        memoriesUsed: 0,
+        memoriesLimit: 500,
+        tier: "free",
+        messageTtlDays: MESSAGE_TTL_DAYS.free,
+      };
+    }
     const userId = stableUserId(identity.subject);
 
     const tier = (await ctx.runQuery(internal.crystal.userProfiles.getUserTier, {
