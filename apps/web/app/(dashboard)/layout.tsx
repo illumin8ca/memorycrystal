@@ -33,6 +33,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { signOut } = useAuthActions();
   const currentEmail = currentUser?.email ?? "";
   const currentName = currentUser?.name ?? "";
+  const isAdminEmail = ["andy@illumin8.ca", "admin@illumin8.ca", "andydoucet@gmail.com"].includes(
+    currentEmail.trim().toLowerCase()
+  );
+  const isAllowed = (subscribed ?? false) || isAdminEmail;
   const handleSignOut = async () => {
     await signOut();
     router.push("/");
@@ -221,7 +225,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </ul>
       </nav>
 
-      {subscribed !== undefined && subscribed === false && (
+      {subscribed !== undefined && !isAllowed && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-6"
           style={{ backgroundColor: "rgba(13,24,32,0.97)", backdropFilter: "blur(12px)" }}
@@ -235,7 +239,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </p>
             </div>
             <a
-              href="/api/polar/checkout"
+              href="/pricing"
               className="btn-primary px-8 py-3 text-sm font-mono font-bold tracking-widest"
             >
               SUBSCRIBE NOW
