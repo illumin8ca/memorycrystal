@@ -240,12 +240,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             >
               SUBSCRIBE NOW
             </a>
-            <p className="text-xs text-white/30">
-              Already subscribed?{" "}
-              <a href="/dashboard" className="text-accent hover:underline">
-                Refresh
-              </a>
-            </p>
+            <div className="flex flex-col items-center gap-2 text-xs">
+              <p className="text-white/30">Already subscribed? <a href="/dashboard" className="text-accent hover:underline">Refresh</a></p>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="text-secondary hover:text-red-400 underline min-h-9"
+              >
+                Sign out
+              </button>
+            </div>
           </div>
         </div>
       )}
