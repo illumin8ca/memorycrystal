@@ -38,10 +38,12 @@ export default function MemoriesPage() {
   const totalCount = memories?.[0]?.totalCount ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
+  type MemoryRow = NonNullable<typeof memories>[number];
+
   // Client-side search filter across the current page
-  const filtered = memories
+  const filtered: MemoryRow[] = memories
     ? memories.filter(
-        (m) =>
+        (m: MemoryRow) =>
           !search.trim() ||
           m.title?.toLowerCase().includes(search.toLowerCase()) ||
           m.content?.toLowerCase().includes(search.toLowerCase()) ||

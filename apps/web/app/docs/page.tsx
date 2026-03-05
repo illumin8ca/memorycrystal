@@ -181,8 +181,8 @@ curl -X POST https://memorycrystal.ai/api/mcp/stats \
                 {[
                   ["FREE", "$0", "500", "500", "30 days"],
                   ["STARTER", "$10/mo", "10,000", "5,000", "60 days"],
-                  ["PRO", "$25/mo", "25,000", "25,000", "90 days"],
-                  ["ULTRA", "$50/mo", "Unlimited", "Unlimited", "365 days"],
+                  ["PRO", "$20/mo", "25,000", "25,000", "90 days"],
+                  ["ULTRA", "$100/mo", "Unlimited", "Unlimited", "365 days"],
                 ].map((row) => (
                   <div key={row[0]} className="grid grid-cols-5 text-sm border-b last:border-b-0 border-white/[0.06]">
                     {row.map((cell, i) => <div key={i} className="p-3 text-secondary">{cell}</div>)}

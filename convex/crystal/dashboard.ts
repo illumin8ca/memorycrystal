@@ -143,7 +143,12 @@ export const listMessages = query({
 
 export const getUsage = query({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<{
+    memoriesUsed: number;
+    memoriesLimit: number | null;
+    tier: UserTier;
+    messageTtlDays: number;
+  }> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const userId = stableUserId(identity.subject);

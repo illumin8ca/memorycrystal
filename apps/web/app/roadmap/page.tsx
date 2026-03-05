@@ -1,3 +1,4 @@
+import { type ComponentType } from "react";
 import { CheckCircle2, Circle, Clock3 } from "lucide-react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -55,7 +56,7 @@ function TimelineSection({
 }: {
   title: string;
   items: RoadmapItem[];
-  icon: React.ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string }>;
   iconClass: string;
 }) {
   return (

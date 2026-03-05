@@ -56,12 +56,12 @@ const platformCards = [
 ];
 
 const featureCards = [
-  { icon: "◈", title: "Semantic Search", copy: "Ask \"what did we decide about the auth flow?\" and get the answer. Memory Crystal searches by meaning, not keywords — so you find what you meant, not just what you typed." },
-  { icon: "◈", title: "Spreading Activation", copy: "Pull one memory and related context surfaces automatically. Ask about your database schema and your migration decisions come with it. Memory works in clusters, not isolation." },
-  { icon: "◈", title: "5 Memory Stores", copy: "Not all memory is equal. Episodic (what happened), semantic (what you know), procedural (how you work), prospective (what you planned), sensory (recent messages). Each stored and recalled appropriately." },
-  { icon: "◈", title: "Knowledge Graph", copy: "Typed entities and relationships — people, projects, decisions, concepts — stored as a queryable graph. Ask \"what decisions did we make about Project X?\" and get a real answer. (Ultra)" },
-  { icon: "◈", title: "Wake Briefings", copy: "Every session starts with a memory briefing: what you were working on, what decisions are pending, what changed. Your AI is already up to speed before you type a word." },
-  { icon: "◈", title: "Obsidian Sync", copy: "Every memory synced to a human-readable Obsidian vault. You own your memory. Browse it, edit it, search it without touching the app. (Pro+)" },
+  { title: "Semantic Search", copy: "Ask \"what did we decide about the auth flow?\" and get the answer. Memory Crystal searches by meaning, not keywords — so you find what you meant, not just what you typed." },
+  { title: "Spreading Activation", copy: "Pull one memory and related context surfaces automatically. Ask about your database schema and your migration decisions come with it. Memory works in clusters, not isolation." },
+  { title: "5 Memory Stores", copy: "Not all memory is equal. Episodic (what happened), semantic (what you know), procedural (how you work), prospective (what you planned), sensory (recent messages). Each stored and recalled appropriately." },
+  { title: "Knowledge Graph", copy: "Typed entities and relationships — people, projects, decisions, concepts — stored as a queryable graph. Ask \"what decisions did we make about Project X?\" and get a real answer. (Ultra)" },
+  { title: "Wake Briefings", copy: "Every session starts with a memory briefing: what you were working on, what decisions are pending, what changed. Your AI is already up to speed before you type a word." },
+  { title: "Obsidian Sync", copy: "Every memory synced to a human-readable Obsidian vault. You own your memory. Browse it, edit it, search it without touching the app. (Pro+)" },
 ];
 
 const roadmapItems = [
@@ -92,7 +92,7 @@ const pricingPlans = [
   },
   {
     name: "PRO",
-    price: "$25/mo",
+    price: "$20/mo",
     button: "START PRO",
     checkoutHref: "/api/polar/checkout?plan=pro",
     badge: "MOST POPULAR",
@@ -102,7 +102,7 @@ const pricingPlans = [
   },
   {
     name: "ULTRA",
-    price: "$50/mo",
+    price: "$100/mo",
     button: "START ULTRA",
     checkoutHref: "/api/polar/checkout?plan=ultra",
     features: ["Unlimited memories", "Unlimited messages", "365-day message retention"],

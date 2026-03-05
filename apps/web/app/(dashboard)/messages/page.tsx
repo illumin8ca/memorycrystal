@@ -39,9 +39,11 @@ export default function MessagesPage() {
   const totalCount = messages?.[0]?.totalCount ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
-  const filtered = messages
+  type MessageRow = NonNullable<typeof messages>[number];
+
+  const filtered: MessageRow[] = messages
     ? messages.filter(
-        (m) =>
+        (m: MessageRow) =>
           !search.trim() ||
           m.content?.toLowerCase().includes(search.toLowerCase())
       )
