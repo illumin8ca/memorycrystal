@@ -170,12 +170,12 @@ export default function SettingsPage() {
           {usage && usage.tier !== "ultra" && usage.tier !== "unlimited" ? (
             <div className="mt-3 flex flex-wrap gap-2">
               {(usage.tier === "free" || usage.tier === "starter") ? (
-                <a href="/pricing" className="btn-primary inline-flex px-4 py-2 text-xs">
+                <a href="/api/polar/checkout?plan=pro" className="btn-primary inline-flex px-4 py-2 text-xs">
                   Upgrade to Pro
                 </a>
               ) : null}
               {usage.tier === "pro" ? (
-                <a href="/pricing" className="btn-primary inline-flex px-4 py-2 text-xs">
+                <a href="/api/polar/checkout?plan=ultra" className="btn-primary inline-flex px-4 py-2 text-xs">
                   Upgrade to Ultra
                 </a>
               ) : null}
