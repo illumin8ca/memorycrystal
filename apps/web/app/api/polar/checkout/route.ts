@@ -2,10 +2,10 @@ import { Polar } from "@polar-sh/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PRODUCT_IDS: Record<string, string | undefined> = {
-  free: process.env.POLAR_PRODUCT_ID_FREE,
+  free: process.env.POLAR_PRODUCT_ID_FREE ?? "bbd98a9d-271d-431b-bf23-246bc34e79f0",
   starter: undefined,
-  pro: process.env.POLAR_PRODUCT_ID_PRO,
-  ultra: process.env.POLAR_PRODUCT_ID_ULTRA,
+  pro: process.env.POLAR_PRODUCT_ID_PRO ?? "f78ee82b-719e-4de8-850a-3e9eea3db4b0",
+  ultra: process.env.POLAR_PRODUCT_ID_ULTRA ?? "9d59dd76-5026-4079-95f7-bf594f71121b",
 };
 
 export async function GET(request: NextRequest) {
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!accessToken || !productId) {
-    return NextResponse.redirect("https://polar.sh/illumin8ca/products");
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL ?? "https://memorycrystal.ai"}/pricing?checkoutError=config&plan=${encodeURIComponent(plan)}`);
   }
 
   const polar = new Polar({ accessToken });
@@ -31,7 +31,8 @@ export async function GET(request: NextRequest) {
       successUrl: `${appUrl}/dashboard?subscribed=1`,
     });
     return NextResponse.redirect(checkout.url);
-  } catch {
-    return NextResponse.redirect("https://polar.sh/illumin8ca/products");
+  } catch (error) {
+    console.error("Polar checkout creation failed", { plan, productId, error });
+    return NextResponse.redirect(`${appUrl}/pricing?checkoutError=polar&plan=${encodeURIComponent(plan)}`);
   }
 }
