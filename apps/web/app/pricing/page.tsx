@@ -80,18 +80,12 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-              {plan.comingSoon ? (
-                <div className="mt-7 inline-flex items-center justify-center px-5 py-3 text-xs font-mono border border-accent/60 text-accent bg-accent/10">
-                  COMING SOON!
-                </div>
-              ) : (
-                <Link
-                  href={plan.checkoutHref!}
-                  className="mt-7 inline-flex items-center justify-center px-5 py-3 text-xs font-mono border border-border/50 bg-border/5 hover:bg-accent/12 hover:border-accent transition-colors"
-                >
-                  {plan.button}
-                </Link>
-              )}
+              <Link
+                href={plan.checkoutHref!}
+                className="mt-7 inline-flex items-center justify-center px-5 py-3 text-xs font-mono border border-border/50 bg-border/5 hover:bg-accent/12 hover:border-accent transition-colors"
+              >
+                {plan.button}
+              </Link>
             </article>
           ))}
         </section>
