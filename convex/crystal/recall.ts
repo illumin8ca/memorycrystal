@@ -29,7 +29,8 @@ const memoryCategory = v.union(
   v.literal("event"),
   v.literal("fact"),
   v.literal("goal"),
-  v.literal("workflow")
+  v.literal("workflow"),
+  v.literal("conversation")
 );
 
 type RecallCandidateDocument = {

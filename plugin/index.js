@@ -122,7 +122,7 @@ module.exports = (api) => {
         title: `OpenClaw — ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
         content,
         store: "sensory",
-        category: "event",
+        category: "conversation",
         tags: ["openclaw", "auto-capture"],
         channel: ctx?.messageProvider || "openclaw",
       });

@@ -18,14 +18,15 @@ const memoryCategory = v.union(
   v.literal("event"),
   v.literal("fact"),
   v.literal("goal"),
-  v.literal("workflow")
+  v.literal("workflow"),
+  v.literal("conversation")
 );
 
 type MemoryStore = "sensory" | "episodic" | "semantic" | "procedural" | "prospective";
-type MemoryCategory = "decision" | "lesson" | "person" | "rule" | "event" | "fact" | "goal" | "workflow";
+type MemoryCategory = "decision" | "lesson" | "person" | "rule" | "event" | "fact" | "goal" | "workflow" | "conversation";
 
 const DEFAULT_STORE: MemoryStore = "episodic";
-const DEFAULT_CATEGORY: MemoryCategory = "event";
+const DEFAULT_CATEGORY: MemoryCategory = "conversation";
 const STORE_VALUES: MemoryStore[] = ["sensory", "episodic", "semantic", "procedural", "prospective"];
 const CATEGORY_VALUES: MemoryCategory[] = [
   "decision",
@@ -36,6 +37,7 @@ const CATEGORY_VALUES: MemoryCategory[] = [
   "fact",
   "goal",
   "workflow",
+  "conversation",
 ];
 
 type UserTier = "free" | "starter" | "pro" | "ultra" | "unlimited";

@@ -299,7 +299,7 @@ export const runReflectionForUser = internalAction({
         const memId = await ctx.runMutation(internal.crystal.memories.createMemoryInternal, {
           userId: args.userId,
           store: "episodic",
-          category: "event",
+          category: "conversation",
           title: `Reflection summary: ${dateStr}`,
           content: summary,
           embedding: [],
