@@ -13,6 +13,7 @@ const memoryCategories = [
   "fact",
   "goal",
   "workflow",
+  "conversation",
 ] as const;
 
 export type MemoryStore = (typeof memoryStores)[number];

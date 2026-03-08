@@ -12,6 +12,7 @@ const memoryCategories = [
   "fact",
   "goal",
   "workflow",
+  "conversation",
 ] as const;
 
 export type CrystalRecallInput = {

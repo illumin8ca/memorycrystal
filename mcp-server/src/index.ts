@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { createServer } from "node:http";
 import { URL } from "node:url";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
