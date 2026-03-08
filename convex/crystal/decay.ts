@@ -3,11 +3,19 @@ import { v } from "convex/values";
 import { action, internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
 
-const nowMs = () => Date.now();
-const MAX_BATCH = 500;
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 
-const computeDecay = (
+// Tier-based memory limits (max active memories per tier)
+const TIER_MEMORY_LIMITS: Record<string, number> = {
+  free: 500,
+  starter: 2500,
+  pro: 10000,
+  ultra: 50000,
+  unlimited: 999999,
+};
+
+// computeDecay is kept for potential future use (e.g. internal strength adjustments)
+export const computeDecay = (
   strength: number,
   ageDays: number,
   accessCount: number,
@@ -84,64 +92,69 @@ export const applyDecayPatchAuth = mutation({
   },
 });
 
+/**
+ * Storage-pressure-based decay.
+ *
+ * Decay only fires for a user when they are at ≥90% of their tier memory limit.
+ * When triggered, the oldest/weakest memories are archived to bring them back
+ * to 85% of their limit.
+ *
+ * Scoring: combinedScore = strength * 0.4 + recencyScore * 0.6
+ * (lower score = archived first)
+ */
 export const applyDecay = action({
-  args: {
-    ageOverrideDays: v.optional(v.number()),
-  },
-  handler: async (ctx, { ageOverrideDays }) => {
-    const now = nowMs();
-    const ageCap = ageOverrideDays ?? 30;
-
-    // Get all user IDs and run decay per user
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, { dryRun }) => {
     const userIds: string[] = await ctx.runQuery(internal.crystal.userProfiles.listAllUserIds, {});
-
-    let totalDecayed = 0;
     let totalArchived = 0;
-    let totalErrors = 0;
 
     for (const userId of userIds) {
-      const memoryBatch: any[] = await ctx.runQuery(internal.crystal.decay.getMemoriesForDecay, {
+      const tier: string = await ctx.runQuery(internal.crystal.userProfiles.getUserTier, { userId });
+      const limit = TIER_MEMORY_LIMITS[tier] ?? TIER_MEMORY_LIMITS.free;
+
+      // Fetch enough to determine if we're over threshold (limit + 1 so we know if there are more)
+      const memories: any[] = await ctx.runQuery(internal.crystal.decay.getMemoriesForDecay, {
         userId,
-        limit: MAX_BATCH + 1,
+        limit: limit + 1,
       });
+      const activeCount = memories.length;
 
-      const memories = memoryBatch.slice(0, MAX_BATCH);
-      const deferred = Math.max(0, memoryBatch.length - MAX_BATCH);
-      if (deferred > 0) {
-        console.log(`[applyDecay] user ${userId}: deferred ${deferred} memories to next run`);
-      }
+      // Skip if below 90% full
+      if (activeCount < limit * 0.9) continue;
 
-      for (const memory of memories) {
-        try {
-          const ageDays = (now - (memory.lastAccessedAt ?? memory.createdAt)) / (24 * 60 * 60 * 1000);
-          if (ageDays < 0.001) continue;
+      const targetCount = Math.floor(limit * 0.85);
+      const toArchive = activeCount - targetCount;
+      if (toArchive <= 0) continue;
 
-          const nextStrength = computeDecay(
-            memory.strength,
-            Math.min(ageDays, ageCap),
-            memory.accessCount,
-            memory.valence,
-            memory.arousal
-          );
+      console.log(
+        `[applyDecay] user ${userId} tier=${tier}: ${activeCount}/${limit} active (${Math.round(activeCount / limit * 100)}% full), archiving ${toArchive} to reach ${targetCount}`
+      );
 
-          if (nextStrength === memory.strength) continue;
+      const now = Date.now();
+      const scored = memories
+        .map((m) => {
+          const ageDays = (now - (m.lastAccessedAt ?? m.createdAt)) / 86400000;
+          const recencyScore = Math.exp(-0.05 * ageDays); // slow decay curve
+          const combinedScore = m.strength * 0.4 + recencyScore * 0.6;
+          return { ...m, combinedScore };
+        })
+        .sort((a, b) => a.combinedScore - b.combinedScore); // lowest score first
 
+      const candidates = scored.slice(0, toArchive);
+
+      for (const memory of candidates) {
+        if (!dryRun) {
           await ctx.runMutation(internal.crystal.decay.applyDecayPatch, {
             memoryId: memory._id,
-            strength: nextStrength,
-            archived: nextStrength < 0.1,
+            strength: memory.strength * 0.5, // halve strength as final warning before archival
+            archived: true,
             archivedAt: now,
           });
-
-          totalDecayed += 1;
-          if (nextStrength < 0.1) totalArchived += 1;
-        } catch (error) {
-          totalErrors += 1;
-          console.log(`[applyDecay] failed to decay memory ${memory._id}`, error);
         }
+        totalArchived++;
       }
     }
 
-    return { decayed: totalDecayed, archived: totalArchived, errors: totalErrors };
+    return { archived: totalArchived, dryRun: dryRun ?? false };
   },
 });

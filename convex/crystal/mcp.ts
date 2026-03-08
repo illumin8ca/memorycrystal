@@ -229,6 +229,21 @@ export const listRecentCheckpoints = internalQuery({
   },
 });
 
+export const getLastSessionByUser = internalQuery({
+  args: { userId: v.string(), channel: v.optional(v.string()) },
+  handler: async (ctx, { userId, channel }) => {
+    const allSessions = await ctx.db
+      .query("crystalSessions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(10);
+    const filtered = channel
+      ? allSessions.filter((s) => s.channel === channel)
+      : allSessions;
+    return filtered[0] ?? null;
+  },
+});
+
 export const semanticSearch = internalAction({
   args: {
     userId: v.string(),
@@ -529,10 +544,77 @@ const wakeHandler = httpAction(async (ctx, request) => {
   });
   const stats = await ctx.runQuery(internal.crystal.mcp.getMemoryStoreStats, { userId: auth.userId });
   const lastCheckpoint = checkpoints[0] ?? null;
-  const checkpointLabel = lastCheckpoint?.label ?? "none";
   const topTitle = recentMemories[0]?.title ?? "none";
 
-  const briefing = `You have ${stats.total} memories. Last checkpoint: ${checkpointLabel}. Recent context: ${topTitle}.`;
+  // Parse channel from request body if POST
+  let channel: string | undefined;
+  try {
+    if (request.method === "POST") {
+      const body = await request.clone().json().catch(() => ({}));
+      channel = typeof body?.channel === "string" ? body.channel.trim() || undefined : undefined;
+    }
+  } catch { /* ignore */ }
+
+  // Fetch last session for continuity
+  const lastSession = await ctx.runQuery(internal.crystal.mcp.getLastSessionByUser, {
+    userId: auth.userId,
+    channel,
+  });
+
+  const goals = recentMemories.filter((m: any) => m.store === "prospective" || m.category === "goal");
+  const decisions = recentMemories.filter((m: any) => m.category === "decision");
+
+  // Build last session block
+  const lastSessionLines: string[] = [];
+  if (lastSession?.summary) {
+    const ago = lastSession.lastActiveAt
+      ? `${Math.round((Date.now() - lastSession.lastActiveAt) / 3600000)}h ago`
+      : "recently";
+    lastSessionLines.push(
+      "",
+      `## Last session (${ago}, ${lastSession.messageCount ?? 0} messages):`,
+      lastSession.summary.slice(0, 300)
+    );
+  }
+
+  const bootstrapLines = [
+    "## 🔮 Memory Crystal — Active",
+    "You have access to persistent memory tools. Use them proactively:",
+    "- **crystal_recall** — search your memory when the user references past events, decisions, or asks 'do you remember'",
+    "- **crystal_remember** — save important decisions, lessons, facts, goals, or anything worth keeping",
+    "- **crystal_checkpoint** — snapshot current memory state at significant milestones",
+    "- **crystal_what_do_i_know** — summarize what you know about a topic",
+    "- **crystal_why_did_we** — explain the reasoning behind past decisions",
+    "Memory is automatically captured each turn. Focus on quality saves with crystal_remember.",
+    "",
+    "## Memory Crystal Wake Briefing",
+    `Channel: ${channel ?? "unknown"}`,
+    `Total memories: ${stats.total}`,
+    ...lastSessionLines,
+    "",
+    "Open goals:",
+    ...(goals.length ? goals.map((m: any) => `- [${m.store}] ${m.title}`) : ["- none"]),
+    "",
+    "Recent decisions:",
+    ...(decisions.length ? decisions.map((m: any) => `- [${m.store}] ${m.title}`) : ["- none"]),
+    "",
+    `${goals.length + decisions.length} memories surfaced | Use crystal_recall to search all memories.`,
+  ];
+
+  const briefing = bootstrapLines.join("\n");
+
+  // Store session so next wake can show this summary
+  const now = Date.now();
+  await ctx.runMutation(internal.crystal.sessions.createSessionInternal, {
+    userId: auth.userId,
+    channel: channel ?? "unknown",
+    startedAt: now,
+    lastActiveAt: now,
+    messageCount: 0,
+    memoryCount: stats.total,
+    summary: briefing,
+    participants: [],
+  });
 
   return json({
     briefing,

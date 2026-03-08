@@ -62,6 +62,28 @@ export const createWakeStateInternal = internalMutation({
   },
 });
 
+export const getLastSession = query({
+  args: { channel: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = stableUserId(identity.subject);
+    const channel = args.channel?.trim() || undefined;
+
+    const allSessions = await ctx.db
+      .query("crystalSessions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(10);
+
+    const filtered = channel
+      ? allSessions.filter((s) => s.channel === channel)
+      : allSessions;
+
+    return filtered[0] ?? null;
+  },
+});
+
 export const getActiveMemories = query({
   args: { channel: v.optional(v.string()), limit: v.number() },
   handler: async (ctx, args) => {

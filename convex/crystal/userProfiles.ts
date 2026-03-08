@@ -12,11 +12,17 @@ function pickLatestProfile<T extends { updatedAt?: number }>(profiles: T[]): T |
   return profiles.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
 }
 
+function normalizePlan(plan: string): string {
+  // Strip common suffixes like "_monthly", "_yearly", "_annual", "_trial"
+  return plan.replace(/_(monthly|yearly|annual|trial|m|y)$/, "");
+}
+
 function deriveTier(profile: { subscriptionStatus?: string; plan?: string } | null | undefined): UserTier {
   if (profile?.subscriptionStatus === "unlimited") return "unlimited";
   if (profile?.subscriptionStatus !== "active" && profile?.subscriptionStatus !== "trialing") return "free";
 
-  const plan = (profile?.plan ?? "").toLowerCase();
+  const rawPlan = (profile?.plan ?? "").toLowerCase();
+  const plan = normalizePlan(rawPlan);
   if (plan === ULTRA_PRODUCT_ID || plan === "ultra") return "ultra";
   if (plan === PRO_PRODUCT_ID || plan === "pro") return "pro";
   if (plan === "starter") return "starter";

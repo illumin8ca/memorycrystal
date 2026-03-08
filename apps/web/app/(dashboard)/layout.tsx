@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { Brain, Flag, LayoutDashboard, MessageSquare, Settings, type LucideIcon } from "lucide-react";
+import { Brain, Flag, LayoutDashboard, MessageSquare, Settings, BarChart2, type LucideIcon } from "lucide-react";
 import CrystalIcon from "../components/CrystalIcon";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -21,6 +21,7 @@ const nav: NavItem[] = [
   { label: "Memories", href: "/memories", icon: Brain },
   { label: "Messages", href: "/messages", icon: MessageSquare },
   { label: "Checkpoints", href: "/checkpoints", icon: Flag },
+  { label: "Usage", href: "/usage", icon: BarChart2 },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -201,7 +202,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Bottom tab bar — mobile only */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40" style={{ backgroundColor: "#0d1820", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-        <ul className="grid grid-cols-5">
+        <ul className="grid grid-cols-6">
           {nav.map((item) => {
             const Icon = item.icon;
             return (
