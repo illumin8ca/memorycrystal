@@ -19,7 +19,14 @@
     "start:crystal": "node dist/index.js",
     "prepublishOnly": "npm run build"
   },
-  "keywords": ["mcp", "memory", "ai", "claude", "codex", "persistent-memory"],
+  "keywords": [
+    "mcp",
+    "memory",
+    "ai",
+    "claude",
+    "codex",
+    "persistent-memory"
+  ],
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
