@@ -1,7 +1,32 @@
 const { appendFileSync, readFileSync, writeFileSync } = require("node:fs");
+const path = require("node:path");
 
 const log = (m) => appendFileSync("/tmp/crystal-hook-log.txt", `[${new Date().toISOString()}] ${m}\n`);
-const API_KEY = "5116fcb6e36c622e412cb09c1209e4322e129190c4725c6afe6a53e78905c06e";
+
+// Resolve API key: env var first, then fall back to reading .env file
+function resolveApiKey() {
+  if (process.env.CRYSTAL_API_KEY) {
+    return process.env.CRYSTAL_API_KEY;
+  }
+  try {
+    const envFile = path.resolve(__dirname, "..", "mcp-server", ".env");
+    const raw = readFileSync(envFile, "utf8");
+    for (const line of raw.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
+      const [key, ...rest] = trimmed.split("=");
+      if (key.trim() === "CRYSTAL_API_KEY") {
+        return rest.join("=").trim().replace(/^"+|"+$/g, "");
+      }
+    }
+  } catch {
+    // .env file not found or unreadable
+  }
+  log("WARNING: CRYSTAL_API_KEY not set in env or mcp-server/.env — capture will be skipped");
+  return null;
+}
+
+const API_KEY = resolveApiKey();
 const BASE_URL = "https://rightful-mockingbird-389.convex.site";
 const PENDING_FILE = "/tmp/crystal-pending.json";
 
@@ -17,10 +42,15 @@ function setPending(key, val) { const p = loadPending(); p[key] = val; savePendi
 function deletePending(key) { const p = loadPending(); delete p[key]; savePending(p); }
 function hasPending(key) { return !!loadPending()[key]; }
 
-async function post(path, body) {
-  return fetch(`${BASE_URL}${path}`, {
+async function post(urlPath, body) {
+  const apiKey = resolveApiKey();
+  if (!apiKey) {
+    log("WARNING: No API key available, skipping post");
+    return { ok: false, status: "no-api-key" };
+  }
+  return fetch(`${BASE_URL}${urlPath}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   }).catch(e => ({ ok: false, status: `error:${e.message}` }));
 }
@@ -46,6 +76,10 @@ async function captureAssistant(text, sessionKey, channel) {
 }
 
 module.exports = async function handler(event, ctx) {
+  if (!resolveApiKey()) {
+    log("WARNING: No API key — skipping capture handler");
+    return;
+  }
   const action = event?.action;
   const type = event?.type;
   const sessionKey = event?.sessionKey || ctx?.sessionKey || "";

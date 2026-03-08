@@ -23,6 +23,7 @@ import type * as crystal_mcp from "../crystal/mcp.js";
 import type * as crystal_memories from "../crystal/memories.js";
 import type * as crystal_messages from "../crystal/messages.js";
 import type * as crystal_recall from "../crystal/recall.js";
+import type * as crystal_reflection from "../crystal/reflection.js";
 import type * as crystal_sessions from "../crystal/sessions.js";
 import type * as crystal_stats from "../crystal/stats.js";
 import type * as crystal_stmEmbedder from "../crystal/stmEmbedder.js";
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   "crystal/memories": typeof crystal_memories;
   "crystal/messages": typeof crystal_messages;
   "crystal/recall": typeof crystal_recall;
+  "crystal/reflection": typeof crystal_reflection;
   "crystal/sessions": typeof crystal_sessions;
   "crystal/stats": typeof crystal_stats;
   "crystal/stmEmbedder": typeof crystal_stmEmbedder;

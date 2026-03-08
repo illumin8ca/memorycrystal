@@ -93,7 +93,15 @@ export default defineSchema({
     .index("by_store_category", ["store", "category", "archived"])
     .index("by_strength", ["strength", "archived"])
     .index("by_last_accessed", ["lastAccessedAt"])
-    .index("by_session", ["sessionId"]),
+    .index("by_session", ["sessionId"])
+    .searchIndex("search_content", {
+      searchField: "content",
+      filterFields: ["userId", "archived"],
+    })
+    .searchIndex("search_title", {
+      searchField: "title",
+      filterFields: ["userId", "archived"],
+    }),
 
   crystalAssociations: defineTable({
     fromMemoryId: v.id("crystalMemories"),

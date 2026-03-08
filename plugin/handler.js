@@ -1,3 +1,17 @@
+/**
+ * LEGACY HOOK HANDLER
+ * -------------------
+ * This file is the legacy entry point for older OpenClaw hook systems that
+ * used the `openclaw-hook.json` format (schemaVersion 1).
+ *
+ * It works by spawning child processes to run capture-hook.js and recall-hook.js.
+ *
+ * For modern OpenClaw plugin API (api.registerHook), use `index.js` instead.
+ * `index.js` is the canonical entry point referenced by `openclaw.plugin.json`.
+ *
+ * Do NOT delete this file — it may still be used by older OpenClaw installations
+ * or systems that invoke hooks directly via openclaw-hook.json.
+ */
 const childProcess = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");

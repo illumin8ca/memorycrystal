@@ -622,6 +622,37 @@ export const mcpStats = httpAction(async (ctx, request) => {
   });
 });
 
+export const mcpReflect = httpAction(async (ctx, request) => {
+  const auth = await requireAuth(ctx, request);
+  if (!auth) return json({ error: "Unauthorized" }, 401);
+
+  const rateLimitResponse = await withRateLimit(ctx, auth.keyHash);
+  if (rateLimitResponse) return rateLimitResponse;
+
+  const body = await parseBody(request);
+  const windowHoursRaw = Number(body?.windowHours ?? 4);
+  const windowHours = Number.isFinite(windowHoursRaw) ? Math.min(Math.max(windowHoursRaw, 0.5), 72) : 4;
+  const sessionId = body?.sessionId ? String(body.sessionId) : undefined;
+
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+  if (!openaiApiKey) {
+    return json({ error: "Reflection not available: OPENAI_API_KEY not configured" }, 503);
+  }
+
+  try {
+    const stats = await ctx.runAction(internal.crystal.reflection.runReflectionForUser, {
+      userId: auth.userId,
+      windowHours,
+      sessionId: sessionId as any,
+      openaiApiKey,
+    });
+    return json({ ok: true, stats });
+  } catch (err) {
+    console.log("[mcpReflect] action failed:", err);
+    return json({ error: "Reflection failed", detail: String(err) }, 500);
+  }
+});
+
 export const mcpAuth = httpAction(async (ctx, request) => {
   let auth = await requireAuth(ctx, request);
 

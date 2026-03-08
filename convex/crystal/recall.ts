@@ -1,6 +1,6 @@
 import { stableUserId } from "./auth";
 import { v } from "convex/values";
-import { action } from "../_generated/server";
+import { action, internalQuery } from "../_generated/server";
 import { internal } from "../_generated/api";
 
 const nowMs = () => Date.now();
@@ -65,12 +65,14 @@ type RecallResult = {
 
 const requestSchema = v.object({
   embedding: v.array(v.float64()),
+  query: v.optional(v.string()),
   stores: v.optional(v.array(memoryStore)),
   categories: v.optional(v.array(memoryCategory)),
   tags: v.optional(v.array(v.string())),
   limit: v.optional(v.number()),
   includeAssociations: v.optional(v.boolean()),
   includeArchived: v.optional(v.boolean()),
+  recentMemoryIds: v.optional(v.array(v.string())),
 });
 
 type RecallSet = {
@@ -157,13 +159,78 @@ const buildInjectionBlock = (memories: RecallResult[]) => {
   return ["## 🧠 Memory Crystal Memory Recall", ...lines].join("\n");
 };
 
+/**
+ * Look up crystalMemoryNodeLinks for a set of memory IDs.
+ * Used by the recallMemories action to apply a knowledge-graph boost.
+ */
+export const getNodesForMemories = internalQuery({
+  args: { userId: v.string(), memoryIds: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    // Look up crystalMemoryNodeLinks for each memoryId
+    const links = await Promise.all(
+      args.memoryIds.map((id) =>
+        ctx.db
+          .query("crystalMemoryNodeLinks")
+          .withIndex("by_memory", (q) => q.eq("memoryId", id as any))
+          .collect()
+      )
+    );
+    return links.flat();
+  },
+});
+
+export const searchMemoriesByText = internalQuery({
+  args: {
+    userId: v.string(),
+    query: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = Math.min(args.limit ?? 20, 50);
+    const [contentResults, titleResults] = await Promise.all([
+      ctx.db
+        .query("crystalMemories")
+        .withSearchIndex("search_content", (q) =>
+          q.search("content", args.query).eq("userId", args.userId).eq("archived", false)
+        )
+        .take(limit),
+      ctx.db
+        .query("crystalMemories")
+        .withSearchIndex("search_title", (q) =>
+          q.search("title", args.query).eq("userId", args.userId).eq("archived", false)
+        )
+        .take(limit),
+    ]);
+
+    // Dedupe by _id; title hits get a 15% score boost marker
+    const seen = new Set<string>();
+    const results: Array<{ _id: string; bm25Boost: number }> = [];
+
+    for (const doc of titleResults) {
+      if (!seen.has(doc._id as string)) {
+        seen.add(doc._id as string);
+        results.push({ _id: doc._id as string, bm25Boost: 0.15 });
+      }
+    }
+    for (const doc of contentResults) {
+      if (!seen.has(doc._id as string)) {
+        seen.add(doc._id as string);
+        results.push({ _id: doc._id as string, bm25Boost: 0.0 });
+      }
+    }
+
+    return results;
+  },
+});
+
 export const recallMemories = action({
   args: requestSchema,
   handler: async (ctx, args) => {
     const requestedLimit = Math.floor(args.limit ?? defaultLimit);
     const normalizedLimit = Math.min(Math.max(requestedLimit, minLimit), maxLimit);
     const vectorTake = Math.min(Math.max(normalizedLimit * 4, vectorTakeMin), vectorTakeMax);
-    const includeAssociations = args.includeAssociations ?? false;
+    // Task 1: Default includeAssociations to true
+    const includeAssociations = args.includeAssociations ?? true;
     const includeArchived = args.includeArchived ?? false;
     const requestedTags = args.tags?.length ? normalizeTagList(args.tags) : undefined;
 
@@ -171,11 +238,31 @@ export const recallMemories = action({
     if (!identity) throw new Error("Unauthenticated");
     const userId = stableUserId(identity.subject);
 
-    const vectorResults = (await ctx.vectorSearch("crystalMemories", "by_embedding", {
-      vector: args.embedding,
-      limit: vectorTake,
-      filter: (q: any) => q.eq("userId", userId),
-    })) as Array<{ _id: string; _score: number }>;
+    // Derive text query for BM25 hybrid search.
+    // Passed as `query` from the plugin/mcp-server alongside the embedding.
+    const textQuery: string = args.query ?? "";
+
+    // Run vector search and BM25 text search in parallel
+    const [vectorResults, textSearchResults] = await Promise.all([
+      ctx.vectorSearch("crystalMemories", "by_embedding", {
+        vector: args.embedding,
+        limit: vectorTake,
+        filter: (q: any) => q.eq("userId", userId),
+      }) as Promise<Array<{ _id: string; _score: number }>>,
+      textQuery.trim().length > 0
+        ? ctx.runQuery(internal.crystal.recall.searchMemoriesByText, {
+            userId,
+            query: textQuery,
+            limit: vectorTake,
+          })
+        : Promise.resolve([] as Array<{ _id: string; bm25Boost: number }>),
+    ]);
+
+    // Build BM25 boost map keyed by memory _id
+    const bm25BoostMap = new Map<string, number>();
+    for (const entry of textSearchResults as Array<{ _id: string; bm25Boost: number }>) {
+      bm25BoostMap.set(entry._id, entry.bm25Boost);
+    }
 
     // Fetch full documents for each vector result (vectorSearch only returns _id + _score)
     const rawResults = (
@@ -228,8 +315,19 @@ export const recallMemories = action({
         );
         const recency = recencyScore(ageDays);
         const accessScore = clamp01((candidate.accessCount ?? 0) / 20);
+
+        // Scoring formula:
+        // - vectorScore (0.35): semantic similarity from embedding ANN
+        // - strength (0.30): user/system assigned memory importance
+        // - recency (0.20): exponential decay based on last access
+        // - accessScore (0.10): normalized access frequency (cap 20 accesses)
+        // - bm25Boost (0.05): keyword match bonus from FTS (if hybrid search enabled)
+        // - nodeBoost (0.05): knowledge graph node linkage bonus
+        // Note: components sum to 1.05 to allow slight upward pressure on well-connected memories
+        const bm25Boost = bm25BoostMap.get(candidate._id) ?? 0;
         const scoreValue =
-          candidate.strength * 0.3 + recency * 0.2 + accessScore * 0.1 + vectorScore * 0.4;
+          candidate.strength * 0.3 + recency * 0.2 + accessScore * 0.1 + vectorScore * 0.35 + bm25Boost * 0.05;
+        // nodeBoost applied in post-processing below
 
         return {
           memoryId: candidate._id,
@@ -245,9 +343,47 @@ export const recallMemories = action({
         } as RecallResult;
       })
       .sort((a, b) => b.scoreValue - a.scoreValue)
+      .filter((result) => result.scoreValue >= 0.25)
       .slice(0, normalizedLimit);
 
-    const finalMemories = dedupeById(ranked);
+    // Session deduplication: filter out memories already shown this session
+    const recentMemoryIdSet = new Set<string>(args.recentMemoryIds ?? []);
+    const sessionFiltered = recentMemoryIdSet.size > 0
+      ? ranked.filter((r) => !recentMemoryIdSet.has(r.memoryId))
+      : ranked;
+
+    let finalMemories = dedupeById(sessionFiltered);
+
+    // Task 3: Node/Relation Graph Boost
+    // Look up crystalMemoryNodeLinks for all final memories and boost scores for
+    // well-connected memories (linkConfidence > 0.7).
+    const finalMemoryIds = finalMemories.map((m) => m.memoryId);
+    if (finalMemoryIds.length > 0) {
+      const nodeLinks: Array<{ memoryId: string; linkConfidence: number }> = await ctx
+        .runQuery(internal.crystal.recall.getNodesForMemories, {
+          userId,
+          memoryIds: finalMemoryIds,
+        })
+        .catch(() => []);
+
+      // Build a set of memoryIds that have at least one high-confidence node link
+      const boostedMemoryIds = new Set<string>(
+        nodeLinks
+          .filter((link) => link.linkConfidence > 0.7)
+          .map((link) => link.memoryId)
+      );
+
+      if (boostedMemoryIds.size > 0) {
+        finalMemories = finalMemories.map((memory) => {
+          if (boostedMemoryIds.has(memory.memoryId)) {
+            return { ...memory, scoreValue: memory.scoreValue + 0.05 };
+          }
+          return memory;
+        });
+        // Re-sort after applying node boost
+        finalMemories = finalMemories.sort((a, b) => b.scoreValue - a.scoreValue);
+      }
+    }
 
     if (!includeAssociations || ranked.length === 0) {
       const injectionBlock = buildInjectionBlock(finalMemories);
@@ -264,11 +400,21 @@ export const recallMemories = action({
       } as RecallSet;
     }
 
+    // Task 2: Batch Association Lookup
+    // Collect all final memory IDs and run buildAssociationCandidates concurrently
+    // instead of sequentially, reducing round trips.
     const linkedIds = new Set<string>(finalMemories.map((result) => result.memoryId));
+
+    const allAssocCandidatesNested = await Promise.all(
+      finalMemories.map((topResult) => buildAssociationCandidates(ctx, userId, topResult.memoryId, 3))
+    );
+
+    // Expand associated memories — fetch docs and score them
     const expanded: RecallResult[] = [];
 
-    for (const topResult of finalMemories) {
-      const assocCandidates = await buildAssociationCandidates(ctx, userId, topResult.memoryId, 3);
+    for (let i = 0; i < finalMemories.length; i++) {
+      const topResult = finalMemories[i];
+      const assocCandidates = allAssocCandidatesNested[i];
 
       for (const assoc of assocCandidates) {
         const candidateId = topResult.memoryId === assoc.sourceId ? assoc.targetId : assoc.sourceId;

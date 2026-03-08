@@ -1,4 +1,13 @@
 /**
+ * DEPRECATED / LEGACY
+ * -------------------
+ * This file is a legacy duplicate of capture logic now consolidated into `index.js`.
+ * It was previously used by handler.js (via child_process.spawnSync) and as a
+ * standalone hook in older OpenClaw configurations.
+ *
+ * Canonical capture logic now lives in: `index.js`
+ * Do NOT delete — may be referenced by legacy configurations or handler.js.
+ *
  * Crystal Capture plugin — captures conversation turns via MCP API
  * Writes to crystalMemories (sensory store) with proper userId via API key auth
  */

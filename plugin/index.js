@@ -3,6 +3,53 @@ const DEFAULT_CONVEX_URL = "https://rightful-mockingbird-389.convex.site";
 const pendingUserMessages = new Map();
 const wakeInjectedSessions = new Set();
 
+/**
+ * Returns false if this conversation turn is noise and should NOT be captured.
+ * Prevents heartbeat acks, greetings, short acks, and refusals from polluting memory.
+ */
+function shouldCapture(userMessage, assistantText) {
+  const text = assistantText.trim();
+  const userMsg = (userMessage || "").trim();
+
+  // Skip if userMessage is a heartbeat prompt
+  if (/HEARTBEAT|heartbeat poll/i.test(userMsg)) return false;
+
+  // Skip if assistant text is too short
+  if (text.length < 20) return false;
+
+  // Skip HEARTBEAT_OK acknowledgements (case insensitive)
+  if (/^HEARTBEAT_OK$/i.test(text)) return false;
+
+  // Skip short acknowledgement phrases
+  if (/^(NO_REPLY|ok|sure|got it|okay|yep|yeah|nope|nah|thanks|thank you)[!.,\s]*$/i.test(text)) return false;
+
+  // Skip pure greetings
+  if (/^(hi|hello|hey|good morning|good afternoon|good evening)[!.,\s]*$/i.test(text)) return false;
+
+  // Skip short agent refusals (under 100 chars)
+  if (text.length < 100 && /^(I don't have|I cannot|I'm not able to)/i.test(text)) return false;
+
+  return true;
+}
+
+async function triggerReflection(config, sessionKey) {
+  const apiKey = config?.apiKey;
+  if (!apiKey) return;
+  const convexUrl = config?.convexUrl || DEFAULT_CONVEX_URL;
+  try {
+    await fetch(`${convexUrl}/api/mcp/reflect`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ windowHours: 4 }),
+    });
+  } catch (e) {
+    // Fire and forget — don't block session reset
+  }
+}
+
 async function request(config, method, path, body) {
   const apiKey = config?.apiKey;
   if (!apiKey) return null;
@@ -64,6 +111,8 @@ module.exports = (api) => {
       const userMessage = sessionKey ? (pendingUserMessages.get(sessionKey) || "") : "";
       if (sessionKey) pendingUserMessages.delete(sessionKey);
 
+      if (!shouldCapture(userMessage, assistantText)) return;
+
       const content = [
         userMessage ? `User: ${userMessage}` : null,
         `Assistant: ${assistantText}`,
@@ -81,5 +130,22 @@ module.exports = (api) => {
     { name: "crystal-memory.llm-output", description: "Capture AI response to Memory Crystal" }
   );
 
-  api.logger?.info?.("[crystal-memory] hooks registered: message_received + llm_output");
+  // Trigger memory reflection on session boundary
+  api.registerHook(
+    'command:new',
+    async (event, ctx) => {
+      await triggerReflection(ctx?.config, ctx?.sessionKey);
+    },
+    { name: 'crystal-memory.command-new', description: 'Trigger memory reflection on /new' }
+  );
+
+  api.registerHook(
+    'command:reset',
+    async (event, ctx) => {
+      await triggerReflection(ctx?.config, ctx?.sessionKey);
+    },
+    { name: 'crystal-memory.command-reset', description: 'Trigger memory reflection on /reset' }
+  );
+
+  api.logger?.info?.("[crystal-memory] hooks registered: message_received + llm_output + command:new + command:reset");
 };

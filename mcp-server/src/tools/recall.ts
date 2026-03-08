@@ -223,6 +223,7 @@ export const handleRecallTool = async (args: unknown): Promise<CallToolResult> =
 
     const response = (await getConvexClient().action("crystal/recall:recallMemories" as any, {
       embedding,
+      query: parsed.query,
       stores: parsed.stores,
       categories: parsed.categories,
       tags: parsed.tags,

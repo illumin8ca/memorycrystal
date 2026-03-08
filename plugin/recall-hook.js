@@ -9,6 +9,33 @@ const CONVEX_QUERY = "/api/query";
 const DEFAULT_LIMIT = 8;
 const RECALL_PATHS = ["crystal/recall:recallMemories"];
 
+// Session memory dedup cache: tracks memory IDs returned this session
+// Key: sessionKey, Value: Set of memoryId strings
+const sessionMemoryCache = new Map();
+const SESSION_CACHE_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 hours
+const sessionCacheTimestamps = new Map();
+
+function getSessionMemoryIds(sessionKey) {
+  if (!sessionKey) return [];
+  // Expire old sessions
+  const ts = sessionCacheTimestamps.get(sessionKey);
+  if (ts && Date.now() - ts > SESSION_CACHE_MAX_AGE_MS) {
+    sessionMemoryCache.delete(sessionKey);
+    sessionCacheTimestamps.delete(sessionKey);
+    return [];
+  }
+  return Array.from(sessionMemoryCache.get(sessionKey) || []);
+}
+
+function addSessionMemoryIds(sessionKey, memoryIds) {
+  if (!sessionKey || !memoryIds.length) return;
+  if (!sessionMemoryCache.has(sessionKey)) {
+    sessionMemoryCache.set(sessionKey, new Set());
+    sessionCacheTimestamps.set(sessionKey, Date.now());
+  }
+  for (const id of memoryIds) sessionMemoryCache.get(sessionKey).add(id);
+}
+
 const readFileEnv = (filePath) => {
   const values = {};
   if (!fs.existsSync(filePath)) {
@@ -167,7 +194,7 @@ const normalizeMemory = (memory) => {
   };
 };
 
-const searchMemories = async ({ embedding, env }) => {
+const searchMemories = async ({ embedding, query, sessionKey, env }) => {
   const convexUrl = toConvexUrl(env.CONVEX_URL);
   if (!convexUrl || !Array.isArray(embedding) || embedding.length === 0) {
     return [];
@@ -184,6 +211,8 @@ const searchMemories = async ({ embedding, env }) => {
         args: {
           embedding,
           limit: DEFAULT_LIMIT,
+          query: query, // enables BM25 hybrid search
+          recentMemoryIds: getSessionMemoryIds(sessionKey), // session dedup
         },
       }),
     });
@@ -254,18 +283,56 @@ const formatRecentMessages = (messages) => {
   return ["## Short-Term Memory (recent messages)", ...lines].join("\n");
 };
 
+/**
+ * Returns true if this query warrants a memory recall lookup.
+ * Skips noisy/trivial queries; forces recall for explicit memory-seeking queries.
+ */
+function shouldRecall(query) {
+  const q = (query || "").trim();
+
+  // Force recall if query explicitly seeks memory context
+  const forcePatterns = /\b(remember|recall|previously|last time|earlier|before|memory|forgot|what did we|when did we|history)\b/i;
+  if (forcePatterns.test(q)) return true;
+
+  // Skip empty or very short queries
+  if (q.length < 4) return false;
+
+  // Skip slash commands
+  if (q.startsWith("/")) return false;
+
+  // Skip pure greetings
+  if (/^(hi|hello|hey|good morning|good afternoon|good evening|howdy)[!.,\s]*$/i.test(q)) return false;
+
+  // Skip simple confirmations
+  if (/^(yes|no|ok|sure|thanks|thank you|nope|yep|yeah|nah)[!.,\s]*$/i.test(q)) return false;
+
+  // Skip pure emoji (no alphabetic characters)
+  if (!/[a-zA-Z]/.test(q)) return false;
+
+  // Skip heartbeat patterns
+  if (/HEARTBEAT|heartbeat poll/i.test(q)) return false;
+
+  return true;
+}
+
 const main = async () => {
   const { query, env, channel, sessionKey } = await parseInput();
+
+  if (!shouldRecall(query)) {
+    process.stdout.write(JSON.stringify({ injectionBlock: "", memories: [] }));
+    process.exit(0);
+  }
   const embedding = await getEmbedding(query, env);
   if (!embedding) {
     process.stdout.write(JSON.stringify({ injectionBlock: "", memories: [] }));
     return;
   }
 
-  const memories = (await searchMemories({ embedding, env }))
+  const memories = (await searchMemories({ embedding, query, sessionKey, env }))
     .slice(0, DEFAULT_LIMIT)
     .map(normalizeMemory)
     .filter(Boolean);
+  addSessionMemoryIds(sessionKey, memories.map((m) => m.memoryId).filter(Boolean));
   const recentMessages = await fetchRecentMessages(channel, sessionKey, 20, env);
   const recentBlock = formatRecentMessages(recentMessages);
   const longTermBlock = formatBlock(memories);
