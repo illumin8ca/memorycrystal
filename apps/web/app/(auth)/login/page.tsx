@@ -30,7 +30,14 @@ export default function LoginPage() {
       });
       router.push("/dashboard");
     } catch (err) {
-      setError((err as Error).message ?? "Sign in failed");
+      const msg = (err as Error).message ?? "";
+      if (/invalid password|incorrect password/i.test(msg)) {
+        setError("Incorrect email or password.");
+      } else if (/could not find account|no account|user not found/i.test(msg)) {
+        setError("No account found with that email. Sign up instead?");
+      } else {
+        setError("Sign in failed. Please try again.");
+      }
       setLoadingMode("idle");
     }
   };

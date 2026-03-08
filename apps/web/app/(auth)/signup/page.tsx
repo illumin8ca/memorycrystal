@@ -36,7 +36,16 @@ export default function SignupPage() {
       });
       router.push("/dashboard");
     } catch (err) {
-      setError((err as Error).message ?? "Sign up failed");
+      const msg = (err as Error).message ?? "";
+      if (/already exists|already registered|email.*taken/i.test(msg)) {
+        setError("An account with that email already exists. Sign in instead?");
+      } else if (/invalid.*email|email.*invalid/i.test(msg)) {
+        setError("Please enter a valid email address.");
+      } else if (/password.*short|password.*weak|password.*length/i.test(msg)) {
+        setError("Password is too short. Please use at least 8 characters.");
+      } else {
+        setError("Sign up failed. Please try again.");
+      }
       setLoadingMode("idle");
     }
   };
