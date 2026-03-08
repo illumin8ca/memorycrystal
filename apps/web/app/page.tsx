@@ -25,18 +25,18 @@ const problemCards = [
 const workflowSteps = [
   {
     number: "01",
-    title: "CAPTURE",
-    copy: "Memory Crystal hooks into your AI agent and automatically extracts facts, decisions, and context from every session. No manual note-taking. No CLAUDE.md maintenance. It just works.",
+    title: "CONNECT",
+    copy: "Install the MCP server or OpenClaw plugin in under 5 minutes. Works with Claude Desktop, Codex CLI, and any MCP-compatible client.",
   },
   {
     number: "02",
-    title: "CRYSTALLIZE",
-    copy: "Extracted memories are semantically indexed and linked using spreading activation — the same mechanism your brain uses. Related memories cluster together. Context builds on itself.",
+    title: "CONVERSE",
+    copy: "AI automatically captures decisions, goals, and knowledge from every conversation. No manual note-taking. No CLAUDE.md maintenance. It just works.",
   },
   {
     number: "03",
-    title: "RECALL",
-    copy: "Before your AI responds, Memory Crystal surfaces the most relevant memories for that moment. Your agent walks into every session already briefed. Compaction becomes irrelevant.",
+    title: "REMEMBER",
+    copy: "Every future session starts with a full context briefing. Your AI knows what you were working on, what decisions are pending, and where you left off.",
   },
 ];
 
@@ -56,12 +56,12 @@ const platformCards = [
 ];
 
 const featureCards = [
-  { title: "Semantic Search", copy: "Ask \"what did we decide about the auth flow?\" and get the answer. Memory Crystal searches by meaning, not keywords — so you find what you meant, not just what you typed." },
-  { title: "Spreading Activation", copy: "Pull one memory and related context surfaces automatically. Ask about your database schema and your migration decisions come with it. Memory works in clusters, not isolation." },
-  { title: "5 Memory Stores", copy: "Not all memory is equal. Episodic (what happened), semantic (what you know), procedural (how you work), prospective (what you planned), sensory (recent messages). Each stored and recalled appropriately." },
-  { title: "Knowledge Graph", copy: "Typed entities and relationships — people, projects, decisions, concepts — stored as a queryable graph. Ask \"what decisions did we make about Project X?\" and get a real answer. (Ultra)" },
-  { title: "Wake Briefings", copy: "Every session starts with a memory briefing: what you were working on, what decisions are pending, what changed. Your AI is already up to speed before you type a word." },
-  { title: "Obsidian Sync", copy: "Every memory synced to a human-readable Obsidian vault. You own your memory. Browse it, edit it, search it without touching the app. (Pro+)" },
+  { title: "Persistent Memory", copy: "Memories survive session resets, compactions, and restarts. Your AI picks up exactly where you left off — every time, without exception." },
+  { title: "5 Memory Stores", copy: "Built like a real brain. Episodic (what happened), semantic (what you know), procedural (how you work), prospective (what you planned), sensory (recent messages). Each stored and recalled appropriately." },
+  { title: "Reflection Pipeline", copy: "AI automatically reviews conversations and distills them into lasting insights. Decisions, lessons, and patterns are extracted and stored — without you lifting a finger. (Pro+)" },
+  { title: "Wake Briefing", copy: "Every session starts with a full context briefing: what you were working on, what decisions are pending, what changed. Your AI is already up to speed before you type a word." },
+  { title: "Storage-Based Decay", copy: "Memories don't fade by time. They only make room when you hit your storage limit — oldest and weakest memories are pruned first. Your most important context stays forever." },
+  { title: "MCP + Plugin Support", copy: "Works with Claude Desktop, OpenClaw, Codex CLI, and any MCP-compatible client. Install in under 5 minutes. No workflow changes required." },
 ];
 
 const roadmapItems = [
@@ -77,35 +77,34 @@ const pricingPlans = [
     name: "FREE",
     price: "$0/forever",
     button: "START FREE",
-    checkoutHref: "/pricing",
-    features: ["500 memories", "500 messages", "30-day message retention"],
+    checkoutHref: "/api/polar/checkout?plan=free",
+    features: ["500 memories", "500 messages", "30-day retention", "1 channel"],
     borderClass: "border-white/[0.06]",
   },
   {
     name: "STARTER",
-    price: "$10/mo",
-    button: "COMING SOON",
-    comingSoon: true,
-    badge: "COMING SOON!",
-    features: ["10,000 memories", "5,000 messages", "60-day message retention"],
+    price: "$9/mo",
+    button: "START STARTER",
+    checkoutHref: "/api/polar/checkout?plan=starter",
+    features: ["2,500 memories", "5,000 messages", "90-day retention", "5 channels"],
     borderClass: "border-white/[0.07]",
   },
   {
     name: "PRO",
-    price: "$20/mo",
+    price: "$19/mo",
     button: "START PRO",
     checkoutHref: "/api/polar/checkout?plan=pro",
     badge: "MOST POPULAR",
     isFeatured: true,
-    features: ["25,000 memories", "25,000 messages", "90-day message retention"],
+    features: ["10,000 memories", "25,000 messages", "1-year retention", "Unlimited channels", "Reflection pipeline"],
     borderClass: "neon-border glow-pulse",
   },
   {
     name: "ULTRA",
-    price: "$100/mo",
+    price: "$49/mo",
     button: "START ULTRA",
     checkoutHref: "/api/polar/checkout?plan=ultra",
-    features: ["Unlimited memories", "Unlimited messages", "365-day message retention"],
+    features: ["50,000 memories", "Unlimited messages", "Unlimited retention", "Unlimited channels", "Priority recall + API access"],
     borderClass: "border-white/[0.07]",
   },
 ];
@@ -251,18 +250,18 @@ export default function HomePage() {
           <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[calc(100vh-4rem)] flex flex-col justify-center">
             <p className="text-xs font-mono tracking-[0.24em] text-accent">[ PERSISTENT MEMORY FOR AI AGENTS ]</p>
             <h1 className="mt-3 text-[clamp(2rem,10vw,5.2rem)] leading-tight tracking-wide">
-              Say Goodbye to<br />
-              <span className="font-bold">Forgetful AI</span>
+              Your AI remembers<br />
+              <span className="font-bold">everything. Finally.</span>
             </h1>
             <p className="mt-6 max-w-2xl text-primary text-base sm:text-lg">
-              Memory Crystal is the MCP server that gives Claude Code, Codex, and OpenClaw agents persistent memory across every session, compaction, and restart. No more re-explaining your codebase. No more lost context. Your AI picks up exactly where you left off.
+              Memory Crystal gives your AI agents persistent memory across every conversation — decisions, goals, knowledge, all of it. No more re-explaining your codebase. No more lost context.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row gap-4">
               <Link
-                href="/pricing"
+                href="/api/polar/checkout?plan=free"
                 className="btn-primary inline-flex items-center justify-center px-6 py-3 text-xs"
               >
-                START FOR FREE
+                START FREE
               </Link>
               <a
                 href="#how-it-works"
@@ -389,18 +388,12 @@ export default function HomePage() {
                       </li>
                     ))}
                   </ul>
-                  {plan.comingSoon ? (
-                    <div className="mt-7 inline-flex items-center justify-center px-5 py-3 text-xs font-mono border border-accent/60 text-accent bg-accent/10">
-                      COMING SOON!
-                    </div>
-                  ) : (
-                    <Link
-                      href={plan.checkoutHref!}
-                      className="btn-primary mt-7 inline-flex items-center justify-center px-5 py-3 text-xs"
-                    >
-                      {plan.button}
-                    </Link>
-                  )}
+                  <Link
+                    href={plan.checkoutHref}
+                    className="btn-primary mt-7 inline-flex items-center justify-center px-5 py-3 text-xs"
+                  >
+                    {plan.button}
+                  </Link>
                 </article></FadeInItem>
               ))}
             </FadeInStagger>
@@ -432,10 +425,10 @@ export default function HomePage() {
             <h2 className="font-heading text-4xl md:text-5xl">Your AI Deserves to Remember</h2>
             <p className="mt-4 text-secondary">Start free. No credit card required.</p>
             <Link
-              href="/pricing"
+              href="/api/polar/checkout?plan=free"
               className="btn-primary mt-8 inline-flex px-10 py-3 text-xs"
             >
-              GET STARTED FREE
+              START FREE
             </Link>
           </div>
         </FadeIn>
