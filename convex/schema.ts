@@ -283,6 +283,7 @@ export default defineSchema({
     lastUsedAt: v.optional(v.number()),
     createdAt: v.number(),
     active: v.boolean(),
+    expiresAt: v.optional(v.number()), // Unix ms timestamp, null = never expires
   })
     .index("by_user", ["userId"])
     .index("by_key_hash", ["keyHash"]),
@@ -292,4 +293,14 @@ export default defineSchema({
     windowStart: v.number(),
     count: v.number(),
   }).index("by_key", ["key"]),
+
+  crystalAuditLog: defineTable({
+    userId: v.string(),
+    keyHash: v.string(),
+    action: v.string(), // "capture", "recall", "forget", "checkpoint", etc.
+    ts: v.number(),
+    meta: v.optional(v.string()), // JSON string with extra info (memory id, query, etc.)
+  })
+    .index("by_user", ["userId", "ts"])
+    .index("by_key", ["keyHash", "ts"]),
 });
