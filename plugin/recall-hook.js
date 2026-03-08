@@ -181,7 +181,7 @@ const normalizeMemory = (memory) => {
     return null;
   }
   return {
-    memoryId: safeGetString(memory.memoryId),
+    memoryId: safeGetString(memory.memoryId || memory._id),
     store: safeGetString(memory.store),
     category: safeGetString(memory.category),
     title: safeGetString(memory.title),
@@ -195,6 +195,38 @@ const normalizeMemory = (memory) => {
 };
 
 const searchMemories = async ({ embedding, query, sessionKey, env }) => {
+  // Prefer authenticated HTTP endpoint (/api/mcp/recall) when CRYSTAL_SITE + CRYSTAL_API_KEY
+  // are available. This avoids the Convex action auth requirement (ctx.auth.getUserIdentity()).
+  const crystalSite = (env.CRYSTAL_SITE || "").replace(/\/+$/, "");
+  const crystalApiKey = env.CRYSTAL_API_KEY || "";
+
+  if (crystalSite && crystalApiKey) {
+    try {
+      const mcpResponse = await fetch(`${crystalSite}/api/mcp/recall`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          Authorization: `Bearer ${crystalApiKey}`,
+        },
+        body: JSON.stringify({
+          query: query || "",
+          limit: DEFAULT_LIMIT,
+        }),
+      });
+      if (mcpResponse.ok) {
+        const mcpPayload = await mcpResponse.json().catch(() => null);
+        const mcpMemories = Array.isArray(mcpPayload?.memories) ? mcpPayload.memories : [];
+        if (mcpMemories.length > 0) {
+          return mcpMemories;
+        }
+      }
+    } catch (_) {
+      // fall through to Convex action path
+    }
+  }
+
+  // Fallback: raw Convex action endpoint (requires auth context — only works when
+  // called from within an authenticated Convex session or from the MCP server).
   const convexUrl = toConvexUrl(env.CONVEX_URL);
   if (!convexUrl || !Array.isArray(embedding) || embedding.length === 0) {
     return [];

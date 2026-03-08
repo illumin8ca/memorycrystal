@@ -35,7 +35,7 @@ function shouldCapture(userMessage, assistantText) {
 async function triggerReflection(config, sessionKey) {
   const apiKey = config?.apiKey;
   if (!apiKey) return;
-  const convexUrl = config?.convexUrl || DEFAULT_CONVEX_URL;
+  const convexUrl = (config?.convexUrl || DEFAULT_CONVEX_URL).replace(/\/+$/, "");
   try {
     await fetch(`${convexUrl}/api/mcp/reflect`, {
       method: 'POST',
@@ -54,7 +54,7 @@ async function request(config, method, path, body) {
   const apiKey = config?.apiKey;
   if (!apiKey) return null;
 
-  const convexUrl = config?.convexUrl || DEFAULT_CONVEX_URL;
+  const convexUrl = (config?.convexUrl || DEFAULT_CONVEX_URL).replace(/\/+$/, "");
   const res = await fetch(`${convexUrl}${path}`, {
     method,
     headers: {
@@ -122,7 +122,7 @@ module.exports = (api) => {
         title: `OpenClaw — ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
         content,
         store: "sensory",
-        category: "conversation",
+        category: "event",
         tags: ["openclaw", "auto-capture"],
         channel: ctx?.messageProvider || "openclaw",
       });
