@@ -326,6 +326,11 @@ export const getMemoryStoreStats = internalQuery({
   },
 });
 
+// Safe ceiling for a single scan pass. Each crystalMemories row is ~14KB
+// (mainly the 1536-dim float64 embedding). 1000 rows × 14KB ≈ 14MB which is
+// just under the 16MB Convex per-function read limit. We use 900 for headroom.
+const MEMORY_COUNT_SAFE_SCAN = 900;
+
 export const getMemoryCount = internalQuery({
   args: { userId: v.string(), maxCount: v.optional(v.number()) },
   handler: async (ctx, { userId, maxCount }) => {
@@ -333,7 +338,9 @@ export const getMemoryCount = internalQuery({
       ? Math.max(Math.trunc(maxCount as number), 1)
       : 50_000;
 
-    let remaining = requestedMax;
+    // Clamp to the safe scan limit so we never exceed the 16MB read budget.
+    const safeCap = Math.min(requestedMax, MEMORY_COUNT_SAFE_SCAN);
+    let remaining = safeCap;
 
     const active = await ctx.db
       .query("crystalMemories")
@@ -341,7 +348,7 @@ export const getMemoryCount = internalQuery({
       .take(remaining + 1);
 
     if (active.length > remaining) {
-      return requestedMax;
+      return safeCap;
     }
 
     remaining -= active.length;
@@ -352,7 +359,7 @@ export const getMemoryCount = internalQuery({
       .take(remaining + 1);
 
     if (archived.length > remaining) {
-      return requestedMax;
+      return safeCap;
     }
 
     return active.length + archived.length;

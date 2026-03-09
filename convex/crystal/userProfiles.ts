@@ -19,7 +19,7 @@ function normalizePlan(plan: string): string {
   return plan.replace(/_(monthly|yearly|annual|trial|m|y)$/, "");
 }
 
-function deriveTier(profile: { subscriptionStatus?: string; plan?: string } | null | undefined): UserTier {
+export function deriveTier(profile: { subscriptionStatus?: string; plan?: string } | null | undefined): UserTier {
   if (profile?.subscriptionStatus === "unlimited") return "unlimited";
   if (profile?.subscriptionStatus !== "active" && profile?.subscriptionStatus !== "trialing") return "free";
 
