@@ -11,6 +11,7 @@ import {
   mcpWakeGet,
   mcpWakePost,
 } from "./crystal/mcp";
+import { polarWebhook } from "./crystal/polarWebhook";
 
 const http = httpRouter();
 
@@ -25,6 +26,7 @@ http.route({ path: "/api/mcp/log", method: "POST", handler: mcpLog });
 http.route({ path: "/api/mcp/reflect", method: "POST", handler: mcpReflect });
 http.route({ path: "/api/mcp/stats", method: "GET", handler: mcpStats });
 http.route({ path: "/api/mcp/stats", method: "POST", handler: mcpStats });
+http.route({ path: "/api/polar/webhook", method: "POST", handler: polarWebhook });
 // Backwards-compatible auth aliases
 http.route({ path: "/api/mcp-auth", method: "POST", handler: mcpAuth });
 http.route({ path: "/api/mcp/auth", method: "GET", handler: mcpAuth });
