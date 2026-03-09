@@ -90,13 +90,14 @@ export async function POST(request: NextRequest) {
       : null;
 
   const profile = profileBySubscription ?? profileByCustomer;
+  const eventUserId = subscription.userId ?? subscription.user_id ?? subscription.user?.id ?? subscription.metadata?.userId;
 
-  if (!profile?._id) {
+  if (!profile?._id && !eventUserId) {
     return NextResponse.json({ skipped: "no matching profile" });
   }
 
   const incomingSubscriptionId = polarSubscriptionId ? String(polarSubscriptionId) : undefined;
-  const existingSubscriptionId = profile.polarSubscriptionId;
+  const existingSubscriptionId = profile?.polarSubscriptionId;
 
   const isPotentiallyStaleCancellation =
     (subscriptionStatus === "cancelled" || subscriptionStatus === "inactive") &&
@@ -110,14 +111,25 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  await rawClient.mutation(api.crystal.userProfiles.updateSubscription, {
-    userProfileId: profile._id,
-    polarSubscriptionId: incomingSubscriptionId,
-    polarCustomerId: polarCustomerId ? String(polarCustomerId) : undefined,
-    subscriptionStatus,
-    plan: productId ? String(productId) : undefined,
-    webhookToken: secret,
-  });
+  if (profile?._id) {
+    await rawClient.mutation(api.crystal.userProfiles.updateSubscription, {
+      userProfileId: profile._id,
+      polarSubscriptionId: incomingSubscriptionId,
+      polarCustomerId: polarCustomerId ? String(polarCustomerId) : undefined,
+      subscriptionStatus,
+      plan: productId ? String(productId) : undefined,
+      webhookToken: secret,
+    });
+  } else {
+    await rawClient.mutation(api.crystal.userProfiles.upsertSubscriptionByUser, {
+      userId: String(eventUserId),
+      polarSubscriptionId: incomingSubscriptionId,
+      polarCustomerId: polarCustomerId ? String(polarCustomerId) : undefined,
+      subscriptionStatus,
+      plan: productId ? String(productId) : undefined,
+      webhookToken: secret,
+    });
+  }
 
   return NextResponse.json({ received: true });
 }

@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Brain, Flag, LayoutDashboard, MessageSquare, Settings, BarChart2, type LucideIcon } from "lucide-react";
 import CrystalIcon from "../components/CrystalIcon";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 
 type NavItem = {
@@ -29,6 +29,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const currentUser = useQuery(api.crystal.userProfiles.getCurrentUser, {});
+  const ensureProfile = useMutation(api.crystal.userProfiles.createOrGet);
   const router = useRouter();
   const { signOut } = useAuthActions();
   const currentEmail = currentUser?.email ?? "";
@@ -37,6 +38,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     await signOut();
     router.push("/");
   };
+
+  useEffect(() => {
+    if (!currentUser?.userId) return;
+    void ensureProfile({}).catch(() => {
+      // Non-fatal: tier checks safely default to free.
+    });
+  }, [currentUser?.userId, ensureProfile]);
 
   const isActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`);
 

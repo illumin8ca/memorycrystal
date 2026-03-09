@@ -30,43 +30,57 @@ function deriveTier(profile: { subscriptionStatus?: string; plan?: string } | nu
   return "pro";
 }
 
+async function getOrCreateProfileForUser(
+  ctx: any,
+  userId: string,
+  email?: string | null,
+): Promise<any> {
+  const normalizedEmail = (email ?? "").toLowerCase();
+  const isUnlimitedEmail = UNLIMITED_EMAILS.includes(normalizedEmail);
+
+  const existingProfiles = await ctx.db
+    .query("crystalUserProfiles")
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .collect();
+  const existing: any = pickLatestProfile(existingProfiles);
+
+  if (existing) {
+    if (isUnlimitedEmail && existing.subscriptionStatus !== "unlimited") {
+      await ctx.db.patch(existing._id, {
+        subscriptionStatus: "unlimited",
+        plan: "unlimited",
+        updatedAt: Date.now(),
+      });
+      return { ...existing, subscriptionStatus: "unlimited", plan: "unlimited", updatedAt: Date.now() };
+    }
+    return existing;
+  }
+
+  const now = Date.now();
+  const id = await ctx.db.insert("crystalUserProfiles", {
+    userId,
+    subscriptionStatus: isUnlimitedEmail ? "unlimited" : "inactive",
+    plan: isUnlimitedEmail ? "unlimited" : undefined,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return await ctx.db.get(id);
+}
+
 export const createOrGet = mutation({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const userId = stableUserId(identity.subject);
-    const normalizedEmail = (identity.email ?? "").toLowerCase();
-    const isUnlimitedEmail = UNLIMITED_EMAILS.includes(normalizedEmail);
+    return await getOrCreateProfileForUser(ctx, userId, identity.email ?? null);
+  },
+});
 
-    const existingProfiles = await ctx.db
-      .query("crystalUserProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-    const existing = pickLatestProfile(existingProfiles);
-
-    if (existing) {
-      if (isUnlimitedEmail && existing.subscriptionStatus !== "unlimited") {
-        await ctx.db.patch(existing._id, {
-          subscriptionStatus: "unlimited",
-          plan: "unlimited",
-          updatedAt: Date.now(),
-        });
-      }
-      return existing.subscriptionStatus === "unlimited" || isUnlimitedEmail
-        ? { ...existing, subscriptionStatus: "unlimited", plan: "unlimited", updatedAt: Date.now() }
-        : existing;
-    }
-
-    const now = Date.now();
-    const id = await ctx.db.insert("crystalUserProfiles", {
-      userId,
-      subscriptionStatus: isUnlimitedEmail ? "unlimited" : "inactive",
-      plan: isUnlimitedEmail ? "unlimited" : undefined,
-      createdAt: now,
-      updatedAt: now,
-    });
-    return ctx.db.get(id);
+export const ensureProfileForUserInternal = internalMutation({
+  args: { userId: v.string(), email: v.optional(v.string()) },
+  handler: async (ctx, { userId, email }) => {
+    return await getOrCreateProfileForUser(ctx, userId, email);
   },
 });
 
@@ -107,12 +121,7 @@ export const grantUnlimitedBySelf = mutation({
       throw new Error("Not authorized for unlimited plan");
     }
     const userId = stableUserId(identity.subject);
-    const profiles = await ctx.db
-      .query("crystalUserProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-    const profile = pickLatestProfile(profiles);
-    if (!profile) throw new Error("No profile found — visit /dashboard first");
+    const profile = await getOrCreateProfileForUser(ctx, userId, identity.email ?? null);
     await ctx.db.patch(profile._id, {
       subscriptionStatus: "unlimited",
       plan: "unlimited",
@@ -271,6 +280,28 @@ export const updateSubscription = mutation({
       throw new Error("Unauthorized");
     }
     await ctx.db.patch(userProfileId, { ...fields, updatedAt: Date.now() });
+  },
+});
+
+
+export const upsertSubscriptionByUser = mutation({
+  args: {
+    userId: v.string(),
+    polarSubscriptionId: v.optional(v.string()),
+    polarCustomerId: v.optional(v.string()),
+    subscriptionStatus: v.union(
+      v.literal("active"), v.literal("inactive"), v.literal("cancelled"), v.literal("trialing")
+    ),
+    plan: v.optional(v.string()),
+    webhookToken: v.string(),
+  },
+  handler: async (ctx, { userId, webhookToken, ...fields }) => {
+    if (!process.env.POLAR_WEBHOOK_SECRET || webhookToken !== process.env.POLAR_WEBHOOK_SECRET) {
+      throw new Error("Unauthorized");
+    }
+    const profile = await getOrCreateProfileForUser(ctx, userId);
+    await ctx.db.patch(profile._id, { ...fields, updatedAt: Date.now() });
+    return { profileId: profile._id };
   },
 });
 

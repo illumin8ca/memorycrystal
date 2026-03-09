@@ -1,4 +1,5 @@
 import { stableUserId } from "./auth";
+import { internal } from "../_generated/api";
 import { internalQuery, mutation, query } from "../_generated/server";
 import { v } from "convex/values";
 
@@ -19,6 +20,10 @@ export const createApiKey = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const userId = stableUserId(identity.subject);
+    await ctx.runMutation(internal.crystal.userProfiles.ensureProfileForUserInternal, {
+      userId,
+      email: identity.email ?? undefined,
+    });
     const rawKey = generateKey();
     const keyHash = await sha256Hex(rawKey);
     await ctx.db.insert("crystalApiKeys", {
@@ -62,6 +67,10 @@ export const regenerateApiKey = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const userId = stableUserId(identity.subject);
+    await ctx.runMutation(internal.crystal.userProfiles.ensureProfileForUserInternal, {
+      userId,
+      email: identity.email ?? undefined,
+    });
 
     const oldKey = await ctx.db.get(oldKeyId);
     if (!oldKey || oldKey.userId !== userId) throw new Error("Not found");
