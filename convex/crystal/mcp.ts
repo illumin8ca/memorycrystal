@@ -153,6 +153,7 @@ export const captureMemory = internalMutation({
     if (limit !== null) {
       const memoryCount = await ctx.runQuery(internal.crystal.mcp.getMemoryCount, {
         userId: args.userId,
+        maxCount: limit + 1,
       });
       if (memoryCount >= limit) {
         return {
@@ -295,10 +296,14 @@ export const semanticSearch = internalAction({
 export const getMemoryStoreStats = internalQuery({
   args: { userId: v.string() },
   handler: async (ctx, { userId }) => {
-    const memories = await ctx.db
+    const sampleLimit = 5000;
+    const sample = await ctx.db
       .query("crystalMemories")
       .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
-      .collect();
+      .take(sampleLimit + 1);
+
+    const bounded = sample.length > sampleLimit;
+    const memories = sample.slice(0, sampleLimit);
 
     const byStore = {
       episodic: 0,
@@ -314,21 +319,43 @@ export const getMemoryStoreStats = internalQuery({
       }
     }
 
-    return { total: memories.length, byStore };
+    return {
+      total: memories.length,
+      byStore,
+      statsNote: bounded ? `Store stats are approximate; capped at ${sampleLimit} memories.` : undefined,
+    };
   },
 });
 
 export const getMemoryCount = internalQuery({
-  args: { userId: v.string() },
-  handler: async (ctx, { userId }) => {
+  args: { userId: v.string(), maxCount: v.optional(v.number()) },
+  handler: async (ctx, { userId, maxCount }) => {
+    const requestedMax = Number.isFinite(maxCount)
+      ? Math.max(Math.trunc(maxCount as number), 1)
+      : 50_000;
+
+    let remaining = requestedMax;
+
     const active = await ctx.db
       .query("crystalMemories")
       .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
-      .collect();
+      .take(remaining + 1);
+
+    if (active.length > remaining) {
+      return requestedMax;
+    }
+
+    remaining -= active.length;
+
     const archived = await ctx.db
       .query("crystalMemories")
       .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", true))
-      .collect();
+      .take(remaining + 1);
+
+    if (archived.length > remaining) {
+      return requestedMax;
+    }
+
     return active.length + archived.length;
   },
 });
@@ -448,6 +475,7 @@ export const mcpCapture = httpAction(async (ctx, request) => {
   if (limit !== null) {
     const memoryCount = await ctx.runQuery(internal.crystal.mcp.getMemoryCount, {
       userId: auth.userId,
+      maxCount: limit + 1,
     });
     if (memoryCount >= limit) {
       return json(

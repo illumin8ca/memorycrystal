@@ -22,6 +22,7 @@ const MESSAGE_TTL_DAYS: Record<UserTier, number> = {
 const PAGE_SIZE = 25;
 const DASHBOARD_MEMORY_SAMPLE_LIMIT = 500;
 const DASHBOARD_MESSAGE_SAMPLE_LIMIT = 5000;
+const LIST_MESSAGES_SCAN_LIMIT = 2000;
 
 async function isAllowedUser(ctx: any, userId: string): Promise<boolean> {
   const profiles = await ctx.db
@@ -148,17 +149,27 @@ export const listMessages = query({
     const safePage = Math.max(Math.trunc(page ?? 0), 0);
     const skip = safePage * pageSize;
 
-    const all = await ctx.db
+    const scanLimit = Math.max(skip + pageSize, LIST_MESSAGES_SCAN_LIMIT);
+    const sampled = await ctx.db
       .query("crystalMessages")
-      .withIndex("by_user_time", (q) => q.eq("userId", userId))
+      .withIndex("by_user_time", (q) =>
+        sinceMs ? q.eq("userId", userId).gte("timestamp", sinceMs) : q.eq("userId", userId)
+      )
       .order("desc")
-      .collect();
+      .take(scanLimit + 1);
 
-    const filtered = role ? all.filter((m) => m.role === role) : all;
-    const since = sinceMs ? filtered.filter((m) => m.timestamp >= sinceMs) : filtered;
-    const page_items = since.slice(skip, skip + pageSize);
+    const scanBounded = sampled.length > scanLimit;
+    const bounded = sampled.slice(0, scanLimit);
+    const filtered = role ? bounded.filter((m) => m.role === role) : bounded;
+    const pageItems = filtered.slice(skip, skip + pageSize);
 
-    return page_items.map((m) => ({ ...m, totalCount: since.length }));
+    return pageItems.map((m) => ({
+      ...m,
+      totalCount: filtered.length,
+      statsNote: scanBounded
+        ? `Message list is approximate; scanned latest ${scanLimit} records.`
+        : undefined,
+    }));
   },
 });
 
@@ -184,8 +195,10 @@ export const getUsage = query({
     const tier = (await ctx.runQuery(internal.crystal.userProfiles.getUserTier, {
       userId,
     })) as UserTier;
+    const memoryCountCap = STORAGE_LIMITS[tier] !== null ? STORAGE_LIMITS[tier]! + 1 : 20_000;
     const memoriesUsed = await ctx.runQuery(internal.crystal.mcp.getMemoryCount, {
       userId,
+      maxCount: memoryCountCap,
     });
 
     return {

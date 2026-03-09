@@ -20,6 +20,13 @@ const TIER_LIMITS: Record<
 
 const TIER_ORDER: UserTier[] = ["free", "starter", "pro", "ultra", "unlimited"];
 
+const PROFILE_SAMPLE_LIMIT = 20;
+const ACTIVE_MEMORY_SAMPLE_LIMIT = 2000;
+const ARCHIVED_MEMORY_SAMPLE_LIMIT = 2000;
+const MESSAGE_SAMPLE_LIMIT = 5000;
+const SESSION_SAMPLE_LIMIT = 5000;
+const CHECKPOINT_SAMPLE_LIMIT = 5000;
+
 function pickLatestProfile<T extends { updatedAt?: number }>(profiles: T[]): T | undefined {
   return profiles.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
 }
@@ -54,29 +61,32 @@ export const getUserUsageStats = query({
     const email = (identity.email ?? "").toLowerCase();
 
     // -- Derive tier from profile --
-    const profiles = await ctx.db
+    const profileSample = await ctx.db
       .query("crystalUserProfiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-    const profile = pickLatestProfile(profiles);
+      .take(PROFILE_SAMPLE_LIMIT);
+    const profile = pickLatestProfile(profileSample);
     const tier = deriveTierFromProfile(profile, email);
     const limits = TIER_LIMITS[tier];
     const subscriptionStatus = profile?.subscriptionStatus ?? "inactive";
 
     // -- Active memories --
-    const activeMemories = await ctx.db
+    const activeSample = await ctx.db
       .query("crystalMemories")
       .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
-      .collect();
+      .take(ACTIVE_MEMORY_SAMPLE_LIMIT + 1);
 
-    // -- Archived memories (capped at 2000 to avoid scanning forever) --
     const archivedSample = await ctx.db
       .query("crystalMemories")
       .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", true))
-      .take(2000);
+      .take(ARCHIVED_MEMORY_SAMPLE_LIMIT + 1);
+
+    const activeBounded = activeSample.length > ACTIVE_MEMORY_SAMPLE_LIMIT;
+    const archivedBounded = archivedSample.length > ARCHIVED_MEMORY_SAMPLE_LIMIT;
+    const activeMemories = activeSample.slice(0, ACTIVE_MEMORY_SAMPLE_LIMIT);
 
     const totalMemories = activeMemories.length;
-    const archivedMemories = archivedSample.length;
+    const archivedMemories = archivedSample.slice(0, ARCHIVED_MEMORY_SAMPLE_LIMIT).length;
 
     // -- Breakdown by store --
     const byStoreRaw: Record<string, number> = {};
@@ -110,22 +120,25 @@ export const getUserUsageStats = query({
     const messageSample = await ctx.db
       .query("crystalMessages")
       .withIndex("by_user_time", (q) => q.eq("userId", userId))
-      .take(5000);
-    const totalStmMessages = messageSample.length;
+      .take(MESSAGE_SAMPLE_LIMIT + 1);
+    const messagesBounded = messageSample.length > MESSAGE_SAMPLE_LIMIT;
+    const totalStmMessages = messageSample.slice(0, MESSAGE_SAMPLE_LIMIT).length;
 
     // -- Sessions --
     const sessionSample = await ctx.db
       .query("crystalSessions")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .take(5000);
-    const totalSessions = sessionSample.length;
+      .take(SESSION_SAMPLE_LIMIT + 1);
+    const sessionsBounded = sessionSample.length > SESSION_SAMPLE_LIMIT;
+    const totalSessions = sessionSample.slice(0, SESSION_SAMPLE_LIMIT).length;
 
     // -- Checkpoints --
     const checkpointSample = await ctx.db
       .query("crystalCheckpoints")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .take(5000);
-    const checkpoints = checkpointSample.length;
+      .take(CHECKPOINT_SAMPLE_LIMIT + 1);
+    const checkpointsBounded = checkpointSample.length > CHECKPOINT_SAMPLE_LIMIT;
+    const checkpoints = checkpointSample.slice(0, CHECKPOINT_SAMPLE_LIMIT).length;
 
     // -- Percentages --
     const memoriesUsedPercent =
@@ -136,6 +149,11 @@ export const getUserUsageStats = query({
     // -- upgradeAvailable --
     const tierIdx = TIER_ORDER.indexOf(tier);
     const upgradeAvailable = tierIdx < TIER_ORDER.indexOf("ultra");
+
+    const usageNote =
+      activeBounded || archivedBounded || messagesBounded || sessionsBounded || checkpointsBounded
+        ? `Usage stats are approximate; sampling caps: active=${ACTIVE_MEMORY_SAMPLE_LIMIT}, archived=${ARCHIVED_MEMORY_SAMPLE_LIMIT}, messages=${MESSAGE_SAMPLE_LIMIT}, sessions=${SESSION_SAMPLE_LIMIT}, checkpoints=${CHECKPOINT_SAMPLE_LIMIT}.`
+        : undefined;
 
     return {
       tier,
@@ -154,6 +172,7 @@ export const getUserUsageStats = query({
         totalSessions,
         checkpoints,
       },
+      usageNote,
       subscriptionStatus,
       upgradeAvailable,
     };
