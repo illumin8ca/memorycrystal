@@ -277,59 +277,56 @@ export async function getDashboardTotals(ctx: any, userId: string): Promise<Dash
 }
 
 export async function computeDashboardTotalsFromSource(ctx: any, userId: string): Promise<DashboardTotalsSnapshot> {
-  const [activeMemories, archivedMemories] = await Promise.all([
-    ctx.db
-      .query("crystalMemories")
-      .withIndex("by_user", (q: any) => q.eq("userId", userId).eq("archived", false))
-      .count(),
-    ctx.db
-      .query("crystalMemories")
-      .withIndex("by_user", (q: any) => q.eq("userId", userId).eq("archived", true))
-      .count(),
-  ]);
-
-  const byStoreCounts = await Promise.all(
-    memoryStoreValues.map(async (store): Promise<[MemoryStore, number]> => {
-      const count = await ctx.db
-        .query("crystalMemories")
-        .withIndex("by_user", (q: any) => q.eq("userId", userId).eq("archived", false))
-        .filter((q: any) => q.eq(q.field("store"), store))
-        .count();
-
-      return [store, count];
-    })
-  );
-
-  const totalMessages = await ctx.db
-    .query("crystalMessages")
-    .withIndex("by_user_time", (q: any) => q.eq("userId", userId))
-    .count();
-
-  const latestMemory = await ctx.db
-    .query("crystalMemories")
-    .withIndex("by_user", (q: any) => q.eq("userId", userId).eq("archived", false))
-    .order("desc")
-    .take(1);
-
   const activeMemoriesByStore = { ...ZERO_COUNTS };
-  for (const [store, count] of byStoreCounts) {
-    activeMemoriesByStore[store] = clampCount(count);
+  let activeMemories = 0;
+  let archivedMemories = 0;
+  let totalMemories = 0;
+  let lastCaptureMemory: any = undefined;
+
+  for await (const memory of ctx.db
+    .query("crystalMemories")
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))) {
+    totalMemories += 1;
+    if (memory.archived) {
+      archivedMemories += 1;
+      continue;
+    }
+
+    activeMemories += 1;
+    if (memory.store in activeMemoriesByStore) {
+      activeMemoriesByStore[memory.store as MemoryStore] = clampCount(
+        (activeMemoriesByStore[memory.store as MemoryStore] || 0) + 1
+      );
+    }
+
+    if (
+      memory.createdAt !== undefined &&
+      (!lastCaptureMemory ||
+        memory.createdAt > (lastCaptureMemory.createdAt ?? Number.NEGATIVE_INFINITY))
+    ) {
+      lastCaptureMemory = memory;
+    }
   }
 
-  const lastCapture = latestMemory[0];
+  let totalMessages = 0;
+  for await (const _ of ctx.db
+    .query("crystalMessages")
+    .withIndex("by_user_time", (q: any) => q.eq("userId", userId))) {
+    totalMessages += 1;
+  }
 
   return {
     userId,
-    totalMemories: clampCount(activeMemories + archivedMemories),
-    activeMemories: clampCount(activeMemories),
-    archivedMemories: clampCount(archivedMemories),
-    totalMessages: clampCount(totalMessages),
+    totalMemories,
+    activeMemories,
+    archivedMemories,
+    totalMessages,
     activeMemoriesByStore,
     activeStoreCount: Object.values(activeMemoriesByStore).filter((count) => count > 0).length,
-    lastCaptureMemoryId: lastCapture?._id,
-    lastCaptureStore: normalizeStore(lastCapture?.store),
-    lastCaptureTitle: lastCapture?.title,
-    lastCaptureCreatedAt: lastCapture?.createdAt,
+    lastCaptureMemoryId: lastCaptureMemory?._id,
+    lastCaptureStore: normalizeStore(lastCaptureMemory?.store),
+    lastCaptureTitle: lastCaptureMemory?.title,
+    lastCaptureCreatedAt: lastCaptureMemory?.createdAt,
     updatedAt: Date.now(),
   };
 }

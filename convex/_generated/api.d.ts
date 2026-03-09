@@ -19,6 +19,7 @@ import type * as crystal_checkpoints from "../crystal/checkpoints.js";
 import type * as crystal_cleanup from "../crystal/cleanup.js";
 import type * as crystal_consolidate from "../crystal/consolidate.js";
 import type * as crystal_dashboard from "../crystal/dashboard.js";
+import type * as crystal_dashboardTotals from "../crystal/dashboardTotals.js";
 import type * as crystal_decay from "../crystal/decay.js";
 import type * as crystal_graph from "../crystal/graph.js";
 import type * as crystal_impersonation from "../crystal/impersonation.js";
@@ -56,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   "crystal/cleanup": typeof crystal_cleanup;
   "crystal/consolidate": typeof crystal_consolidate;
   "crystal/dashboard": typeof crystal_dashboard;
+  "crystal/dashboardTotals": typeof crystal_dashboardTotals;
   "crystal/decay": typeof crystal_decay;
   "crystal/graph": typeof crystal_graph;
   "crystal/impersonation": typeof crystal_impersonation;
