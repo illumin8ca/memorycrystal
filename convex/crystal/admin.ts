@@ -30,7 +30,7 @@ export const getViewerAccess = query({
   args: {},
   handler: async (ctx) => {
     const { userId, roles } = await requireAdminViewer(ctx);
-    return { userId, roles };
+    return { userId, roles, isAdmin: roles.includes("admin") };
   },
 });
 
@@ -107,7 +107,7 @@ export const listUsers = query({
 export const getUserDetail = query({
   args: { userId: v.string() },
   handler: async (ctx, { userId }) => {
-    await requireAdminViewer(ctx);
+    const { roles: viewerRoles } = await requireAdminViewer(ctx);
 
     const profiles = await ctx.db
       .query("crystalUserProfiles")
@@ -141,6 +141,10 @@ export const getUserDetail = query({
     const activeKeys = keys.filter((k) => k.active);
 
     return {
+      viewer: {
+        roles: viewerRoles,
+        canAssignRoles: viewerRoles.includes("admin"),
+      },
       userId: profile.userId,
       roles,
       accountSummary: {
@@ -161,6 +165,15 @@ export const getUserDetail = query({
         active: activeKeys.length,
         latestCreatedAt: keys.length ? Math.max(...keys.map((k) => k.createdAt)) : null,
         latestUsedAt: keys.length ? Math.max(...keys.map((k) => k.lastUsedAt ?? 0)) || null : null,
+        entries: keys
+          .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
+          .map((k) => ({
+            _id: k._id,
+            label: k.label ?? null,
+            active: k.active,
+            createdAt: k.createdAt,
+            lastUsedAt: k.lastUsedAt ?? null,
+          })),
       },
       profileHealth: {
         hasBillingLinkage: Boolean(profile.polarCustomerId || profile.polarSubscriptionId),
