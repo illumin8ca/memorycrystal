@@ -48,8 +48,6 @@ const ZERO_COUNTS: DashboardTotalsByStore = {
   prospective: 0,
 };
 
-const BASE_QUERY_PAGE_SIZE = 200;
-const MAX_BYTES_PER_PAGE = 4_000_000;
 
 function clampCount(value: unknown): number {
   const numericValue =
@@ -264,126 +262,76 @@ export function buildMemoryTransitionDelta(args: {
 }
 
 export async function getDashboardTotals(ctx: any, userId: string): Promise<DashboardTotalsSnapshot> {
-  const stored = await getStoredTotals(ctx, userId);
+  let stored: DashboardTotalsSnapshot | null = null;
+  try {
+    stored = await getStoredTotals(ctx, userId);
+  } catch (_error) {
+    // If the aggregate table is unavailable (e.g., before backfill or during rollout),
+    // compute the totals from source data directly to keep dashboard queries available.
+    stored = null;
+  }
+
   if (stored) return stored;
 
-  const rebuilt = await computeDashboardTotalsFromSource(ctx, userId);
-  return rebuilt;
+  return await computeDashboardTotalsFromSource(ctx, userId);
 }
 
 export async function computeDashboardTotalsFromSource(ctx: any, userId: string): Promise<DashboardTotalsSnapshot> {
-  const totals = newEmptyTotals(userId);
+  const [activeMemories, archivedMemories] = await Promise.all([
+    ctx.db
+      .query("crystalMemories")
+      .withIndex("by_user", (q: any) => q.eq("userId", userId).eq("archived", false))
+      .count(),
+    ctx.db
+      .query("crystalMemories")
+      .withIndex("by_user", (q: any) => q.eq("userId", userId).eq("archived", true))
+      .count(),
+  ]);
 
-  const scanPaginated = async <T,>(
-    fetchPage: (cursor: string | null, numItems: number, maximumBytesRead?: number) => Promise<{
-      page: T[];
-      isDone: boolean;
-      pageStatus?: "SplitRequired" | string;
-      continueCursor?: string | null;
-    }>,
-    onRow: (row: T) => void,
-  ): Promise<void> => {
-    let cursor: string | null = null;
-    let numItems = BASE_QUERY_PAGE_SIZE;
-    let maximumBytesRead: number | undefined = MAX_BYTES_PER_PAGE;
+  const byStoreCounts = await Promise.all(
+    memoryStoreValues.map(async (store): Promise<[MemoryStore, number]> => {
+      const count = await ctx.db
+        .query("crystalMemories")
+        .withIndex("by_user", (q: any) => q.eq("userId", userId).eq("archived", false))
+        .filter((q: any) => q.eq(q.field("store"), store))
+        .count();
 
-    while (true) {
-      const page = await fetchPage(cursor, numItems, maximumBytesRead);
+      return [store, count];
+    })
+  );
 
-      for (const row of page.page) {
-        onRow(row);
-      }
+  const totalMessages = await ctx.db
+    .query("crystalMessages")
+    .withIndex("by_user_time", (q: any) => q.eq("userId", userId))
+    .count();
 
-      if (page.isDone) return;
+  const latestMemory = await ctx.db
+    .query("crystalMemories")
+    .withIndex("by_user", (q: any) => q.eq("userId", userId).eq("archived", false))
+    .order("desc")
+    .take(1);
 
-      const nextCursor = page.continueCursor ?? null;
-      if (!nextCursor) return;
-      cursor = nextCursor;
+  const activeMemoriesByStore = { ...ZERO_COUNTS };
+  for (const [store, count] of byStoreCounts) {
+    activeMemoriesByStore[store] = clampCount(count);
+  }
 
-      if (page.pageStatus === "SplitRequired") {
-        if (numItems > 1) {
-          numItems = Math.max(1, Math.floor(numItems / 2));
-          maximumBytesRead = MAX_BYTES_PER_PAGE;
-          continue;
-        }
+  const lastCapture = latestMemory[0];
 
-        if (maximumBytesRead === undefined) {
-          // Worst-case fallback: single-row pages are still too large for read cap.
-          // Exit the scan to avoid blocking dashboard reads.
-          return;
-        }
-
-        // Retry the same cursor without a read cap as a final fallback for a single large row.
-        maximumBytesRead = undefined;
-        continue;
-      }
-
-      // Successful full page read: restore default page sizing.
-      numItems = BASE_QUERY_PAGE_SIZE;
-      maximumBytesRead = MAX_BYTES_PER_PAGE;
-    }
+  return {
+    userId,
+    totalMemories: clampCount(activeMemories + archivedMemories),
+    activeMemories: clampCount(activeMemories),
+    archivedMemories: clampCount(archivedMemories),
+    totalMessages: clampCount(totalMessages),
+    activeMemoriesByStore,
+    activeStoreCount: Object.values(activeMemoriesByStore).filter((count) => count > 0).length,
+    lastCaptureMemoryId: lastCapture?._id,
+    lastCaptureStore: normalizeStore(lastCapture?.store),
+    lastCaptureTitle: lastCapture?.title,
+    lastCaptureCreatedAt: lastCapture?.createdAt,
+    updatedAt: Date.now(),
   };
-
-  const scanMemoryState = async (archived: boolean) => {
-    await scanPaginated<any>(
-      (cursor, numItems, maxRead) =>
-        ctx.db
-          .query("crystalMemories")
-          .withIndex("by_user", (q: any) => q.eq("userId", userId).eq("archived", archived))
-          .order("desc")
-          .paginate(
-            maxRead === undefined ? { numItems, cursor } : { numItems, cursor, maximumBytesRead: maxRead }
-          ) as any,
-      (memory) => {
-        totals.totalMemories += 1;
-
-        if (archived) {
-          totals.archivedMemories += 1;
-          return;
-        }
-
-        totals.activeMemories += 1;
-        const store = normalizeStore(memory.store);
-        if (store) {
-          totals.activeMemoriesByStore[store] = clampCount(totals.activeMemoriesByStore[store] + 1);
-        }
-
-        if (
-          totals.lastCaptureCreatedAt === undefined ||
-          (memory.createdAt ?? 0) > (totals.lastCaptureCreatedAt ?? Number.NEGATIVE_INFINITY)
-        ) {
-          totals.lastCaptureCreatedAt = memory.createdAt;
-          totals.lastCaptureMemoryId = memory._id;
-          totals.lastCaptureTitle = memory.title;
-          totals.lastCaptureStore = store;
-        }
-      }
-    );
-
-    totals.activeStoreCount = Object.values(totals.activeMemoriesByStore).filter((count) => count > 0).length;
-  };
-
-  const scanMessages = async () => {
-    await scanPaginated<any>(
-      (cursor, numItems, maxRead) =>
-        ctx.db
-          .query("crystalMessages")
-          .withIndex("by_user_time", (q: any) => q.eq("userId", userId))
-          .order("desc")
-          .paginate(maxRead === undefined ? { numItems, cursor } : { numItems, cursor, maximumBytesRead: maxRead }) as any,
-      () => {
-        totals.totalMessages += 1;
-      }
-    );
-  };
-
-  await scanMemoryState(false);
-  await scanMemoryState(true);
-  await scanMessages();
-
-  totals.updatedAt = Date.now();
-  totals.activeStoreCount = Object.values(totals.activeMemoriesByStore).filter((count) => count > 0).length;
-  return totals;
 }
 
 export const backfillDashboardTotalsForUser = internalMutation({
