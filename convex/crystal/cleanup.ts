@@ -1,6 +1,10 @@
 import { v } from "convex/values";
 import { action, internalMutation, internalQuery } from "../_generated/server";
 import { internal } from "../_generated/api";
+import {
+  applyDashboardTotalsDelta,
+  buildMemoryTransitionDelta,
+} from "./dashboardTotals";
 
 const nowMs = () => Date.now();
 const MAX_BATCH = 200;
@@ -50,6 +54,31 @@ export const deleteAssociation = internalMutation({
 export const deleteMemory = internalMutation({
   args: { memoryId: v.id("crystalMemories") },
   handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.memoryId);
+    if (!existing) return;
+
+    if (existing.archived) {
+      await applyDashboardTotalsDelta(
+        ctx,
+        existing.userId,
+        {
+          totalMemoriesDelta: -1,
+          archivedMemoriesDelta: -1,
+        }
+      );
+    } else {
+      await applyDashboardTotalsDelta(
+        ctx,
+        existing.userId,
+        buildMemoryTransitionDelta({
+          oldArchived: false,
+          oldStore: existing.store,
+          newArchived: true,
+          newStore: existing.store,
+        })
+      );
+    }
+
     await ctx.db.delete(args.memoryId);
   },
 });
@@ -57,7 +86,25 @@ export const deleteMemory = internalMutation({
 export const archiveWeakMemory = internalMutation({
   args: { memoryId: v.id("crystalMemories"), archivedAt: v.number() },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.memoryId, { archived: true, archivedAt: args.archivedAt });
+    const existing = await ctx.db.get(args.memoryId);
+    if (!existing) return;
+
+    if (!existing.archived) {
+      await applyDashboardTotalsDelta(
+        ctx,
+        existing.userId,
+        buildMemoryTransitionDelta({
+          oldArchived: false,
+          oldStore: existing.store,
+          newArchived: true,
+          newStore: existing.store,
+        })
+      );
+      await ctx.db.patch(args.memoryId, { archived: true, archivedAt: args.archivedAt });
+      return;
+    }
+
+    await ctx.db.patch(args.memoryId, { archived: true, archivedAt: args.archivedAt ?? existing.archivedAt });
   },
 });
 

@@ -1,6 +1,11 @@
 import { v } from "convex/values";
 import { action, internalAction, internalMutation, internalQuery } from "../_generated/server";
 import { internal } from "../_generated/api";
+import {
+  applyDashboardTotalsDelta,
+  buildMemoryCreateDelta,
+  buildMemoryTransitionDelta,
+} from "./dashboardTotals";
 
 const dayMs = 24 * 60 * 60 * 1000;
 const nowMs = () => Date.now();
@@ -96,6 +101,18 @@ export const archiveConsolidatedMemory = internalMutation({
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.memoryId);
     if (!existing || existing.userId !== args.userId) throw new Error("Not found");
+    if (!existing.archived) {
+      await applyDashboardTotalsDelta(
+        ctx,
+        existing.userId,
+        buildMemoryTransitionDelta({
+          oldArchived: false,
+          oldStore: existing.store,
+          newArchived: true,
+          newStore: existing.store,
+        })
+      );
+    }
     await ctx.db.patch(args.memoryId, { archived: true, archivedAt: args.archivedAt });
   },
 });
@@ -121,7 +138,21 @@ export const insertConsolidatedMemory = internalMutation({
     promotedFrom: v.optional(v.id("crystalMemories")),
   },
   handler: async (ctx, args) => {
-    return ctx.db.insert("crystalMemories", args as any);
+    const memoryId = await ctx.db.insert("crystalMemories", args as any);
+
+    await applyDashboardTotalsDelta(
+      ctx,
+      args.userId,
+      buildMemoryCreateDelta({
+        store: args.store,
+        archived: args.archived,
+        title: args.title,
+        memoryId,
+        createdAt: args.createdAt,
+      })
+    );
+
+    return memoryId;
   },
 });
 

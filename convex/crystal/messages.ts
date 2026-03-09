@@ -3,6 +3,10 @@ import { v } from "convex/values";
 import { action, internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { type UserTier, TIER_LIMITS } from "../../shared/tierLimits";
+import {
+  applyDashboardTotalsDelta,
+  getDashboardTotals,
+} from "./dashboardTotals";
 
 const DEFAULT_TTL_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
 const MAX_CONTENT_LENGTH = 8000; // truncate very long messages
@@ -89,6 +93,12 @@ export const logMessage = mutation({
       metadata: normalizeText(args.metadata),
     });
 
+    await applyDashboardTotalsDelta(
+      ctx,
+      userId,
+      { totalMessagesDelta: 1 }
+    );
+
     return messageId;
   },
 });
@@ -121,7 +131,7 @@ export const logMessageInternal = internalMutation({
     const ttlDays = Math.max(rest.ttlDays ?? TIER_TTL_DAYS[tier], 0);
     const ttlMs = ttlDays * 24 * 60 * 60 * 1000;
 
-    return ctx.db.insert("crystalMessages", {
+    const messageId = await ctx.db.insert("crystalMessages", {
       userId,
       role: rest.role,
       content: truncateContent(rest.content),
@@ -133,6 +143,14 @@ export const logMessageInternal = internalMutation({
       expiresAt: now + (ttlDays === 0 ? 0 : ttlMs || DEFAULT_TTL_MS),
       metadata: normalizeText(rest.metadata),
     });
+
+    await applyDashboardTotalsDelta(
+      ctx,
+      userId,
+      { totalMessagesDelta: 1 }
+    );
+
+    return messageId;
   },
 });
 
@@ -205,11 +223,8 @@ export const getRecentMessages = query({
 export const getMessageCount = internalQuery({
   args: { userId: v.string() },
   handler: async (ctx, { userId }) => {
-    const messages = await ctx.db
-      .query("crystalMessages")
-      .withIndex("by_user_time", (q) => q.eq("userId", userId))
-      .collect();
-    return messages.length;
+    const totals = await getDashboardTotals(ctx, userId);
+    return totals.totalMessages;
   },
 });
 
@@ -279,6 +294,11 @@ export const expireOldMessages = internalMutation({
     let deleted = 0;
     for (const message of expiredMessages) {
       await ctx.db.delete(message._id);
+      if (message.userId) {
+        await applyDashboardTotalsDelta(ctx, message.userId, {
+          totalMessagesDelta: -1,
+        });
+      }
       deleted += 1;
     }
 

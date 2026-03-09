@@ -4,6 +4,9 @@ import { v } from "convex/values";
 import { type UserTier, TIER_LIMITS } from "../../shared/tierLimits";
 import { resolveEffectiveUserId } from "./impersonation";
 import { deriveTier } from "./userProfiles";
+import {
+  getDashboardTotals,
+} from "./dashboardTotals";
 
 const STORAGE_LIMITS: Record<UserTier, number | null> = {
   free: TIER_LIMITS.free.memories,
@@ -20,13 +23,6 @@ const MESSAGE_TTL_DAYS: Record<UserTier, number> = {
   unlimited: TIER_LIMITS.unlimited.stmTtlDays ?? 365,
 };
 const PAGE_SIZE = 25;
-// Keep dashboard sampling intentionally small: crystalMemories rows include embeddings
-// (~12KB each) and crystalMessages can include large content. Larger scans can exceed
-// Convex's 16MB per-function read budget in production.
-// Budget math: 16MB / ~14KB per memory row ≈ 1,170 rows max.
-// We stay well under to leave headroom for other reads in the same transaction.
-const DASHBOARD_MEMORY_SAMPLE_LIMIT = 75;
-const DASHBOARD_MESSAGE_SAMPLE_LIMIT = 200;
 // Maximum rows to scan for listing (memories have embeddings, so keep this small).
 const LIST_MEMORIES_SCAN_LIMIT = 500;
 const LIST_MESSAGES_SCAN_LIMIT = 500;
@@ -34,10 +30,6 @@ const LIST_MESSAGES_SCAN_LIMIT = 500;
 // pagination over the first window of matches.
 const LIST_MEMORIES_SEARCH_LIMIT = 250;
 const LIST_MESSAGES_SEARCH_LIMIT = 200;
-// Maximum rows to scan when counting memories for usage display.
-// crystalMemories rows include large embeddings, so keep this conservative.
-// 500 rows is ~7MB, leaving ample headroom for profile + query overhead.
-const USAGE_COUNT_SCAN_LIMIT = 500;
 
 const normalizeSearch = (value?: string): string | undefined => {
   const trimmed = value?.trim();
@@ -85,41 +77,22 @@ export const getStats = query({
       };
     }
 
-    const sampledMemories = await ctx.db
-      .query("crystalMemories")
-      .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
-      .take(DASHBOARD_MEMORY_SAMPLE_LIMIT + 1);
-
-    const sampledMessages = await ctx.db
-      .query("crystalMessages")
-      .withIndex("by_user_time", (q) => q.eq("userId", userId))
-      .take(DASHBOARD_MESSAGE_SAMPLE_LIMIT + 1);
-
-    const boundedMemories = sampledMemories.length > DASHBOARD_MEMORY_SAMPLE_LIMIT;
-    const boundedMessages = sampledMessages.length > DASHBOARD_MESSAGE_SAMPLE_LIMIT;
-    const memories = sampledMemories.slice(0, DASHBOARD_MEMORY_SAMPLE_LIMIT);
-    const messages = sampledMessages.slice(0, DASHBOARD_MESSAGE_SAMPLE_LIMIT);
-
-    const recent = [...memories]
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, 5)
-      .map((m) => ({ title: m.title, store: m.store, createdAt: m.createdAt }));
-
-    const byStore: Record<string, number> = {};
-    for (const m of memories) {
-      byStore[m.store] = (byStore[m.store] ?? 0) + 1;
-    }
+    const totals = await getDashboardTotals(ctx, userId);
 
     return {
-      totalMemories: memories.length,
-      totalMessages: messages.length,
-      memoriesByStore: byStore,
-      activeStores: Object.keys(byStore).length,
-      recentActivity: recent,
-      statsNote:
-        boundedMemories || boundedMessages
-          ? `Stats are approximate; sampled at ${DASHBOARD_MEMORY_SAMPLE_LIMIT} memories and ${DASHBOARD_MESSAGE_SAMPLE_LIMIT} messages.`
-          : undefined,
+      totalMemories: totals.activeMemories,
+      totalMessages: totals.totalMessages,
+      memoriesByStore: totals.activeMemoriesByStore,
+      activeStores: totals.activeStoreCount,
+      recentActivity: totals.lastCaptureCreatedAt
+        ? [
+            {
+              title: totals.lastCaptureTitle ?? "",
+              store: totals.lastCaptureStore ?? "sensory",
+              createdAt: totals.lastCaptureCreatedAt,
+            },
+          ]
+        : [],
     };
   },
 });
@@ -335,7 +308,6 @@ export const getUsage = query({
     const actorUserId = stableUserId(identity.subject);
     const userId = await resolveEffectiveUserId(ctx, actorUserId, asUserId);
 
-    // Derive tier inline to avoid runQuery overhead and share read budget.
     const profiles = await ctx.db
       .query("crystalUserProfiles")
       .withIndex("by_user", (q: any) => q.eq("userId", userId))
@@ -343,57 +315,14 @@ export const getUsage = query({
     const latestProfile = profiles.sort((a: any, b: any) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
     const tier = deriveTier(latestProfile);
 
-    let approximate = false;
-    let memoriesUsed = 0;
-
-    try {
-      // Count memories inline with a conservative cap so this query never takes down
-      // the entire dashboard when a user has many embedding-heavy rows.
-      const scanCap = USAGE_COUNT_SCAN_LIMIT;
-
-      const active = await ctx.db
-        .query("crystalMemories")
-        .withIndex("by_user", (q: any) => q.eq("userId", userId).eq("archived", false))
-        .take(scanCap + 1);
-
-      if (active.length > scanCap) {
-        memoriesUsed = scanCap;
-        approximate = true;
-      } else {
-        memoriesUsed = active.length;
-
-        // Keep archived sampling tighter than active to preserve read headroom.
-        const archivedCap = Math.min(scanCap - active.length, Math.floor(scanCap / 2));
-        if (archivedCap > 0) {
-          const archived = await ctx.db
-            .query("crystalMemories")
-            .withIndex("by_user", (q: any) => q.eq("userId", userId).eq("archived", true))
-            .take(archivedCap + 1);
-
-          if (archived.length > archivedCap) {
-            memoriesUsed += archivedCap;
-            approximate = true;
-          } else {
-            memoriesUsed += archived.length;
-            // If we had to clamp archived scan, always mark approximate.
-            if (archivedCap < scanCap - active.length) {
-              approximate = true;
-            }
-          }
-        }
-      }
-    } catch (_err) {
-      // Defensive fallback: usage can be approximate, but dashboard must never fail hard.
-      memoriesUsed = 0;
-      approximate = true;
-    }
+    const totals = await getDashboardTotals(ctx, userId);
 
     return {
-      memoriesUsed,
+      memoriesUsed: totals.activeMemories,
       memoriesLimit: STORAGE_LIMITS[tier],
       tier,
       messageTtlDays: MESSAGE_TTL_DAYS[tier],
-      approximate,
+      approximate: false,
     };
   },
 });

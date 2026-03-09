@@ -3,6 +3,10 @@ import { v } from "convex/values";
 import { action, internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { TIER_LIMITS } from "../../shared/tierLimits";
+import {
+  applyDashboardTotalsDelta,
+  buildMemoryTransitionDelta,
+} from "./dashboardTotals";
 
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 
@@ -48,11 +52,31 @@ export const applyDecayPatch = internalMutation({
     archivedAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.memoryId);
+    if (!existing) throw new Error("Memory not found");
+
     const patch: Record<string, unknown> = { strength: args.strength };
+    const willArchive = Boolean(args.archived);
+    const willUnarchive = !args.archived && existing.archived;
+
     if (args.archived) {
       patch.archived = true;
       patch.archivedAt = args.archivedAt ?? Date.now();
     }
+
+    if (willArchive || willUnarchive) {
+      await applyDashboardTotalsDelta(
+        ctx,
+        existing.userId,
+        buildMemoryTransitionDelta({
+          oldArchived: existing.archived,
+          oldStore: existing.store,
+          newArchived: willArchive,
+          newStore: existing.store,
+        })
+      );
+    }
+
     await ctx.db.patch(args.memoryId, patch);
   },
 });
@@ -83,11 +107,29 @@ export const applyDecayPatchAuth = mutation({
     if (!identity) throw new Error("Unauthenticated");
     const memory = await ctx.db.get(args.memoryId);
     if (!memory || memory.userId !== stableUserId(identity.subject)) return;
+
     const patch: Record<string, unknown> = { strength: args.strength };
+    const willArchive = Boolean(args.archived);
+    const willUnarchive = !args.archived && memory.archived;
+
     if (args.archived) {
       patch.archived = true;
       patch.archivedAt = args.archivedAt ?? Date.now();
     }
+
+    if (willArchive || willUnarchive) {
+      await applyDashboardTotalsDelta(
+        ctx,
+        memory.userId,
+        buildMemoryTransitionDelta({
+          oldArchived: memory.archived,
+          oldStore: memory.store,
+          newArchived: willArchive,
+          newStore: memory.store,
+        })
+      );
+    }
+
     await ctx.db.patch(args.memoryId, patch);
   },
 });

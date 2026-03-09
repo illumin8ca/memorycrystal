@@ -1,6 +1,11 @@
 import { stableUserId } from "./auth";
 import { v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "../_generated/server";
+import {
+  applyDashboardTotalsDelta,
+  buildMemoryCreateDelta,
+  buildMemoryTransitionDelta,
+} from "./dashboardTotals";
 
 const nowMs = () => Date.now();
 
@@ -157,6 +162,18 @@ export const createMemory = mutation({
       checkpointId: args.checkpointId,
     });
 
+    await applyDashboardTotalsDelta(
+      ctx,
+      userId,
+      buildMemoryCreateDelta({
+        store: args.store,
+        archived: args.archived ?? false,
+        title: args.title,
+        memoryId,
+        createdAt: now,
+      })
+    );
+
     return memoryId;
   },
 });
@@ -198,7 +215,7 @@ export const createMemoryInternal = internalMutation({
       return duplicate._id;
     }
 
-    return ctx.db.insert("crystalMemories", {
+    const memoryId = await ctx.db.insert("crystalMemories", {
       userId,
       store: rest.store,
       category: rest.category,
@@ -221,6 +238,20 @@ export const createMemoryInternal = internalMutation({
       promotedFrom: rest.promotedFrom,
       checkpointId: rest.checkpointId,
     });
+
+    await applyDashboardTotalsDelta(
+      ctx,
+      userId,
+      buildMemoryCreateDelta({
+        store: rest.store,
+        archived: rest.archived ?? false,
+        title: rest.title,
+        memoryId,
+        createdAt: now,
+      })
+    );
+
+    return memoryId;
   },
 });
 
@@ -318,6 +349,9 @@ export const updateMemory = mutation({
     const existing = await ctx.db.get(args.memoryId);
     if (!existing || existing.userId !== stableUserId(identity.subject)) return null;
 
+    const previousArchived = Boolean(existing.archived);
+    const previousStore = existing.store;
+
     const patch: Record<string, unknown> = {};
     if (args.store !== undefined) patch.store = args.store;
     if (args.category !== undefined) patch.category = args.category;
@@ -336,6 +370,21 @@ export const updateMemory = mutation({
     if (args.checkpointId !== undefined) patch.checkpointId = args.checkpointId;
 
     await ctx.db.patch(args.memoryId, patch);
+
+    const nextArchived = args.archived !== undefined ? args.archived : existing.archived;
+    const nextStore = args.store !== undefined ? args.store : existing.store;
+
+    await applyDashboardTotalsDelta(
+      ctx,
+      existing.userId,
+      buildMemoryTransitionDelta({
+        oldArchived: previousArchived,
+        oldStore: previousStore,
+        newArchived: nextArchived,
+        newStore: nextStore,
+      })
+    );
+
     return ctx.db.get(args.memoryId);
   },
 });
@@ -348,10 +397,24 @@ export const forgetMemory = mutation({
     const existing = await ctx.db.get(args.memoryId);
     if (!existing || existing.userId !== stableUserId(identity.subject)) return null;
 
+    const wasAlreadyArchived = existing.archived;
     await ctx.db.patch(args.memoryId, {
       archived: true,
       archivedAt: nowMs(),
     });
+
+    if (!wasAlreadyArchived) {
+      await applyDashboardTotalsDelta(
+        ctx,
+        existing.userId,
+        buildMemoryTransitionDelta({
+          oldArchived: false,
+          oldStore: existing.store,
+          newArchived: true,
+          newStore: existing.store,
+        })
+      );
+    }
 
     return {
       memoryId: args.memoryId,

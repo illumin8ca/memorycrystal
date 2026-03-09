@@ -3,6 +3,12 @@ import type { ActionCtx } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import { type UserTier, TIER_LIMITS } from "../../shared/tierLimits";
+import {
+  applyDashboardTotalsDelta,
+  buildMemoryCreateDelta,
+  buildMemoryTransitionDelta,
+  getDashboardTotals,
+} from "./dashboardTotals";
 
 const memoryStore = v.union(
   v.literal("sensory"),
@@ -182,6 +188,19 @@ export const captureMemory = internalMutation({
       archived: false,
       embedding: [],
     });
+
+    await applyDashboardTotalsDelta(
+      ctx,
+      args.userId,
+      buildMemoryCreateDelta({
+        store: args.store,
+        archived: false,
+        title: args.title,
+        memoryId: id,
+        createdAt: now,
+      })
+    );
+
     // Schedule async embedding generation
     await ctx.scheduler.runAfter(0, internal.crystal.mcp.embedMemory, { memoryId: id });
     return { id };
@@ -295,33 +314,12 @@ export const semanticSearch = internalAction({
 export const getMemoryStoreStats = internalQuery({
   args: { userId: v.string() },
   handler: async (ctx, { userId }) => {
-    const sampleLimit = 5000;
-    const sample = await ctx.db
-      .query("crystalMemories")
-      .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
-      .take(sampleLimit + 1);
-
-    const bounded = sample.length > sampleLimit;
-    const memories = sample.slice(0, sampleLimit);
-
-    const byStore = {
-      episodic: 0,
-      semantic: 0,
-      procedural: 0,
-      prospective: 0,
-      sensory: 0,
-    };
-
-    for (const memory of memories) {
-      if (memory.store in byStore) {
-        (byStore as any)[memory.store] += 1;
-      }
-    }
+    const totals = await getDashboardTotals(ctx, userId);
 
     return {
-      total: memories.length,
-      byStore,
-      statsNote: bounded ? `Store stats are approximate; capped at ${sampleLimit} memories.` : undefined,
+      total: totals.activeMemories,
+      byStore: totals.activeMemoriesByStore,
+      activeStores: totals.activeStoreCount,
     };
   },
 });
@@ -329,40 +327,12 @@ export const getMemoryStoreStats = internalQuery({
 // Safe ceiling for a single scan pass. Each crystalMemories row is ~14KB
 // (mainly the 1536-dim float64 embedding). 1000 rows × 14KB ≈ 14MB which is
 // just under the 16MB Convex per-function read limit. We use 900 for headroom.
-const MEMORY_COUNT_SAFE_SCAN = 900;
-
 export const getMemoryCount = internalQuery({
   args: { userId: v.string(), maxCount: v.optional(v.number()) },
   handler: async (ctx, { userId, maxCount }) => {
-    const requestedMax = Number.isFinite(maxCount)
-      ? Math.max(Math.trunc(maxCount as number), 1)
-      : 50_000;
-
-    // Clamp to the safe scan limit so we never exceed the 16MB read budget.
-    const safeCap = Math.min(requestedMax, MEMORY_COUNT_SAFE_SCAN);
-    let remaining = safeCap;
-
-    const active = await ctx.db
-      .query("crystalMemories")
-      .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
-      .take(remaining + 1);
-
-    if (active.length > remaining) {
-      return safeCap;
-    }
-
-    remaining -= active.length;
-
-    const archived = await ctx.db
-      .query("crystalMemories")
-      .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", true))
-      .take(remaining + 1);
-
-    if (archived.length > remaining) {
-      return safeCap;
-    }
-
-    return active.length + archived.length;
+    const requestedMax = Number.isFinite(maxCount) ? Math.max(Math.trunc(maxCount as number), 1) : 50_000;
+    const totals = await getDashboardTotals(ctx, userId);
+    return Math.min(requestedMax, totals.totalMemories);
   },
 });
 

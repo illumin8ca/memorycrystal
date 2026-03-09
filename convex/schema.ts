@@ -261,6 +261,27 @@ export default defineSchema({
       filterFields: ["userId", "role"],
     }),
 
+  crystalDashboardTotals: defineTable({
+    userId: v.string(),
+    totalMemories: v.number(),
+    activeMemories: v.number(),
+    archivedMemories: v.number(),
+    totalMessages: v.number(),
+    activeMemoriesByStore: v.object({
+      sensory: v.number(),
+      episodic: v.number(),
+      semantic: v.number(),
+      procedural: v.number(),
+      prospective: v.number(),
+    }),
+    activeStoreCount: v.number(),
+    lastCaptureMemoryId: v.optional(v.id("crystalMemories")),
+    lastCaptureStore: v.optional(memoryStore),
+    lastCaptureTitle: v.optional(v.string()),
+    lastCaptureCreatedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
   crystalUserProfiles: defineTable({
     userId: v.string(),
     polarSubscriptionId: v.optional(v.string()),
