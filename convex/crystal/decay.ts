@@ -2,16 +2,16 @@ import { stableUserId } from "./auth";
 import { v } from "convex/values";
 import { action, internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
+import { TIER_LIMITS } from "../../shared/tierLimits";
 
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 
-// Tier-based memory limits (max active memories per tier)
 const TIER_MEMORY_LIMITS: Record<string, number> = {
-  free: 500,
-  starter: 2500,
-  pro: 10000,
-  ultra: 50000,
-  unlimited: 999999,
+  free: TIER_LIMITS.free.memories ?? 500,
+  starter: TIER_LIMITS.starter.memories ?? 10_000,
+  pro: TIER_LIMITS.pro.memories ?? 25_000,
+  ultra: TIER_LIMITS.ultra.memories ?? 50_000,
+  unlimited: TIER_LIMITS.unlimited.memories ?? 999_999,
 };
 
 // computeDecay is kept for potential future use (e.g. internal strength adjustments)

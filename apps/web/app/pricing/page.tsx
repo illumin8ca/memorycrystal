@@ -2,14 +2,42 @@ import Link from "next/link";
 import CrystalIcon from "../components/CrystalIcon";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { formatLimit, formatTtlDays, TIER_LIMITS } from "@shared/tierLimits";
 
-const pricingPlans = [
+type PricingPlan = {
+  name: string;
+  price: string;
+  button: string;
+  checkoutHref: string;
+  features: string[];
+  borderClass: string;
+  badge?: string;
+};
+
+const formatChannels = (channels: number | null): string =>
+  channels === null ? "Unlimited channels" : `${channels} channels`;
+
+const planFeatureFromTier = (name: keyof typeof TIER_LIMITS) => {
+  const limits = TIER_LIMITS[name];
+  const memories = `${formatLimit(limits.memories)} memories`;
+  const stm = limits.stmMessages === null ? "Unlimited messages" : `${formatLimit(limits.stmMessages)} messages`;
+  const ttl = `${formatTtlDays(limits.stmTtlDays)} message retention`;
+  const channels = formatChannels(limits.channels);
+  return { memories, stm, ttl, channels };
+};
+
+const pricingPlans: PricingPlan[] = [
   {
     name: "FREE",
     price: "$0/forever",
     button: "START FREE",
     checkoutHref: "/api/polar/checkout?plan=free",
-    features: ["500 memories", "500 messages", "30-day message retention", "1 channel"],
+    features: [
+      planFeatureFromTier("free").memories,
+      planFeatureFromTier("free").stm,
+      planFeatureFromTier("free").ttl,
+      planFeatureFromTier("free").channels,
+    ],
     borderClass: "border-border/25",
   },
   {
@@ -17,7 +45,12 @@ const pricingPlans = [
     price: "$9/mo",
     button: "START STARTER",
     checkoutHref: "/api/polar/checkout?plan=starter",
-    features: ["2,500 memories", "5,000 messages", "90-day message retention", "5 channels"],
+    features: [
+      planFeatureFromTier("starter").memories,
+      planFeatureFromTier("starter").stm,
+      planFeatureFromTier("starter").ttl,
+      planFeatureFromTier("starter").channels,
+    ],
     borderClass: "border-border/45",
   },
   {
@@ -26,7 +59,13 @@ const pricingPlans = [
     button: "START PRO",
     checkoutHref: "/api/polar/checkout?plan=pro",
     badge: "MOST POPULAR",
-    features: ["10,000 memories", "25,000 messages", "1-year message retention", "Unlimited channels", "Reflection pipeline"],
+    features: [
+      planFeatureFromTier("pro").memories,
+      planFeatureFromTier("pro").stm,
+      planFeatureFromTier("pro").ttl,
+      planFeatureFromTier("pro").channels,
+      "Reflection pipeline",
+    ],
     borderClass: "neon-border glow-pulse",
   },
   {
@@ -34,7 +73,13 @@ const pricingPlans = [
     price: "$49/mo",
     button: "START ULTRA",
     checkoutHref: "/api/polar/checkout?plan=ultra",
-    features: ["50,000 memories", "Unlimited messages", "Unlimited retention", "Unlimited channels", "Priority recall + API access"],
+    features: [
+      planFeatureFromTier("ultra").memories,
+      planFeatureFromTier("ultra").stm,
+      planFeatureFromTier("ultra").ttl,
+      planFeatureFromTier("ultra").channels,
+      "Priority recall + API access",
+    ],
     borderClass: "border-border/50",
   },
 ];

@@ -2,6 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
+import { formatLimit, formatTtlDays, TIER_LIMITS } from "@shared/tierLimits";
 
 // ─── Tier comparison data ─────────────────────────────────────────────────────
 
@@ -15,44 +16,31 @@ type TierInfo = {
   channels: string;
 };
 
-const TIERS: TierInfo[] = [
-  {
-    name: "free",
-    label: "Free",
-    price: "$0",
-    memories: "500",
-    stm: "500 msgs",
-    ttl: "30 days",
-    channels: "1",
-  },
-  {
-    name: "starter",
-    label: "Starter",
-    price: "$9/mo",
-    memories: "2,500",
-    stm: "5,000 msgs",
-    ttl: "90 days",
-    channels: "5",
-  },
-  {
-    name: "pro",
-    label: "Pro",
-    price: "$19/mo",
-    memories: "10,000",
-    stm: "25,000 msgs",
-    ttl: "1 year",
-    channels: "Unlimited",
-  },
-  {
-    name: "ultra",
-    label: "Ultra",
-    price: "$49/mo",
-    memories: "50,000",
-    stm: "Unlimited",
-    ttl: "Unlimited",
-    channels: "Unlimited",
-  },
-];
+type TierName = "free" | "starter" | "pro" | "ultra";
+
+const PLAN_PRICES: Record<TierName, string> = {
+  free: "$0",
+  starter: "$9/mo",
+  pro: "$19/mo",
+  ultra: "$49/mo",
+};
+
+const TIERS: TierInfo[] = (["free", "starter", "pro", "ultra"] as const).map((name: TierName) => {
+  const limits = TIER_LIMITS[name];
+  const memories = formatLimit(limits.memories);
+  const stm = limits.stmMessages === null ? "Unlimited" : `${formatLimit(limits.stmMessages)} msgs`;
+  const ttl = formatTtlDays(limits.stmTtlDays);
+  const channels = limits.channels === null ? "Unlimited" : limits.channels.toString();
+  return {
+    name,
+    label: name === "free" ? "Free" : name.charAt(0).toUpperCase() + name.slice(1),
+    price: PLAN_PRICES[name],
+    memories,
+    stm,
+    ttl,
+    channels,
+  };
+});
 
 const NEXT_TIER: Record<string, string> = {
   free: "starter",

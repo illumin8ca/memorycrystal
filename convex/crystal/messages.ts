@@ -2,25 +2,25 @@ import { stableUserId } from "./auth";
 import { v } from "convex/values";
 import { action, internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
+import { type UserTier, TIER_LIMITS } from "../../shared/tierLimits";
 
 const DEFAULT_TTL_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
 const MAX_CONTENT_LENGTH = 8000; // truncate very long messages
 
-type UserTier = "free" | "starter" | "pro" | "ultra" | "unlimited";
 const TIER_TTL_DAYS: Record<UserTier, number> = {
-  free: 30,
-  starter: 60,
-  pro: 90,
-  ultra: 365,
-  unlimited: 365,
+  free: TIER_LIMITS.free.stmTtlDays ?? 30,
+  starter: TIER_LIMITS.starter.stmTtlDays ?? 60,
+  pro: TIER_LIMITS.pro.stmTtlDays ?? 90,
+  ultra: TIER_LIMITS.ultra.stmTtlDays ?? 365,
+  unlimited: TIER_LIMITS.unlimited.stmTtlDays ?? 365,
 };
 
 const MESSAGE_LIMITS: Record<UserTier, number | null> = {
-  free: 500,
-  starter: 5_000,
-  pro: 25_000,
-  ultra: null,
-  unlimited: null,
+  free: TIER_LIMITS.free.stmMessages,
+  starter: TIER_LIMITS.starter.stmMessages,
+  pro: TIER_LIMITS.pro.stmMessages,
+  ultra: TIER_LIMITS.ultra.stmMessages,
+  unlimited: TIER_LIMITS.unlimited.stmMessages,
 };
 
 const roleEnum = v.union(v.literal("user"), v.literal("assistant"), v.literal("system"));

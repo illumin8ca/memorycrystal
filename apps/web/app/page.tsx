@@ -6,6 +6,7 @@ import CrystalIcon from "./components/CrystalIcon";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { FadeIn, FadeInItem, FadeInStagger } from "./components/FadeIn";
+import { formatLimit, formatTtlDays, TIER_LIMITS } from "@shared/tierLimits";
 
 const problemCards = [
   {
@@ -72,13 +73,21 @@ const roadmapItems = [
   "2027 — Memory Marketplace. Share skill packs, policy bundles, persona configs. The ecosystem for AI memory.",
 ];
 
+const formatChannels = (channels: number | null): string =>
+  channels === null ? "Unlimited channels" : `${channels} channels`;
+
 const pricingPlans = [
   {
     name: "FREE",
     price: "$0/forever",
     button: "START FREE",
     checkoutHref: "/api/polar/checkout?plan=free",
-    features: ["500 memories", "500 messages", "30-day retention", "1 channel"],
+    features: [
+      `${formatLimit(TIER_LIMITS.free.memories)} memories`,
+      `${TIER_LIMITS.free.stmMessages === null ? "Unlimited" : formatLimit(TIER_LIMITS.free.stmMessages)} messages`,
+      `${formatTtlDays(TIER_LIMITS.free.stmTtlDays)} retention`,
+      formatChannels(TIER_LIMITS.free.channels),
+    ],
     borderClass: "border-white/[0.06]",
   },
   {
@@ -86,7 +95,12 @@ const pricingPlans = [
     price: "$9/mo",
     button: "START STARTER",
     checkoutHref: "/api/polar/checkout?plan=starter",
-    features: ["2,500 memories", "5,000 messages", "90-day retention", "5 channels"],
+    features: [
+      `${formatLimit(TIER_LIMITS.starter.memories)} memories`,
+      `${TIER_LIMITS.starter.stmMessages === null ? "Unlimited" : formatLimit(TIER_LIMITS.starter.stmMessages)} messages`,
+      `${formatTtlDays(TIER_LIMITS.starter.stmTtlDays)} retention`,
+      formatChannels(TIER_LIMITS.starter.channels),
+    ],
     borderClass: "border-white/[0.07]",
   },
   {
@@ -96,7 +110,13 @@ const pricingPlans = [
     checkoutHref: "/api/polar/checkout?plan=pro",
     badge: "MOST POPULAR",
     isFeatured: true,
-    features: ["10,000 memories", "25,000 messages", "1-year retention", "Unlimited channels", "Reflection pipeline"],
+    features: [
+      `${formatLimit(TIER_LIMITS.pro.memories)} memories`,
+      `${TIER_LIMITS.pro.stmMessages === null ? "Unlimited" : formatLimit(TIER_LIMITS.pro.stmMessages)} messages`,
+      `${formatTtlDays(TIER_LIMITS.pro.stmTtlDays)} retention`,
+      formatChannels(TIER_LIMITS.pro.channels),
+      "Reflection pipeline",
+    ],
     borderClass: "neon-border glow-pulse",
   },
   {
@@ -104,7 +124,13 @@ const pricingPlans = [
     price: "$49/mo",
     button: "START ULTRA",
     checkoutHref: "/api/polar/checkout?plan=ultra",
-    features: ["50,000 memories", "Unlimited messages", "Unlimited retention", "Unlimited channels", "Priority recall + API access"],
+    features: [
+      `${formatLimit(TIER_LIMITS.ultra.memories)} memories`,
+      `${TIER_LIMITS.ultra.stmMessages === null ? "Unlimited" : formatLimit(TIER_LIMITS.ultra.stmMessages)} messages`,
+      `${formatTtlDays(TIER_LIMITS.ultra.stmTtlDays)} retention`,
+      formatChannels(TIER_LIMITS.ultra.channels),
+      "Priority recall + API access",
+    ],
     borderClass: "border-white/[0.07]",
   },
 ];

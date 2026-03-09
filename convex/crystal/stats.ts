@@ -1,24 +1,9 @@
 import { stableUserId } from "./auth";
 import { query } from "../_generated/server";
+import { TIER_LIMITS, TIER_ORDER, type UserTier } from "../../shared/tierLimits";
 
 const nowMs = () => Date.now();
 const msPerDay = 24 * 60 * 60 * 1000;
-
-// ─── Tier limits ─────────────────────────────────────────────────────────────
-type UserTier = "free" | "starter" | "pro" | "ultra" | "unlimited";
-
-const TIER_LIMITS: Record<
-  UserTier,
-  { memories: number | null; stmMessages: number | null; channels: number | null; stmTtlDays: number | null }
-> = {
-  free:      { memories: 500,    stmMessages: 500,    channels: 1,    stmTtlDays: 30   },
-  starter:   { memories: 2_500,  stmMessages: 5_000,  channels: 5,    stmTtlDays: 90   },
-  pro:       { memories: 10_000, stmMessages: 25_000, channels: null, stmTtlDays: 365  },
-  ultra:     { memories: 50_000, stmMessages: null,   channels: null, stmTtlDays: null },
-  unlimited: { memories: null,   stmMessages: null,   channels: null, stmTtlDays: null },
-};
-
-const TIER_ORDER: UserTier[] = ["free", "starter", "pro", "ultra", "unlimited"];
 
 const PROFILE_SAMPLE_LIMIT = 20;
 const ACTIVE_MEMORY_SAMPLE_LIMIT = 2000;

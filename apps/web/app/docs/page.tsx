@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { formatLimit, formatTtlDays, TIER_LIMITS } from "@shared/tierLimits";
 
 const sections = [
   { id: "what-is-memory-crystal", label: "What is Memory Crystal?" },
@@ -16,6 +17,37 @@ const sections = [
   { id: "dashboard-guide", label: "Dashboard Guide" },
   { id: "pricing-limits", label: "Pricing & Limits" },
   { id: "faq", label: "FAQ" },
+];
+
+const formatChannels = (channels: number | null): string =>
+  channels === null ? "Unlimited" : channels.toLocaleString();
+
+const PRICING_ROWS: string[][] = [
+  ["FREE", "$0", formatLimit(TIER_LIMITS.free.memories), formatLimit(TIER_LIMITS.free.stmMessages), formatTtlDays(TIER_LIMITS.free.stmTtlDays), formatChannels(TIER_LIMITS.free.channels)],
+  [
+    "STARTER",
+    "$9/mo",
+    formatLimit(TIER_LIMITS.starter.memories),
+    formatLimit(TIER_LIMITS.starter.stmMessages),
+    formatTtlDays(TIER_LIMITS.starter.stmTtlDays),
+    formatChannels(TIER_LIMITS.starter.channels),
+  ],
+  [
+    "PRO",
+    "$19/mo",
+    formatLimit(TIER_LIMITS.pro.memories),
+    formatLimit(TIER_LIMITS.pro.stmMessages),
+    formatTtlDays(TIER_LIMITS.pro.stmTtlDays),
+    formatChannels(TIER_LIMITS.pro.channels),
+  ],
+  [
+    "ULTRA",
+    "$49/mo",
+    formatLimit(TIER_LIMITS.ultra.memories),
+    formatLimit(TIER_LIMITS.ultra.stmMessages),
+    formatTtlDays(TIER_LIMITS.ultra.stmTtlDays),
+    formatChannels(TIER_LIMITS.ultra.channels),
+  ],
 ];
 
 function BracketHeading({ children }: { children: string }) {
@@ -226,12 +258,7 @@ curl -X POST https://memorycrystal.ai/api/mcp/stats \
                 <div className="grid grid-cols-6 text-xs font-mono border-b border-white/[0.08] bg-white/[0.03]">
                   <div className="p-3">Tier</div><div className="p-3">Price</div><div className="p-3">Memories</div><div className="p-3">Messages</div><div className="p-3">Retention</div><div className="p-3">Channels</div>
                 </div>
-                {[
-                  ["FREE", "$0", "500", "500", "30 days", "1"],
-                  ["STARTER", "$9/mo", "2,500", "5,000", "90 days", "5"],
-                  ["PRO", "$19/mo", "10,000", "25,000", "1 year", "Unlimited"],
-                  ["ULTRA", "$49/mo", "50,000", "Unlimited", "Unlimited", "Unlimited"],
-                ].map((row) => (
+                {PRICING_ROWS.map((row) => (
                   <div key={row[0]} className="grid grid-cols-6 text-sm border-b last:border-b-0 border-white/[0.06]">
                     {row.map((cell, i) => <div key={i} className="p-3 text-secondary">{cell}</div>)}
                   </div>

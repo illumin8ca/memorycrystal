@@ -42,9 +42,6 @@ const CATEGORY_VALUES: MemoryCategory[] = [
   "conversation",
 ];
 
-type MemoryStore = "sensory" | "episodic" | "semantic" | "procedural" | "prospective";
-type MemoryCategory = "decision" | "lesson" | "person" | "rule" | "event" | "fact" | "goal" | "workflow" | "conversation";
-
 const STORAGE_LIMITS: Record<UserTier, number | null> = {
   free: TIER_LIMITS.free.memories,
   starter: TIER_LIMITS.starter.memories,

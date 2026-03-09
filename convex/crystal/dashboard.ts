@@ -2,23 +2,22 @@ import { stableUserId } from "./auth";
 import { query } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
+import { type UserTier, TIER_LIMITS } from "../../shared/tierLimits";
 
-type UserTier = "free" | "starter" | "pro" | "ultra" | "unlimited";
 const STORAGE_LIMITS: Record<UserTier, number | null> = {
-  free: 500,
-  starter: 10_000,
-  pro: 25_000,
-  ultra: null,
-  unlimited: null,
+  free: TIER_LIMITS.free.memories,
+  starter: TIER_LIMITS.starter.memories,
+  pro: TIER_LIMITS.pro.memories,
+  ultra: TIER_LIMITS.ultra.memories,
+  unlimited: TIER_LIMITS.unlimited.memories,
 };
 const MESSAGE_TTL_DAYS: Record<UserTier, number> = {
-  free: 30,
-  starter: 60,
-  pro: 90,
-  ultra: 365,
-  unlimited: 365,
+  free: TIER_LIMITS.free.stmTtlDays ?? 30,
+  starter: TIER_LIMITS.starter.stmTtlDays ?? 60,
+  pro: TIER_LIMITS.pro.stmTtlDays ?? 90,
+  ultra: TIER_LIMITS.ultra.stmTtlDays ?? 365,
+  unlimited: TIER_LIMITS.unlimited.stmTtlDays ?? 365,
 };
-
 const PAGE_SIZE = 25;
 const DASHBOARD_MEMORY_SAMPLE_LIMIT = 500;
 const DASHBOARD_MESSAGE_SAMPLE_LIMIT = 5000;
