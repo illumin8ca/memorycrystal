@@ -14,6 +14,7 @@
     "crystal:enable": "bash scripts/crystal-enable.sh",
     "crystal:disable": "bash scripts/crystal-disable.sh",
     "crystal:e2e": "bash scripts/crystal-e2e.sh",
+    "convex:deploy": "CONVEX_DEPLOYMENT=prod:rightful-mockingbird-389 npx convex deploy",
     "test:smoke": "bash scripts/crystal-doctor.sh --smoke"
   },
   "devDependencies": {

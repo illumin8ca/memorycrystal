@@ -41,8 +41,8 @@ type DashboardUsage = {
 export default function DashboardPage() {
   const { asUserId } = useImpersonation();
   const convex = useConvex();
-  const recentMemories = useQuery(api.crystal.dashboard.listMemories, { limit: 5, asUserId });
-  const recentMessages = useQuery(api.crystal.dashboard.listMessages, { limit: 3, asUserId });
+  const recentMemories = useQuery(api.crystal.dashboard.listMemories, { limit: 8, asUserId });
+  const recentMessages = useQuery(api.crystal.dashboard.listMessages, { limit: 8, asUserId });
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [usage, setUsage] = useState<DashboardUsage | null>(null);
   const [statsError, setStatsError] = useState<string | null>(null);

@@ -22,9 +22,16 @@ export function useInView<T extends HTMLElement = HTMLElement>({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry?.isIntersecting) {
+        if (!entry) return;
+
+        if (entry.isIntersecting) {
           setIsInView(true);
           if (once) observer.unobserve(node);
+          return;
+        }
+
+        if (!once) {
+          setIsInView(false);
         }
       },
       {
