@@ -3,6 +3,13 @@ import { validateEvent, WebhookVerificationError } from "@polar-sh/sdk/webhooks"
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../../../convex/_generated/api";
 
+const HANDLED_SUBSCRIPTION_EVENTS = new Set([
+  "subscription.created",
+  "subscription.updated",
+  "subscription.active",
+  "subscription.canceled",
+]);
+
 type SubscriptionLike = {
   id?: string;
   status?: string;
@@ -49,13 +56,11 @@ export async function POST(request: NextRequest) {
     throw err;
   }
 
-  if (
-    event.type !== "subscription.created" &&
-    event.type !== "subscription.updated" &&
-    event.type !== "subscription.active" &&
-    event.type !== "subscription.canceled"
-  ) {
-    return NextResponse.json({ received: true });
+  if (!HANDLED_SUBSCRIPTION_EVENTS.has(event.type)) {
+    // Important: return 2xx for valid-but-unhandled events (e.g. checkout.created)
+    // so Polar won't retry them as delivery failures.
+    // NOTE: We do not yet persist webhook event IDs for strict replay/deduplication.
+    return NextResponse.json({ received: true, ignored: event.type }, { status: 200 });
   }
 
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
