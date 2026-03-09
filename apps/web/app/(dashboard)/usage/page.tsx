@@ -3,6 +3,7 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { formatLimit, formatTtlDays, TIER_LIMITS } from "@shared/tierLimits";
+import { useImpersonation } from "../ImpersonationContext";
 
 // ─── Tier comparison data ─────────────────────────────────────────────────────
 
@@ -153,7 +154,8 @@ function StoreBar({
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function UsagePage() {
-  const stats = useQuery(api.crystal.stats.getUserUsageStats, {});
+  const { asUserId } = useImpersonation();
+  const stats = useQuery(api.crystal.stats.getUserUsageStats, { asUserId });
 
   if (stats === undefined) {
     return (

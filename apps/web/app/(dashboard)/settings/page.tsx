@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
+import { useImpersonation } from "../ImpersonationContext";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
 type ApiKeyRow = {
@@ -17,10 +18,11 @@ type ApiKeyRow = {
 
 export default function SettingsPage() {
   const user = useQuery(api.crystal.userProfiles.getCurrentUser, {});
+  const { asUserId } = useImpersonation();
   const userId = user?.userId ?? null;
-  const userTier = useQuery(api.crystal.userProfiles.getCurrentUserTier, userId ? {} : "skip");
-  const usage = useQuery(api.crystal.dashboard.getUsage, userId ? {} : "skip");
-  const apiKeys = useQuery(api.crystal.apiKeys.listApiKeys, userId ? {} : "skip");
+  const userTier = useQuery(api.crystal.userProfiles.getCurrentUserTier, userId ? { asUserId } : "skip");
+  const usage = useQuery(api.crystal.dashboard.getUsage, userId ? { asUserId } : "skip");
+  const apiKeys = useQuery(api.crystal.apiKeys.listApiKeys, userId ? { asUserId } : "skip");
   const createApiKey = useMutation(api.crystal.apiKeys.createApiKey);
   const revokeApiKey = useMutation(api.crystal.apiKeys.revokeApiKey);
   const deleteApiKey = useMutation(api.crystal.apiKeys.deleteApiKey);
@@ -42,6 +44,7 @@ export default function SettingsPage() {
       const cleanedLabel = newKeyLabel.trim();
       const key = await createApiKey({
         ...(cleanedLabel ? { label: cleanedLabel } : {}),
+        asUserId,
       });
       setCreatedKey(key);
       setShowCreateModal(false);
@@ -64,7 +67,7 @@ export default function SettingsPage() {
     if (!userId) return;
     setError("");
     try {
-      await revokeApiKey({ keyId });
+      await revokeApiKey({ keyId, asUserId });
     } catch (err) {
       setError((err as Error).message ?? "Failed to revoke key");
     }
@@ -74,7 +77,7 @@ export default function SettingsPage() {
     if (!userId) return;
     setIsRegenerating(keyId);
     try {
-      const newKey = await regenerateApiKeyMutation({ oldKeyId: keyId, label });
+      const newKey = await regenerateApiKeyMutation({ oldKeyId: keyId, label, asUserId });
       setCreatedKey(newKey);
     } catch (e) {
       alert("Failed to regenerate: " + String(e));
@@ -137,7 +140,7 @@ export default function SettingsPage() {
                       <button
                         onClick={async () => {
                           if (!confirm("Permanently delete this API key?")) return;
-                          try { await deleteApiKey({ keyId: k._id }); }
+                          try { await deleteApiKey({ keyId: k._id, asUserId }); }
                           catch (err) { setError((err as Error).message ?? "Failed to delete key"); }
                         }}
                         className="text-secondary hover:text-red-400 text-xs transition-colors min-h-9"

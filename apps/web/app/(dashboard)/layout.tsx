@@ -185,6 +185,41 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
         )}
       </AnimatePresence>
 
+      {(activeSession || canImpersonate) && (
+        <div className="px-4 sm:px-6 lg:ml-56 lg:px-8 py-3 border-y border-amber-400/40 bg-amber-500/10">
+          {activeSession ? (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-amber-100">
+              <p className="text-xs font-mono tracking-wide">SUPPORT MODE: impersonating <span className="font-bold">{activeSession.targetUserId}</span></p>
+              <button className="btn-secondary px-3 py-1 text-xs" onClick={() => void stopImpersonation()}>Stop impersonation</button>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <input
+                value={targetUserId}
+                onChange={(e) => setTargetUserId(e.target.value)}
+                placeholder="Target userId"
+                className="bg-elevated border border-white/20 text-primary px-3 py-2 text-xs font-mono"
+              />
+              <button
+                className="btn-secondary px-3 py-2 text-xs"
+                onClick={async () => {
+                  try {
+                    setImpersonationError("");
+                    await startImpersonation(targetUserId.trim());
+                    setTargetUserId("");
+                  } catch (err) {
+                    setImpersonationError((err as Error).message ?? "Failed to start impersonation");
+                  }
+                }}
+              >
+                Start support impersonation
+              </button>
+              {impersonationError ? <span className="text-red-300 text-xs">{impersonationError}</span> : null}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex min-h-screen">
         {/* Desktop sidebar */}
         <aside className="hidden lg:flex fixed top-0 left-0 h-screen w-56 flex-col z-40" style={{ backgroundColor: "#0d1820", borderRight: "1px solid rgba(255,255,255,0.07)" }}>

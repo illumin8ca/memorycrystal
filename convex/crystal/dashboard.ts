@@ -3,6 +3,7 @@ import { query } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import { type UserTier, TIER_LIMITS } from "../../shared/tierLimits";
+import { resolveEffectiveUserId } from "./impersonation";
 
 const STORAGE_LIMITS: Record<UserTier, number | null> = {
   free: TIER_LIMITS.free.memories,
@@ -36,8 +37,8 @@ async function isAllowedUser(ctx: any, userId: string): Promise<boolean> {
 }
 
 export const getStats = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { asUserId: v.optional(v.string()) },
+  handler: async (ctx, { asUserId }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       return {
@@ -48,7 +49,8 @@ export const getStats = query({
         recentActivity: [],
       };
     }
-    const userId = stableUserId(identity.subject);
+    const actorUserId = stableUserId(identity.subject);
+    const userId = await resolveEffectiveUserId(ctx, actorUserId, asUserId);
     if (!(await isAllowedUser(ctx, userId))) {
       return {
         totalMemories: 0,
@@ -100,15 +102,17 @@ export const getStats = query({
 
 export const listMemories = query({
   args: {
+    asUserId: v.optional(v.string()),
     limit: v.optional(v.number()),
     store: v.optional(v.string()),
     archived: v.optional(v.boolean()),
     page: v.optional(v.number()),
   },
-  handler: async (ctx, { limit = PAGE_SIZE, store, archived = false, page = 0 }) => {
+  handler: async (ctx, { asUserId, limit = PAGE_SIZE, store, archived = false, page = 0 }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
-    const userId = stableUserId(identity.subject);
+    const actorUserId = stableUserId(identity.subject);
+    const userId = await resolveEffectiveUserId(ctx, actorUserId, asUserId);
     if (!(await isAllowedUser(ctx, userId))) return [];
 
     const pageSize = Math.min(Math.max(Math.trunc(limit ?? PAGE_SIZE), 1), 100);
@@ -133,15 +137,17 @@ export const listMemories = query({
 
 export const listMessages = query({
   args: {
+    asUserId: v.optional(v.string()),
     limit: v.optional(v.number()),
     sinceMs: v.optional(v.number()),
     page: v.optional(v.number()),
     role: v.optional(v.string()),
   },
-  handler: async (ctx, { limit = PAGE_SIZE, sinceMs, page = 0, role }) => {
+  handler: async (ctx, { asUserId, limit = PAGE_SIZE, sinceMs, page = 0, role }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
-    const userId = stableUserId(identity.subject);
+    const actorUserId = stableUserId(identity.subject);
+    const userId = await resolveEffectiveUserId(ctx, actorUserId, asUserId);
     if (!(await isAllowedUser(ctx, userId))) return [];
 
     const pageSize = Math.min(Math.max(Math.trunc(limit ?? PAGE_SIZE), 1), 100);
@@ -173,8 +179,8 @@ export const listMessages = query({
 });
 
 export const getUsage = query({
-  args: {},
-  handler: async (ctx): Promise<{
+  args: { asUserId: v.optional(v.string()) },
+  handler: async (ctx, { asUserId }): Promise<{
     memoriesUsed: number;
     memoriesLimit: number | null;
     tier: UserTier;
@@ -189,7 +195,8 @@ export const getUsage = query({
         messageTtlDays: MESSAGE_TTL_DAYS.free,
       };
     }
-    const userId = stableUserId(identity.subject);
+    const actorUserId = stableUserId(identity.subject);
+    const userId = await resolveEffectiveUserId(ctx, actorUserId, asUserId);
 
     const tier = (await ctx.runQuery(internal.crystal.userProfiles.getUserTier, {
       userId,

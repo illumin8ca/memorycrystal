@@ -1,6 +1,8 @@
 import { stableUserId } from "./auth";
 import { query } from "../_generated/server";
+import { v } from "convex/values";
 import { TIER_LIMITS, TIER_ORDER, type UserTier } from "../../shared/tierLimits";
+import { resolveEffectiveUserId } from "./impersonation";
 
 const nowMs = () => Date.now();
 const msPerDay = 24 * 60 * 60 * 1000;
@@ -37,12 +39,13 @@ function deriveTierFromProfile(
 // ─── getUserUsageStats ────────────────────────────────────────────────────────
 
 export const getUserUsageStats = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { asUserId: v.optional(v.string()) },
+  handler: async (ctx, { asUserId }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
 
-    const userId = stableUserId(identity.subject);
+    const actorUserId = stableUserId(identity.subject);
+    const userId = await resolveEffectiveUserId(ctx, actorUserId, asUserId);
     const email = (identity.email ?? "").toLowerCase();
 
     // -- Derive tier from profile --

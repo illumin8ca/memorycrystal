@@ -2,6 +2,7 @@ import { internalMutation, internalQuery, mutation, query } from "../_generated/
 import { v } from "convex/values";
 import { stableUserId } from "./auth";
 import { normalizeRoles } from "./permissions";
+import { resolveEffectiveUserId } from "./impersonation";
 
 export type UserTier = "free" | "starter" | "pro" | "ultra" | "unlimited";
 
@@ -204,14 +205,16 @@ export const getUserTier = internalQuery({
 });
 
 export const getCurrentUserTier = query({
-  args: {},
-  handler: async (ctx): Promise<UserTier> => {
+  args: { asUserId: v.optional(v.string()) },
+  handler: async (ctx, { asUserId }): Promise<UserTier> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const email = (identity.email ?? "").toLowerCase();
-    if (UNLIMITED_EMAILS.includes(email)) return "unlimited";
 
-    const userId = stableUserId(identity.subject);
+    const actorUserId = stableUserId(identity.subject);
+    const userId = await resolveEffectiveUserId(ctx, actorUserId, asUserId);
+    if (userId === actorUserId && UNLIMITED_EMAILS.includes(email)) return "unlimited";
+
     const profiles = await ctx.db
       .query("crystalUserProfiles")
       .withIndex("by_user", (q) => q.eq("userId", userId))

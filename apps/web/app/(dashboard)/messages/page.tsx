@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
+import { useImpersonation } from "../ImpersonationContext";
 
 const PAGE_SIZE = 25;
 const roles = ["ALL", "USER", "AI"];
@@ -30,7 +31,9 @@ export default function MessagesPage() {
   const convexRole =
     roleFilter === "USER" ? "user" : roleFilter === "AI" ? "assistant" : undefined;
 
+  const { asUserId } = useImpersonation();
   const messages = useQuery(api.crystal.dashboard.listMessages, {
+    asUserId,
     limit: PAGE_SIZE,
     page,
     role: convexRole,

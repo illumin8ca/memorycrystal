@@ -309,4 +309,15 @@ export default defineSchema({
   })
     .index("by_user", ["userId", "ts"])
     .index("by_key", ["keyHash", "ts"]),
+
+  crystalImpersonationSessions: defineTable({
+    actorUserId: v.string(),
+    targetUserId: v.string(),
+    reason: v.optional(v.string()),
+    startedAt: v.number(),
+    endedAt: v.optional(v.number()),
+    active: v.boolean(),
+  })
+    .index("by_actor", ["actorUserId", "startedAt"])
+    .index("by_actor_active", ["actorUserId", "active"]),
 });

@@ -2,6 +2,7 @@ import { stableUserId } from "./auth";
 import { internal } from "../_generated/api";
 import { internalQuery, mutation, query } from "../_generated/server";
 import { v } from "convex/values";
+import { resolveEffectiveUserId } from "./impersonation";
 
 async function sha256Hex(input: string): Promise<string> {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
@@ -15,11 +16,12 @@ function generateKey(): string {
 }
 
 export const createApiKey = mutation({
-  args: { label: v.optional(v.string()) },
-  handler: async (ctx, { label }) => {
+  args: { label: v.optional(v.string()), asUserId: v.optional(v.string()) },
+  handler: async (ctx, { label, asUserId }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = stableUserId(identity.subject);
+    const actorUserId = stableUserId(identity.subject);
+    const userId = await resolveEffectiveUserId(ctx, actorUserId, asUserId);
     await ctx.runMutation(internal.crystal.userProfiles.ensureProfileForUserInternal, {
       userId,
       email: identity.email ?? undefined,
@@ -33,40 +35,62 @@ export const createApiKey = mutation({
       createdAt: Date.now(),
       active: true,
     });
+    if (userId !== actorUserId) {
+      await ctx.runMutation(internal.crystal.mcp.writeAuditLog, {
+        userId: actorUserId,
+        keyHash: "dashboard",
+        action: "impersonation_write_api_key_create",
+        ts: Date.now(),
+        actorUserId,
+        effectiveUserId: userId,
+        targetUserId: userId,
+        meta: JSON.stringify({ label: label ?? null }),
+      });
+    }
     return rawKey; // only time raw key is returned
   },
 });
 
 export const listApiKeys = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { asUserId: v.optional(v.string()) },
+  handler: async (ctx, { asUserId }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
+    const actorUserId = stableUserId(identity.subject);
+    const userId = await resolveEffectiveUserId(ctx, actorUserId, asUserId);
     const keys = await ctx.db
       .query("crystalApiKeys")
-      .withIndex("by_user", (q) => q.eq("userId", stableUserId(identity.subject)))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
     return keys.map(({ keyHash: _kh, ...rest }) => rest);
   },
 });
 
 export const revokeApiKey = mutation({
-  args: { keyId: v.id("crystalApiKeys") },
-  handler: async (ctx, { keyId }) => {
+  args: { keyId: v.id("crystalApiKeys"), asUserId: v.optional(v.string()) },
+  handler: async (ctx, { keyId, asUserId }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
+    const actorUserId = stableUserId(identity.subject);
+    const userId = await resolveEffectiveUserId(ctx, actorUserId, asUserId);
     const key = await ctx.db.get(keyId);
-    if (!key || key.userId !== stableUserId(identity.subject)) throw new Error("Not found");
+    if (!key || key.userId !== userId) throw new Error("Not found");
     await ctx.db.patch(keyId, { active: false });
+    if (userId !== actorUserId) {
+      await ctx.runMutation(internal.crystal.mcp.writeAuditLog, {
+        userId: actorUserId, keyHash: "dashboard", action: "impersonation_write_api_key_revoke", ts: Date.now(), actorUserId, effectiveUserId: userId, targetUserId: userId, targetType: "api_key", targetId: keyId,
+      });
+    }
   },
 });
 
 export const regenerateApiKey = mutation({
-  args: { oldKeyId: v.id("crystalApiKeys"), label: v.optional(v.string()) },
-  handler: async (ctx, { oldKeyId, label }) => {
+  args: { oldKeyId: v.id("crystalApiKeys"), label: v.optional(v.string()), asUserId: v.optional(v.string()) },
+  handler: async (ctx, { oldKeyId, label, asUserId }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = stableUserId(identity.subject);
+    const actorUserId = stableUserId(identity.subject);
+    const userId = await resolveEffectiveUserId(ctx, actorUserId, asUserId);
     await ctx.runMutation(internal.crystal.userProfiles.ensureProfileForUserInternal, {
       userId,
       email: identity.email ?? undefined,
@@ -89,6 +113,20 @@ export const regenerateApiKey = mutation({
       active: true,
     });
 
+    if (userId !== actorUserId) {
+      await ctx.runMutation(internal.crystal.mcp.writeAuditLog, {
+        userId: actorUserId,
+        keyHash: "dashboard",
+        action: "impersonation_write_api_key_regenerate",
+        ts: Date.now(),
+        actorUserId,
+        effectiveUserId: userId,
+        targetUserId: userId,
+        targetType: "api_key",
+        targetId: oldKeyId,
+      });
+    }
+
     return rawKey;
   },
 });
@@ -106,13 +144,19 @@ export const validateApiKey = internalQuery({
 });
 
 export const deleteApiKey = mutation({
-  args: { keyId: v.id("crystalApiKeys") },
-  handler: async (ctx, { keyId }) => {
+  args: { keyId: v.id("crystalApiKeys"), asUserId: v.optional(v.string()) },
+  handler: async (ctx, { keyId, asUserId }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
-    const userId = stableUserId(identity.subject);
+    const actorUserId = stableUserId(identity.subject);
+    const userId = await resolveEffectiveUserId(ctx, actorUserId, asUserId);
     const key = await ctx.db.get(keyId);
     if (!key || key.userId !== userId) throw new Error("Key not found");
     await ctx.db.delete(keyId);
+    if (userId !== actorUserId) {
+      await ctx.runMutation(internal.crystal.mcp.writeAuditLog, {
+        userId: actorUserId, keyHash: "dashboard", action: "impersonation_write_api_key_delete", ts: Date.now(), actorUserId, effectiveUserId: userId, targetUserId: userId, targetType: "api_key", targetId: keyId,
+      });
+    }
   },
 });

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
+import { useImpersonation } from "../ImpersonationContext";
 
 const stores = ["ALL", "SENSORY", "EPISODIC", "SEMANTIC", "PROCEDURAL", "PROSPECTIVE"];
 const PAGE_SIZE = 25;
@@ -29,7 +30,9 @@ export default function MemoriesPage() {
     setPage(0);
   };
 
+  const { asUserId } = useImpersonation();
   const memories = useQuery(api.crystal.dashboard.listMemories, {
+    asUserId,
     store: activeStore === "ALL" ? undefined : activeStore.toLowerCase(),
     limit: PAGE_SIZE,
     page,

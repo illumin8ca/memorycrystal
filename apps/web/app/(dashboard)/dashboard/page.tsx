@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
+import { useImpersonation } from "../ImpersonationContext";
 
 const formatTime = (value: number) =>
   new Date(value).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -22,10 +23,11 @@ type MessageRow = {
 };
 
 export default function DashboardPage() {
-  const stats = useQuery(api.crystal.dashboard.getStats, {});
-  const usage = useQuery(api.crystal.dashboard.getUsage, {});
-  const recentMemories = useQuery(api.crystal.dashboard.listMemories, { limit: 5 });
-  const recentMessages = useQuery(api.crystal.dashboard.listMessages, { limit: 3 });
+  const { asUserId } = useImpersonation();
+  const stats = useQuery(api.crystal.dashboard.getStats, { asUserId });
+  const usage = useQuery(api.crystal.dashboard.getUsage, { asUserId });
+  const recentMemories = useQuery(api.crystal.dashboard.listMemories, { limit: 5, asUserId });
+  const recentMessages = useQuery(api.crystal.dashboard.listMessages, { limit: 3, asUserId });
 
   const cards = [
     {
