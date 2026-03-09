@@ -30,10 +30,23 @@ const DASHBOARD_MESSAGE_SAMPLE_LIMIT = 200;
 // Maximum rows to scan for listing (memories have embeddings, so keep this small).
 const LIST_MEMORIES_SCAN_LIMIT = 500;
 const LIST_MESSAGES_SCAN_LIMIT = 500;
+// Search is bounded separately to avoid loading full datasets while still allowing
+// pagination over the first window of matches.
+const LIST_MEMORIES_SEARCH_LIMIT = 250;
+const LIST_MESSAGES_SEARCH_LIMIT = 200;
 // Maximum rows to scan when counting memories for usage display.
 // crystalMemories rows include large embeddings, so keep this conservative.
 // 500 rows is ~7MB, leaving ample headroom for profile + query overhead.
 const USAGE_COUNT_SCAN_LIMIT = 500;
+
+const normalizeSearch = (value?: string): string | undefined => {
+  const trimmed = value?.trim();
+  return trimmed?.length ? trimmed : undefined;
+};
+
+const clampPageValue = (value: number, min: number, max: number): number => {
+  return Math.min(Math.max(Math.trunc(value), min), max);
+};
 
 async function isAllowedUser(ctx: any, userId: string): Promise<boolean> {
   const profiles = await ctx.db
@@ -118,17 +131,72 @@ export const listMemories = query({
     store: v.optional(v.string()),
     archived: v.optional(v.boolean()),
     page: v.optional(v.number()),
+    search: v.optional(v.string()),
   },
-  handler: async (ctx, { asUserId, limit = PAGE_SIZE, store, archived = false, page = 0 }) => {
+  handler: async (ctx, {
+    asUserId,
+    limit = PAGE_SIZE,
+    store,
+    archived = false,
+    page = 0,
+    search,
+  }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
     const actorUserId = stableUserId(identity.subject);
     const userId = await resolveEffectiveUserId(ctx, actorUserId, asUserId);
     if (!(await isAllowedUser(ctx, userId))) return [];
 
-    const pageSize = Math.min(Math.max(Math.trunc(limit ?? PAGE_SIZE), 1), 100);
+    const pageSize = clampPageValue(limit ?? PAGE_SIZE, 1, 100);
     const safePage = Math.max(Math.trunc(page ?? 0), 0);
     const skip = safePage * pageSize;
+    const normalizedSearch = normalizeSearch(search);
+
+    if (normalizedSearch) {
+      const queryWindow = skip + pageSize;
+      const scanWindow = Math.min(
+        Math.max((store ? queryWindow * 4 : queryWindow * 2), pageSize),
+        LIST_MEMORIES_SEARCH_LIMIT
+      );
+
+      const [titleResults, contentResults] = await Promise.all([
+        ctx.db
+          .query("crystalMemories")
+          .withSearchIndex("search_title", (q) =>
+            q.search("title", normalizedSearch).eq("userId", userId).eq("archived", archived)
+          )
+          .take(scanWindow + 1),
+        ctx.db
+          .query("crystalMemories")
+          .withSearchIndex("search_content", (q) =>
+            q.search("content", normalizedSearch).eq("userId", userId).eq("archived", archived)
+          )
+          .take(scanWindow + 1),
+      ]);
+
+      const seenIds = new Set<string>();
+      const merged: Array<any> = [];
+
+      for (const row of titleResults.concat(contentResults)) {
+        if (!row || seenIds.has(row._id)) continue;
+        seenIds.add(row._id);
+        merged.push(row);
+      }
+
+      const scanBounded =
+        titleResults.length > scanWindow || contentResults.length > scanWindow;
+      const filtered = store ? merged.filter((m) => m.store === store) : merged;
+      const pageItems = filtered.slice(skip, skip + pageSize);
+      const totalCount = filtered.length + (scanBounded ? 1 : 0);
+
+      return pageItems.map(({ embedding: _e, ...rest }) => ({
+        ...rest,
+        totalCount,
+        statsNote: scanBounded
+          ? `Search results are approximate; scanned latest ${scanWindow} records from each index.`
+          : undefined,
+      }));
+    }
 
     // Scan a bounded window instead of .collect() to stay under 16MB read limit.
     // When filtering by store, we need extra rows since we'll discard non-matching ones.
@@ -163,20 +231,66 @@ export const listMessages = query({
     limit: v.optional(v.number()),
     sinceMs: v.optional(v.number()),
     page: v.optional(v.number()),
-    role: v.optional(v.string()),
+    role: v.optional(v.union(v.literal("user"), v.literal("assistant"), v.literal("system"))),
+    search: v.optional(v.string()),
   },
-  handler: async (ctx, { asUserId, limit = PAGE_SIZE, sinceMs, page = 0, role }) => {
+  handler: async (ctx, {
+    asUserId,
+    limit = PAGE_SIZE,
+    sinceMs,
+    page = 0,
+    role,
+    search,
+  }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
     const actorUserId = stableUserId(identity.subject);
     const userId = await resolveEffectiveUserId(ctx, actorUserId, asUserId);
     if (!(await isAllowedUser(ctx, userId))) return [];
 
-    const pageSize = Math.min(Math.max(Math.trunc(limit ?? PAGE_SIZE), 1), 100);
+    const pageSize = clampPageValue(limit ?? PAGE_SIZE, 1, 100);
     const safePage = Math.max(Math.trunc(page ?? 0), 0);
     const skip = safePage * pageSize;
+    const normalizedSearch = normalizeSearch(search);
+    const normalizedRole =
+      role === "user" || role === "assistant" || role === "system" ? role : undefined;
 
-    const scanLimit = Math.max(skip + pageSize, LIST_MESSAGES_SCAN_LIMIT);
+    if (normalizedSearch) {
+      const scanLimit = Math.min(
+        Math.max((skip + pageSize) * 2, pageSize),
+        LIST_MESSAGES_SEARCH_LIMIT
+      );
+
+      const sampled = await ctx.db
+        .query("crystalMessages")
+        .withSearchIndex("search_content", (q) => {
+          let query = q.search("content", normalizedSearch).eq("userId", userId);
+          if (normalizedRole) {
+            query = query.eq("role", normalizedRole);
+          }
+          return query;
+        })
+        .take(scanLimit + 1);
+
+      const scanBounded = sampled.length > scanLimit;
+      const bounded = sampled.slice(0, scanLimit);
+      const pageItems = bounded.slice(skip, skip + pageSize);
+      const totalCount = bounded.length + (scanBounded ? 1 : 0);
+
+      return pageItems.map((m) => ({
+        ...m,
+        totalCount,
+        statsNote: scanBounded
+          ? `Message search is approximate; searched latest ${scanLimit} records.`
+          : undefined,
+      }));
+    }
+
+    const scanLimit = Math.min(
+      normalizedRole ? Math.max(skip + pageSize, pageSize) * 2 : skip + pageSize,
+      LIST_MESSAGES_SCAN_LIMIT
+    );
+
     const sampled = await ctx.db
       .query("crystalMessages")
       .withIndex("by_user_time", (q) =>
@@ -187,7 +301,7 @@ export const listMessages = query({
 
     const scanBounded = sampled.length > scanLimit;
     const bounded = sampled.slice(0, scanLimit);
-    const filtered = role ? bounded.filter((m) => m.role === role) : bounded;
+    const filtered = normalizedRole ? bounded.filter((m) => m.role === normalizedRole) : bounded;
     const pageItems = filtered.slice(skip, skip + pageSize);
 
     return pageItems.map((m) => ({

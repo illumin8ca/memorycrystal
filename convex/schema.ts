@@ -255,6 +255,10 @@ export default defineSchema({
       vectorField: "embedding",
       dimensions: 1536,
       filterFields: ["channel", "role"],
+    })
+    .searchIndex("search_content", {
+      searchField: "content",
+      filterFields: ["userId", "role"],
     }),
 
   crystalUserProfiles: defineTable({
