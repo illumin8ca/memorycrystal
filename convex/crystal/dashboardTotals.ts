@@ -288,7 +288,7 @@ export async function computeDashboardTotalsFromSource(ctx: any, userId: string)
   let cursor: string | null = null;
 
   while (true) {
-    const page = await ctx.db
+    const page: any = await ctx.db
       .query("crystalMemories")
       .withIndex("by_user", (q: any) => q.eq("userId", userId))
       .paginate({
@@ -336,7 +336,7 @@ export async function computeDashboardTotalsFromSource(ctx: any, userId: string)
 
   let messageCursor: string | null = null;
   while (true) {
-    const page = await ctx.db
+    const page: any = await ctx.db
       .query("crystalMessages")
       .withIndex("by_user_time", (q: any) => q.eq("userId", userId))
       .paginate({
@@ -451,7 +451,7 @@ export const adminRepairBackfillDashboardTotalsForUser = internalMutation({
     const totals = getBackfillAccumulator(args, args.userId);
 
     if (args.stage === "memories") {
-      const page = await ctx.db
+      const page: any = await ctx.db
         .query("crystalMemories")
         .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
         .order("desc")
@@ -512,7 +512,7 @@ export const adminRepairBackfillDashboardTotalsForUser = internalMutation({
       return { ok: true, userId: args.userId, stage: "messages", status: "running" };
     }
 
-    const messagePage = await ctx.db
+    const messagePage: any = await ctx.db
       .query("crystalMessages")
       .withIndex("by_user_time", (q: any) => q.eq("userId", args.userId))
       .order("desc")
