@@ -267,25 +267,72 @@ export async function getDashboardTotals(ctx: any, userId: string): Promise<Dash
 export async function computeDashboardTotalsFromSource(ctx: any, userId: string): Promise<DashboardTotalsSnapshot> {
   const totals = newEmptyTotals(userId);
 
-  const scanMemoryState = async (archived: boolean) => {
+  const scanPaginated = async <T,>(
+    fetchPage: (cursor: string | null, numItems: number, maximumBytesRead?: number) => Promise<{
+      page: T[];
+      isDone: boolean;
+      pageStatus?: "SplitRequired" | string;
+      continueCursor?: string | null;
+    }>,
+    onRow: (row: T) => void,
+  ): Promise<void> => {
     let cursor: string | null = null;
-    while (true) {
-      const page = (await ctx.db
-        .query("crystalMemories")
-        .withIndex("by_user", (q: any) => q.eq("userId", userId).eq("archived", archived))
-        .order("desc")
-        .paginate({
-          numItems: BASE_QUERY_PAGE_SIZE,
-          cursor,
-          maximumBytesRead: MAX_BYTES_PER_PAGE,
-        })) as any;
+    let numItems = BASE_QUERY_PAGE_SIZE;
+    let maximumBytesRead: number | undefined = MAX_BYTES_PER_PAGE;
 
-      for (const memory of page.page) {
+    while (true) {
+      const page = await fetchPage(cursor, numItems, maximumBytesRead);
+
+      for (const row of page.page) {
+        onRow(row);
+      }
+
+      if (page.isDone) return;
+
+      const nextCursor = page.continueCursor ?? null;
+      if (!nextCursor) return;
+      cursor = nextCursor;
+
+      if (page.pageStatus === "SplitRequired") {
+        if (numItems > 1) {
+          numItems = Math.max(1, Math.floor(numItems / 2));
+          maximumBytesRead = MAX_BYTES_PER_PAGE;
+          continue;
+        }
+
+        if (maximumBytesRead === undefined) {
+          // Worst-case fallback: single-row pages are still too large for read cap.
+          // Exit the scan to avoid blocking dashboard reads.
+          return;
+        }
+
+        // Retry the same cursor without a read cap as a final fallback for a single large row.
+        maximumBytesRead = undefined;
+        continue;
+      }
+
+      // Successful full page read: restore default page sizing.
+      numItems = BASE_QUERY_PAGE_SIZE;
+      maximumBytesRead = MAX_BYTES_PER_PAGE;
+    }
+  };
+
+  const scanMemoryState = async (archived: boolean) => {
+    await scanPaginated<any>(
+      (cursor, numItems, maxRead) =>
+        ctx.db
+          .query("crystalMemories")
+          .withIndex("by_user", (q: any) => q.eq("userId", userId).eq("archived", archived))
+          .order("desc")
+          .paginate(
+            maxRead === undefined ? { numItems, cursor } : { numItems, cursor, maximumBytesRead: maxRead }
+          ) as any,
+      (memory) => {
         totals.totalMemories += 1;
 
         if (archived) {
           totals.archivedMemories += 1;
-          continue;
+          return;
         }
 
         totals.activeMemories += 1;
@@ -304,42 +351,23 @@ export async function computeDashboardTotalsFromSource(ctx: any, userId: string)
           totals.lastCaptureStore = store;
         }
       }
+    );
 
-      totals.activeStoreCount = Object.values(totals.activeMemoriesByStore).filter((count) => count > 0).length;
-
-      if (page.isDone) {
-        break;
-      }
-      if (page.pageStatus === "SplitRequired") {
-        throw new Error("Dashboard totals source scan exceeded safe limits; rerun in smaller window");
-      }
-      cursor = page.continueCursor;
-    }
+    totals.activeStoreCount = Object.values(totals.activeMemoriesByStore).filter((count) => count > 0).length;
   };
 
   const scanMessages = async () => {
-    let cursor: string | null = null;
-    while (true) {
-      const page = (await ctx.db
-        .query("crystalMessages")
-        .withIndex("by_user_time", (q: any) => q.eq("userId", userId))
-        .order("desc")
-        .paginate({
-          numItems: BASE_QUERY_PAGE_SIZE,
-          cursor,
-          maximumBytesRead: MAX_BYTES_PER_PAGE,
-        })) as any;
-
-      totals.totalMessages += page.page.length;
-
-      if (page.isDone) {
-        break;
+    await scanPaginated<any>(
+      (cursor, numItems, maxRead) =>
+        ctx.db
+          .query("crystalMessages")
+          .withIndex("by_user_time", (q: any) => q.eq("userId", userId))
+          .order("desc")
+          .paginate(maxRead === undefined ? { numItems, cursor } : { numItems, cursor, maximumBytesRead: maxRead }) as any,
+      () => {
+        totals.totalMessages += 1;
       }
-      if (page.pageStatus === "SplitRequired") {
-        throw new Error("Dashboard totals source scan exceeded safe limits; rerun in smaller window");
-      }
-      cursor = page.continueCursor;
-    }
+    );
   };
 
   await scanMemoryState(false);
