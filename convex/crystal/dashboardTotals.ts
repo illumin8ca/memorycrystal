@@ -51,9 +51,16 @@ const ZERO_COUNTS: DashboardTotalsByStore = {
 const BASE_QUERY_PAGE_SIZE = 200;
 const MAX_BYTES_PER_PAGE = 4_000_000;
 
-function clampCount(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.max(0, Math.floor(value));
+function clampCount(value: unknown): number {
+  const numericValue =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value.trim())
+        : Number.NaN;
+
+  if (!Number.isFinite(numericValue)) return 0;
+  return Math.max(0, Math.floor(numericValue));
 }
 
 function normalizeStore(store: string): MemoryStore | undefined {
