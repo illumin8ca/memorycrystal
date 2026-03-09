@@ -258,29 +258,9 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        <main className="flex-1 px-4 py-5 sm:px-6 lg:ml-56 lg:p-8 pb-24 lg:pb-8 overflow-x-hidden">{children}</main>
+        <main className="flex-1 px-4 py-5 sm:px-6 lg:ml-56 lg:p-8 pb-8 overflow-x-hidden">{children}</main>
       </div>
 
-      {/* Bottom tab bar — mobile only */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40" style={{ backgroundColor: "#0d1820", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-        <ul className="grid" style={{ gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))` }}>
-          {nav.map((item) => {
-            const Icon = item.icon;
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className="min-h-14 px-1 py-2 flex flex-col items-center justify-center text-[10px] font-mono gap-1 transition-colors"
-                  style={{ color: isActive(item.href) ? "#2180d6" : "rgba(255,255,255,0.45)" }}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="truncate max-w-full">{item.label}</span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
 
     </div>
   );

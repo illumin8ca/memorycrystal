@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useQuery } from "convex/react";
+import { useEffect, useState } from "react";
+import { useConvex, useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { useImpersonation } from "../ImpersonationContext";
 
@@ -22,25 +23,83 @@ type MessageRow = {
   timestamp: number;
 };
 
+type DashboardStats = {
+  totalMemories: number | string;
+  totalMessages: number | string;
+  activeStores: number | string;
+  recentActivity: { title: string; store: string; createdAt: number }[];
+};
+
+type DashboardUsage = {
+  memoriesUsed: number | string;
+  memoriesLimit: number | null;
+  tier: string;
+  messageTtlDays: number | string;
+  approximate?: boolean;
+};
+
 export default function DashboardPage() {
   const { asUserId } = useImpersonation();
-  const stats = useQuery(api.crystal.dashboard.getStats, { asUserId });
-  const usage = useQuery(api.crystal.dashboard.getUsage, { asUserId });
+  const convex = useConvex();
   const recentMemories = useQuery(api.crystal.dashboard.listMemories, { limit: 5, asUserId });
   const recentMessages = useQuery(api.crystal.dashboard.listMessages, { limit: 3, asUserId });
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [usage, setUsage] = useState<DashboardUsage | null>(null);
+  const [statsError, setStatsError] = useState<string | null>(null);
+  const [usageError, setUsageError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setStats(null);
+    setStatsError(null);
+    void convex
+      .query(api.crystal.dashboard.getStats, { asUserId })
+      .then((result) => {
+        if (!cancelled) setStats(result);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStats({ totalMemories: "—", totalMessages: "—", activeStores: "—", recentActivity: [] });
+          setStatsError("Summary unavailable right now.");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [convex, asUserId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setUsage(null);
+    setUsageError(null);
+    void convex
+      .query(api.crystal.dashboard.getUsage, { asUserId })
+      .then((result) => {
+        if (!cancelled) setUsage(result);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setUsage({ memoriesUsed: "—", memoriesLimit: null, tier: "unknown", messageTtlDays: "—", approximate: true });
+          setUsageError("Usage unavailable right now.");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [convex, asUserId]);
 
   const cards = [
     {
       label: "TOTAL MEMORIES",
       value: stats ? String(stats.totalMemories) : "Loading...",
       sub: usage
-        ? `${usage.memoriesUsed} / ${usage.memoriesLimit === null ? "∞" : usage.memoriesLimit} memories used`
+        ? `${usage.memoriesUsed} / ${usage.memoriesLimit === null ? "∞" : usage.memoriesLimit} memories used${usage.approximate ? " (approx)" : ""}`
         : "Loading...",
     },
     {
       label: "MESSAGES CAPTURED",
       value: stats ? String(stats.totalMessages) : "Loading...",
-      sub: usage ? `${usage.tier.toUpperCase()} • ${usage.messageTtlDays}-day retention` : "Loading...",
+      sub: usage ? `${String(usage.tier).toUpperCase()} • ${usage.messageTtlDays}-day retention` : "Loading...",
     },
     {
       label: "MEMORY STORES",
@@ -69,7 +128,13 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {usage && usage.memoriesLimit !== null && usage.memoriesUsed / usage.memoriesLimit >= 0.8 ? (
+      {(statsError || usageError) && (
+        <div className="mb-6 bg-surface border border-amber-400/30 p-4 text-xs text-amber-100">
+          {[statsError, usageError].filter(Boolean).join(" ")}
+        </div>
+      )}
+
+      {usage && typeof usage.memoriesUsed === "number" && usage.memoriesLimit !== null && usage.memoriesUsed / usage.memoriesLimit >= 0.8 ? (
         <div className="mb-8 sm:mb-10 bg-surface border border-accent/50 p-4 sm:p-5">
           <p className="text-primary text-sm">You&apos;re using {usage.memoriesUsed} of {usage.memoriesLimit} memories.</p>
           <p className="text-secondary text-xs mt-1 mb-3">Upgrade now to avoid capture interruptions.</p>
