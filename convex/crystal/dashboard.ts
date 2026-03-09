@@ -20,6 +20,8 @@ const MESSAGE_TTL_DAYS: Record<UserTier, number> = {
 };
 
 const PAGE_SIZE = 25;
+const DASHBOARD_MEMORY_SAMPLE_LIMIT = 500;
+const DASHBOARD_MESSAGE_SAMPLE_LIMIT = 5000;
 
 async function isAllowedUser(ctx: any, userId: string): Promise<boolean> {
   const profiles = await ctx.db
@@ -57,32 +59,41 @@ export const getStats = query({
       };
     }
 
-    const allMemories = await ctx.db
+    const sampledMemories = await ctx.db
       .query("crystalMemories")
       .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
-      .collect();
+      .take(DASHBOARD_MEMORY_SAMPLE_LIMIT + 1);
 
-    const totalMessages = await ctx.db
+    const sampledMessages = await ctx.db
       .query("crystalMessages")
       .withIndex("by_user_time", (q) => q.eq("userId", userId))
-      .collect();
+      .take(DASHBOARD_MESSAGE_SAMPLE_LIMIT + 1);
 
-    const recent = [...allMemories]
+    const boundedMemories = sampledMemories.length > DASHBOARD_MEMORY_SAMPLE_LIMIT;
+    const boundedMessages = sampledMessages.length > DASHBOARD_MESSAGE_SAMPLE_LIMIT;
+    const memories = sampledMemories.slice(0, DASHBOARD_MEMORY_SAMPLE_LIMIT);
+    const messages = sampledMessages.slice(0, DASHBOARD_MESSAGE_SAMPLE_LIMIT);
+
+    const recent = [...memories]
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, 5)
       .map((m) => ({ title: m.title, store: m.store, createdAt: m.createdAt }));
 
     const byStore: Record<string, number> = {};
-    for (const m of allMemories) {
+    for (const m of memories) {
       byStore[m.store] = (byStore[m.store] ?? 0) + 1;
     }
 
     return {
-      totalMemories: allMemories.length,
-      totalMessages: totalMessages.length,
+      totalMemories: memories.length,
+      totalMessages: messages.length,
       memoriesByStore: byStore,
       activeStores: Object.keys(byStore).length,
       recentActivity: recent,
+      statsNote:
+        boundedMemories || boundedMessages
+          ? `Stats are approximate; sampled at ${DASHBOARD_MEMORY_SAMPLE_LIMIT} memories and ${DASHBOARD_MESSAGE_SAMPLE_LIMIT} messages.`
+          : undefined,
     };
   },
 });
