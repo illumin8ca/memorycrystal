@@ -13,3 +13,4 @@ secrets/
 *.pem
 plugin/openclaw-hook.json
 .serena
+.DS_Store
