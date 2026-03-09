@@ -10,6 +10,7 @@ const isProtectedRoute = createRouteMatcher([
   "/messages(.*)",
   "/settings(.*)",
   "/checkpoints(.*)",
+  "/usage(.*)",
 ]);
 
 const isAuthRoute = createRouteMatcher(["/login", "/signup"]);
