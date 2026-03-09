@@ -4,9 +4,24 @@ import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { useImpersonation } from "../ImpersonationContext";
+import { useInView } from "../../hooks/useInView";
 
 const stores = ["ALL", "SENSORY", "EPISODIC", "SEMANTIC", "PROCEDURAL", "PROSPECTIVE"];
 const PAGE_SIZE = 25;
+
+type MemoryRow = {
+  _id: string;
+  title: string;
+  content: string;
+  store: string;
+  createdAt?: number;
+  tags: string[];
+};
+
+type MemoryQueryRow = MemoryRow & {
+  totalCount?: number;
+  statsNote?: string;
+};
 
 const formatDate = (value?: number) => {
   if (!value) return "Unknown date";
@@ -24,8 +39,17 @@ export default function MemoriesPage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
+  const [rows, setRows] = useState<MemoryRow[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
   const { asUserId } = useImpersonation();
+
+  const { ref, isInView } = useInView<HTMLDivElement>({
+    rootMargin: "250px 0px",
+    threshold: 0.1,
+    once: false,
+  });
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -35,11 +59,15 @@ export default function MemoriesPage() {
     return () => clearTimeout(timeout);
   }, [searchInput]);
 
-  // Reset to page 0 when filters/search change.
+  // Reset pagination state when filters/search/impersonation changes.
   useEffect(() => {
     setPage(0);
+    setRows([]);
+    setTotalCount(0);
+    setHasMore(true);
   }, [activeStore, search, asUserId]);
-  const memories = useQuery(api.crystal.dashboard.listMemories, {
+
+  const rawPage = useQuery(api.crystal.dashboard.listMemories, {
     asUserId,
     store: activeStore === "ALL" ? undefined : activeStore.toLowerCase(),
     limit: PAGE_SIZE,
@@ -47,21 +75,60 @@ export default function MemoriesPage() {
     search: search || undefined,
   });
 
-  const totalCount = memories?.[0]?.totalCount ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  useEffect(() => {
+    if (rawPage === undefined) return;
+
+    const pageRows = rawPage.map((memory) => {
+      const row = memory as MemoryQueryRow;
+      return {
+        _id: row._id,
+        title: row.title,
+        content: row.content,
+        store: row.store,
+        createdAt: row.createdAt,
+        tags: row.tags,
+      } as MemoryRow;
+    });
+
+    const pageTotal = rawPage[0]?.totalCount;
+    if (typeof pageTotal === "number") {
+      setTotalCount(pageTotal);
+    }
+
+    setRows((prev) => {
+      if (page === 0) {
+        return pageRows;
+      }
+
+      if (pageRows.length === 0) {
+        return prev;
+      }
+
+      const existing = new Set(prev.map((row) => row._id));
+      return [...prev, ...pageRows.filter((row) => !existing.has(row._id))];
+    });
+
+    setHasMore(pageRows.length === PAGE_SIZE);
+  }, [rawPage, page]);
+
+  const isLoading = rawPage === undefined;
+  const isLoadingFirstPage = page === 0 && isLoading;
+  const isLoadingMore = page > 0 && isLoading;
   const isSearching = search.length > 0;
 
-  const visible = memories ?? [];
+  useEffect(() => {
+    if (!isInView || !hasMore || isLoading || rows.length === 0) return;
 
-  type MemoryRow = (typeof visible)[number];
+    setPage((p) => p + 1);
+  }, [isInView, hasMore, isLoading, rows.length]);
+
+  const canShowCount = page > 0 || rawPage !== undefined;
 
   return (
     <div>
       <h1 className="font-mono font-bold text-xl sm:text-2xl text-primary mb-2 tracking-wide break-words">
         MEMORY VAULT
-        {memories !== undefined && (
-          <span className="text-white/30 font-normal text-base ml-2">({totalCount})</span>
-        )}
+        {canShowCount ? <span className="text-white/30 font-normal text-base ml-2">({totalCount})</span> : null}
       </h1>
       <p className="text-secondary text-sm mb-4">Search and review your crystallized memories.</p>
 
@@ -93,14 +160,14 @@ export default function MemoriesPage() {
       </div>
 
       <div className="space-y-3 mb-6">
-        {!memories ? (
+        {isLoadingFirstPage ? (
           <div className="text-secondary text-sm px-2">Loading...</div>
-        ) : visible.length === 0 && isSearching ? (
+        ) : rows.length === 0 && isSearching ? (
           <p className="text-secondary text-sm text-center py-12 font-mono">No memories match &quot;{search}&quot;</p>
-        ) : visible.length === 0 ? (
+        ) : rows.length === 0 ? (
           <p className="text-secondary text-sm text-center py-12 font-mono">No memories yet.</p>
         ) : (
-          visible.map((m: MemoryRow) => (
+          rows.map((m) => (
             <div key={m._id} className="bg-surface border border-white/[0.07] p-4 sm:p-5 min-w-0">
               <div className="flex items-start justify-between gap-3 mb-2">
                 <p className="text-primary text-sm font-medium break-words leading-snug">{m.title || "Untitled"}</p>
@@ -111,7 +178,7 @@ export default function MemoriesPage() {
               <p className="text-secondary text-xs leading-relaxed mb-3 break-words line-clamp-3">{m.content}</p>
               <div className="flex items-center gap-3 flex-wrap">
                 <span className="text-white/30 text-[11px] font-mono">{formatDate(m.createdAt)}</span>
-                {m.tags?.slice(0, 5).map((t: string) => (
+                {m.tags.slice(0, 5).map((t) => (
                   <span key={t} className="text-[10px] font-mono text-accent/60 border border-accent/20 px-1.5 py-0.5">
                     {t}
                   </span>
@@ -122,27 +189,11 @@ export default function MemoriesPage() {
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between gap-4 mt-4">
-          <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            className="btn-secondary px-4 py-2 text-xs font-mono disabled:opacity-30"
-          >
-            ← PREV
-          </button>
-          <span className="text-secondary text-xs font-mono">
-            Page {page + 1} of {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={page >= totalPages - 1}
-            className="btn-secondary px-4 py-2 text-xs font-mono disabled:opacity-30"
-          >
-            NEXT →
-          </button>
-        </div>
-      )}
+      {isLoadingMore ? (
+        <div className="text-secondary text-sm px-2 py-3 text-center">Loading more memories…</div>
+      ) : null}
+
+      {rows.length > 0 ? <div ref={ref} className="h-8 w-full" aria-hidden="true" /> : null}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { useImpersonation } from "../ImpersonationContext";
+import { useInView } from "../../hooks/useInView";
 
 const PAGE_SIZE = 25;
 const roles = ["ALL", "USER", "AI"];
@@ -18,12 +19,29 @@ const formatTime = (value: number) =>
     hour12: false,
   });
 
+type MessageRow = {
+  _id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  timestamp: number;
+  sessionKey?: string;
+};
+
 export default function MessagesPage() {
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
+  const [rows, setRows] = useState<MessageRow[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const { asUserId } = useImpersonation();
+
+  const { ref, isInView } = useInView<HTMLDivElement>({
+    rootMargin: "250px 0px",
+    threshold: 0.1,
+    once: false,
+  });
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -36,12 +54,15 @@ export default function MessagesPage() {
   const convexRole =
     roleFilter === "USER" ? "user" : roleFilter === "AI" ? "assistant" : undefined;
 
-  // Reset to page 0 when filters/search change.
+  // Reset pagination state when filters/search/impersonation changes.
   useEffect(() => {
     setPage(0);
+    setRows([]);
+    setTotalCount(0);
+    setHasMore(true);
   }, [roleFilter, search, asUserId]);
 
-  const messages = useQuery(api.crystal.dashboard.listMessages, {
+  const rawPage = useQuery(api.crystal.dashboard.listMessages, {
     asUserId,
     limit: PAGE_SIZE,
     page,
@@ -49,18 +70,56 @@ export default function MessagesPage() {
     search: search || undefined,
   });
 
-  const totalCount = messages?.[0]?.totalCount ?? 0;
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  useEffect(() => {
+    if (rawPage === undefined) return;
+
+    const cleanRows = rawPage.map((row) => ({
+      _id: row._id,
+      role: row.role,
+      content: row.content,
+      timestamp: row.timestamp,
+      sessionKey: row.sessionKey,
+    }));
+
+    const pageTotal = rawPage[0]?.totalCount;
+    if (typeof pageTotal === "number") {
+      setTotalCount(pageTotal);
+    }
+
+    setRows((prev) => {
+      if (page === 0) {
+        return cleanRows;
+      }
+
+      if (cleanRows.length === 0) {
+        return prev;
+      }
+
+      const existing = new Set(prev.map((row) => row._id));
+      return [...prev, ...cleanRows.filter((row) => !existing.has(row._id))];
+    });
+
+    setHasMore(cleanRows.length === PAGE_SIZE);
+  }, [rawPage, page]);
+
+  const isLoading = rawPage === undefined;
+  const isLoadingFirstPage = page === 0 && isLoading;
+  const isLoadingMore = page > 0 && isLoading;
   const isSearching = search.length > 0;
 
-  type MessageRow = NonNullable<typeof messages>[number];
-  const visible: MessageRow[] = messages ?? [];
+  useEffect(() => {
+    if (!isInView || !hasMore || isLoading || rows.length === 0) return;
+
+    setPage((p) => p + 1);
+  }, [isInView, hasMore, isLoading, rows.length]);
+
+  const canShowCount = page > 0 || rawPage !== undefined;
 
   return (
     <div>
       <h1 className="font-mono font-bold text-xl sm:text-2xl text-primary mb-2 tracking-wide">
         SHORT-TERM MEMORY
-        {messages !== undefined && <span className="text-white/30 font-normal text-base ml-2">({totalCount})</span>}
+        {canShowCount && <span className="text-white/30 font-normal text-base ml-2">({totalCount})</span>}
       </h1>
       <p className="text-secondary text-sm mb-4">Conversation messages captured from your AI sessions.</p>
 
@@ -90,14 +149,14 @@ export default function MessagesPage() {
       </div>
 
       <div className="space-y-2 mb-6">
-        {!messages ? (
+        {isLoadingFirstPage ? (
           <div className="text-secondary text-sm px-2">Loading...</div>
-        ) : visible.length === 0 && isSearching ? (
+        ) : rows.length === 0 && isSearching ? (
           <p className="text-secondary text-sm text-center py-12 font-mono">No messages match &quot;{search}&quot;</p>
-        ) : visible.length === 0 ? (
+        ) : rows.length === 0 ? (
           <p className="text-secondary text-sm text-center py-12 font-mono">No messages yet.</p>
         ) : (
-          visible.map((m) => (
+          rows.map((m) => (
             <div key={m._id} className="bg-surface border border-white/[0.07] p-3 sm:p-4 min-w-0">
               <div className="flex items-center gap-3 mb-2 flex-wrap">
                 <span
@@ -107,7 +166,7 @@ export default function MessagesPage() {
                       : "text-secondary border-white/[0.14]"
                   }`}
                 >
-                  {m.role === "user" ? "USER" : m.role === "assistant" ? "AI" : m.role?.toUpperCase()}
+                  {m.role === "user" ? "USER" : m.role === "assistant" ? "AI" : m.role.toUpperCase()}
                 </span>
                 <span className="text-white/30 text-[11px] font-mono">{formatTime(m.timestamp)}</span>
                 {m.sessionKey && (
@@ -120,27 +179,9 @@ export default function MessagesPage() {
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between gap-4 mt-4">
-          <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            className="btn-secondary px-4 py-2 text-xs font-mono disabled:opacity-30"
-          >
-            ← PREV
-          </button>
-          <span className="text-secondary text-xs font-mono">
-            Page {page + 1} of {totalPages}
-          </span>
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={page >= totalPages - 1}
-            className="btn-secondary px-4 py-2 text-xs font-mono disabled:opacity-30"
-          >
-            NEXT →
-          </button>
-        </div>
-      )}
+      {isLoadingMore ? <div className="text-secondary text-sm px-2 py-3 text-center">Loading more messages…</div> : null}
+
+      {rows.length > 0 ? <div ref={ref} className="h-8 w-full" aria-hidden="true" /> : null}
     </div>
   );
 }
