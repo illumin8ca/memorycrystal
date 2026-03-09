@@ -31,8 +31,9 @@ const DASHBOARD_MESSAGE_SAMPLE_LIMIT = 200;
 const LIST_MEMORIES_SCAN_LIMIT = 500;
 const LIST_MESSAGES_SCAN_LIMIT = 500;
 // Maximum rows to scan when counting memories for usage display.
-// Even for unlimited users, we cap the scan to stay under read limits.
-const USAGE_COUNT_SCAN_LIMIT = 800;
+// crystalMemories rows include large embeddings, so keep this conservative.
+// 500 rows is ~7MB, leaving ample headroom for profile + query overhead.
+const USAGE_COUNT_SCAN_LIMIT = 500;
 
 async function isAllowedUser(ctx: any, userId: string): Promise<boolean> {
   const profiles = await ctx.db
@@ -228,41 +229,49 @@ export const getUsage = query({
     const latestProfile = profiles.sort((a: any, b: any) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
     const tier = deriveTier(latestProfile);
 
-    // Count memories inline with a safe scan cap to stay under 16MB read limit.
-    // Each memory row is ~14KB (mainly the 1536-dim embedding). USAGE_COUNT_SCAN_LIMIT
-    // rows × 14KB ≈ 11MB, leaving headroom for the profile read above.
-    const scanCap = USAGE_COUNT_SCAN_LIMIT;
-
-    const active = await ctx.db
-      .query("crystalMemories")
-      .withIndex("by_user", (q: any) => q.eq("userId", userId).eq("archived", false))
-      .take(scanCap + 1);
-
     let approximate = false;
-    let memoriesUsed: number;
+    let memoriesUsed = 0;
 
-    if (active.length > scanCap) {
-      // User has more memories than we can safely scan. Report the cap.
-      memoriesUsed = scanCap;
-      approximate = true;
-    } else {
-      // Try to also count archived, within remaining budget.
-      const remaining = Math.max(scanCap - active.length, 0);
-      if (remaining > 0) {
-        const archived = await ctx.db
-          .query("crystalMemories")
-          .withIndex("by_user", (q: any) => q.eq("userId", userId).eq("archived", true))
-          .take(remaining + 1);
-        if (archived.length > remaining) {
-          memoriesUsed = active.length + remaining;
-          approximate = true;
-        } else {
-          memoriesUsed = active.length + archived.length;
-        }
+    try {
+      // Count memories inline with a conservative cap so this query never takes down
+      // the entire dashboard when a user has many embedding-heavy rows.
+      const scanCap = USAGE_COUNT_SCAN_LIMIT;
+
+      const active = await ctx.db
+        .query("crystalMemories")
+        .withIndex("by_user", (q: any) => q.eq("userId", userId).eq("archived", false))
+        .take(scanCap + 1);
+
+      if (active.length > scanCap) {
+        memoriesUsed = scanCap;
+        approximate = true;
       } else {
         memoriesUsed = active.length;
-        approximate = true;
+
+        // Keep archived sampling tighter than active to preserve read headroom.
+        const archivedCap = Math.min(scanCap - active.length, Math.floor(scanCap / 2));
+        if (archivedCap > 0) {
+          const archived = await ctx.db
+            .query("crystalMemories")
+            .withIndex("by_user", (q: any) => q.eq("userId", userId).eq("archived", true))
+            .take(archivedCap + 1);
+
+          if (archived.length > archivedCap) {
+            memoriesUsed += archivedCap;
+            approximate = true;
+          } else {
+            memoriesUsed += archived.length;
+            // If we had to clamp archived scan, always mark approximate.
+            if (archivedCap < scanCap - active.length) {
+              approximate = true;
+            }
+          }
+        }
       }
+    } catch (_err) {
+      // Defensive fallback: usage can be approximate, but dashboard must never fail hard.
+      memoriesUsed = 0;
+      approximate = true;
     }
 
     return {
