@@ -73,21 +73,46 @@ export async function POST(request: NextRequest) {
   const productId =
     subscription.productId ?? subscription.product_id ?? subscription.product?.id ?? undefined;
 
-  const profile =
-    (polarCustomerId
+  const profileBySubscription =
+    polarSubscriptionId
+      ? await rawClient.query(api.crystal.userProfiles.getByPolarSubscription, {
+          polarSubscriptionId: String(polarSubscriptionId),
+          webhookToken: secret,
+        })
+      : null;
+
+  const profileByCustomer =
+    polarCustomerId
       ? await rawClient.query(api.crystal.userProfiles.getByPolarCustomer, {
           polarCustomerId: String(polarCustomerId),
           webhookToken: secret,
         })
-      : null);
+      : null;
+
+  const profile = profileBySubscription ?? profileByCustomer;
 
   if (!profile?._id) {
     return NextResponse.json({ skipped: "no matching profile" });
   }
 
+  const incomingSubscriptionId = polarSubscriptionId ? String(polarSubscriptionId) : undefined;
+  const existingSubscriptionId = profile.polarSubscriptionId;
+
+  const isPotentiallyStaleCancellation =
+    (subscriptionStatus === "cancelled" || subscriptionStatus === "inactive") &&
+    !!incomingSubscriptionId &&
+    !!existingSubscriptionId &&
+    incomingSubscriptionId !== existingSubscriptionId;
+
+  if (isPotentiallyStaleCancellation) {
+    return NextResponse.json({
+      skipped: "stale cancellation/inactive event for previous subscription",
+    });
+  }
+
   await rawClient.mutation(api.crystal.userProfiles.updateSubscription, {
     userProfileId: profile._id,
-    polarSubscriptionId: polarSubscriptionId ? String(polarSubscriptionId) : undefined,
+    polarSubscriptionId: incomingSubscriptionId,
     polarCustomerId: polarCustomerId ? String(polarCustomerId) : undefined,
     subscriptionStatus,
     plan: productId ? String(productId) : undefined,

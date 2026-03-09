@@ -242,6 +242,19 @@ export const getByPolarCustomer = query({
   },
 });
 
+export const getByPolarSubscription = query({
+  args: { polarSubscriptionId: v.string(), webhookToken: v.string() },
+  handler: async (ctx, { polarSubscriptionId, webhookToken }) => {
+    if (!process.env.POLAR_WEBHOOK_SECRET || webhookToken !== process.env.POLAR_WEBHOOK_SECRET) {
+      throw new Error("Unauthorized");
+    }
+    return ctx.db
+      .query("crystalUserProfiles")
+      .withIndex("by_polar_subscription", (q) => q.eq("polarSubscriptionId", polarSubscriptionId))
+      .first();
+  },
+});
+
 export const updateSubscription = mutation({
   args: {
     userProfileId: v.id("crystalUserProfiles"),
