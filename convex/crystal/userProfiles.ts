@@ -309,6 +309,30 @@ export const updateSubscription = mutation({
   },
 });
 
+export const backfillMissingRoles = mutation({
+  args: { webhookToken: v.string() },
+  handler: async (ctx, { webhookToken }) => {
+    if (!process.env.POLAR_WEBHOOK_SECRET || webhookToken !== process.env.POLAR_WEBHOOK_SECRET) {
+      throw new Error("Unauthorized");
+    }
+
+    const profiles = await ctx.db.query("crystalUserProfiles").collect();
+    let patched = 0;
+    for (const profile of profiles) {
+      const normalizedRoles = normalizeRoles((profile as any).roles);
+      const missingRoles = !(profile as any).roles || (profile as any).roles.length === 0;
+      if (missingRoles) {
+        await ctx.db.patch(profile._id, {
+          roles: normalizedRoles,
+          updatedAt: Date.now(),
+        });
+        patched += 1;
+      }
+    }
+    return { ok: true, scanned: profiles.length, patched };
+  },
+});
+
 
 export const upsertSubscriptionByUser = mutation({
   args: {

@@ -269,7 +269,7 @@ export default defineSchema({
       v.literal("unlimited")
     ),
     plan: v.optional(v.string()),
-    roles: v.array(v.union(v.literal("subscriber"), v.literal("manager"), v.literal("admin"))),
+    roles: v.optional(v.array(v.union(v.literal("subscriber"), v.literal("manager"), v.literal("admin")))),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
