@@ -269,6 +269,7 @@ export default defineSchema({
       v.literal("unlimited")
     ),
     plan: v.optional(v.string()),
+    roles: v.array(v.union(v.literal("subscriber"), v.literal("manager"), v.literal("admin"))),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -299,6 +300,11 @@ export default defineSchema({
     keyHash: v.string(),
     action: v.string(), // "capture", "recall", "forget", "checkpoint", etc.
     ts: v.number(),
+    actorUserId: v.optional(v.string()),
+    effectiveUserId: v.optional(v.string()),
+    targetUserId: v.optional(v.string()),
+    targetType: v.optional(v.string()),
+    targetId: v.optional(v.string()),
     meta: v.optional(v.string()), // JSON string with extra info (memory id, query, etc.)
   })
     .index("by_user", ["userId", "ts"])

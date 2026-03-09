@@ -1,10 +1,11 @@
 import { internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { v } from "convex/values";
 import { stableUserId } from "./auth";
+import { normalizeRoles } from "./permissions";
 
 export type UserTier = "free" | "starter" | "pro" | "ultra" | "unlimited";
 
-const UNLIMITED_EMAILS = ["andy@illumin8.ca", "admin@illumin8.ca", "andydoucet@gmail.com"];
+const UNLIMITED_EMAILS = ["andy@illumin8.ca", "admin@illumin8.ca", "admin@memorycrystal.ai", "andydoucet@gmail.com"];
 const PRO_PRODUCT_ID = "f78ee82b-719e-4de8-850a-3e9eea3db4b0";
 const ULTRA_PRODUCT_ID = "9d59dd76-5026-4079-95f7-bf594f71121b";
 
@@ -45,15 +46,35 @@ async function getOrCreateProfileForUser(
   const existing: any = pickLatestProfile(existingProfiles);
 
   if (existing) {
+    const now = Date.now();
+    const normalizedRoles = normalizeRoles(existing.roles);
+    const needsRolePatch = !existing.roles || existing.roles.length === 0;
+
     if (isUnlimitedEmail && existing.subscriptionStatus !== "unlimited") {
       await ctx.db.patch(existing._id, {
         subscriptionStatus: "unlimited",
         plan: "unlimited",
-        updatedAt: Date.now(),
+        roles: normalizedRoles,
+        updatedAt: now,
       });
-      return { ...existing, subscriptionStatus: "unlimited", plan: "unlimited", updatedAt: Date.now() };
+      return {
+        ...existing,
+        subscriptionStatus: "unlimited",
+        plan: "unlimited",
+        roles: normalizedRoles,
+        updatedAt: now,
+      };
     }
-    return existing;
+
+    if (needsRolePatch) {
+      await ctx.db.patch(existing._id, {
+        roles: normalizedRoles,
+        updatedAt: now,
+      });
+      return { ...existing, roles: normalizedRoles, updatedAt: now };
+    }
+
+    return { ...existing, roles: normalizedRoles };
   }
 
   const now = Date.now();
@@ -61,6 +82,7 @@ async function getOrCreateProfileForUser(
     userId,
     subscriptionStatus: isUnlimitedEmail ? "unlimited" : "inactive",
     plan: isUnlimitedEmail ? "unlimited" : undefined,
+    roles: ["subscriber"],
     createdAt: now,
     updatedAt: now,
   });
@@ -98,6 +120,7 @@ export const grantUnlimitedByUserId = internalMutation({
         userId,
         subscriptionStatus: "unlimited",
         plan: "unlimited",
+        roles: ["subscriber"],
         createdAt: now,
         updatedAt: now,
       });

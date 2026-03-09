@@ -2,6 +2,7 @@ import { httpAction, internalAction, internalMutation, internalQuery } from "../
 import type { ActionCtx } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
+import { type UserTier, TIER_LIMITS } from "../../shared/tierLimits";
 
 const memoryStore = v.union(
   v.literal("sensory"),
@@ -41,30 +42,31 @@ const CATEGORY_VALUES: MemoryCategory[] = [
   "conversation",
 ];
 
-type UserTier = "free" | "starter" | "pro" | "ultra" | "unlimited";
+type MemoryStore = "sensory" | "episodic" | "semantic" | "procedural" | "prospective";
+type MemoryCategory = "decision" | "lesson" | "person" | "rule" | "event" | "fact" | "goal" | "workflow" | "conversation";
 
 const STORAGE_LIMITS: Record<UserTier, number | null> = {
-  free: 500,
-  starter: 10_000,
-  pro: 25_000,
-  ultra: null,
-  unlimited: null,
+  free: TIER_LIMITS.free.memories,
+  starter: TIER_LIMITS.starter.memories,
+  pro: TIER_LIMITS.pro.memories,
+  ultra: TIER_LIMITS.ultra.memories,
+  unlimited: TIER_LIMITS.unlimited.memories,
 };
 
 const MESSAGE_LIMITS: Record<UserTier, number | null> = {
-  free: 500,
-  starter: 5_000,
-  pro: 25_000,
-  ultra: null,
-  unlimited: null,
+  free: TIER_LIMITS.free.stmMessages,
+  starter: TIER_LIMITS.starter.stmMessages,
+  pro: TIER_LIMITS.pro.stmMessages,
+  ultra: TIER_LIMITS.ultra.stmMessages,
+  unlimited: TIER_LIMITS.unlimited.stmMessages,
 };
 
 const MESSAGE_TTL_DAYS: Record<UserTier, number> = {
-  free: 30,
-  starter: 60,
-  pro: 90,
-  ultra: 365,
-  unlimited: 365,
+  free: TIER_LIMITS.free.stmTtlDays ?? 30,
+  starter: TIER_LIMITS.starter.stmTtlDays ?? 60,
+  pro: TIER_LIMITS.pro.stmTtlDays ?? 90,
+  ultra: TIER_LIMITS.ultra.stmTtlDays ?? 365,
+  unlimited: TIER_LIMITS.unlimited.stmTtlDays ?? 365,
 };
 
 const json = (data: unknown, status = 200) =>
@@ -427,10 +429,33 @@ async function requireAuth(ctx: ActionCtx, request: Request): Promise<{ userId: 
   return { userId: keyRecord.userId, key: keyRecord, keyHash };
 }
 
-async function auditLog(ctx: ActionCtx, userId: string, keyHash: string, action: string, meta?: object) {
+type AuditActorContext = {
+  actorUserId?: string;
+  effectiveUserId?: string;
+  targetUserId?: string;
+  targetType?: string;
+  targetId?: string;
+};
+
+async function auditLog(
+  ctx: ActionCtx,
+  userId: string,
+  keyHash: string,
+  action: string,
+  meta?: object,
+  actor?: AuditActorContext,
+) {
   try {
     await ctx.runMutation(internal.crystal.mcp.writeAuditLog, {
-      userId, keyHash, action, ts: Date.now(),
+      userId,
+      keyHash,
+      action,
+      ts: Date.now(),
+      actorUserId: actor?.actorUserId,
+      effectiveUserId: actor?.effectiveUserId,
+      targetUserId: actor?.targetUserId,
+      targetType: actor?.targetType,
+      targetId: actor?.targetId,
       meta: meta ? JSON.stringify(meta) : undefined,
     });
   } catch { /* never let audit logging break the request */ }
@@ -442,6 +467,11 @@ export const writeAuditLog = internalMutation({
     keyHash: v.string(),
     action: v.string(),
     ts: v.number(),
+    actorUserId: v.optional(v.string()),
+    effectiveUserId: v.optional(v.string()),
+    targetUserId: v.optional(v.string()),
+    targetType: v.optional(v.string()),
+    targetId: v.optional(v.string()),
     meta: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
