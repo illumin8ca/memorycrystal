@@ -7,11 +7,16 @@ import { internal } from "../_generated/api";
 const DASHBOARD_AUDIT_KEY_HASH = "dashboard";
 
 async function getLatestProfileByUserId(ctx: any, userId: string) {
-  const profiles = await ctx.db
-    .query("crystalUserProfiles")
-    .withIndex("by_user", (q: any) => q.eq("userId", userId))
-    .collect();
-  return profiles.sort((a: any, b: any) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0] ?? null;
+  try {
+    const profiles = await ctx.db
+      .query("crystalUserProfiles")
+      .withIndex("by_user", (q: any) => q.eq("userId", userId))
+      .collect();
+    return profiles.sort((a: any, b: any) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0] ?? null;
+  } catch {
+    // If schema/index isn't available yet, fail closed and treat as no profile.
+    return null;
+  }
 }
 
 async function getActorRoleState(ctx: any, actorUserId: string) {
@@ -35,11 +40,20 @@ async function audit(ctx: any, actorUserId: string, action: string, meta?: Recor
   });
 }
 
+async function getActiveSessionByActor(ctx: any, actorUserId: string) {
+  try {
+    return await ctx.db
+      .query("crystalImpersonationSessions")
+      .withIndex("by_actor_active", (q: any) => q.eq("actorUserId", actorUserId).eq("active", true))
+      .first();
+  } catch {
+    // If table/index isn't available yet in an environment, disable impersonation gracefully.
+    return null;
+  }
+}
+
 export async function resolveEffectiveUserId(ctx: any, actorUserId: string, requestedAsUserId?: string | null) {
-  const active = await ctx.db
-    .query("crystalImpersonationSessions")
-    .withIndex("by_actor_active", (q: any) => q.eq("actorUserId", actorUserId).eq("active", true))
-    .first();
+  const active = await getActiveSessionByActor(ctx, actorUserId);
 
   if (!active) return actorUserId;
 
@@ -53,22 +67,23 @@ export async function resolveEffectiveUserId(ctx: any, actorUserId: string, requ
 export const getImpersonationState = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return { canImpersonate: false, activeSession: null };
+    try {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) return { canImpersonate: false, actorRoles: [], activeSession: null };
 
-    const actorUserId = stableUserId(identity.subject);
-    const { actorRoles, canImpersonate } = await getActorRoleState(ctx, actorUserId);
+      const actorUserId = stableUserId(identity.subject);
+      const { actorRoles, canImpersonate } = await getActorRoleState(ctx, actorUserId);
+      const activeSession = await getActiveSessionByActor(ctx, actorUserId);
 
-    const activeSession = await ctx.db
-      .query("crystalImpersonationSessions")
-      .withIndex("by_actor_active", (q) => q.eq("actorUserId", actorUserId).eq("active", true))
-      .first();
-
-    return {
-      canImpersonate,
-      actorRoles,
-      activeSession,
-    };
+      return {
+        canImpersonate,
+        actorRoles,
+        activeSession,
+      };
+    } catch {
+      // Never let impersonation state take down the dashboard.
+      return { canImpersonate: false, actorRoles: [], activeSession: null };
+    }
   },
 });
 
