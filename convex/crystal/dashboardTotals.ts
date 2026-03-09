@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { internalMutation } from "../_generated/server";
+import { internalMutation, mutation, query } from "../_generated/server";
+import { internal } from "../_generated/api";
 
 export const memoryStoreValues = ["sensory", "episodic", "semantic", "procedural", "prospective"] as const;
 export type MemoryStore = (typeof memoryStoreValues)[number];
@@ -105,6 +106,12 @@ function normalizeTotals(value: any): DashboardTotalsSnapshot {
     lastCaptureCreatedAt: value?.lastCaptureCreatedAt,
     updatedAt: clampCount(value?.updatedAt),
   };
+}
+
+function requireDashboardTotalsWebhookToken(webhookToken: string) {
+  if (!process.env.POLAR_WEBHOOK_SECRET || webhookToken !== process.env.POLAR_WEBHOOK_SECRET) {
+    throw new Error("Unauthorized");
+  }
 }
 
 function newEmptyTotals(userId: string): DashboardTotalsSnapshot {
@@ -277,59 +284,288 @@ export async function getDashboardTotals(ctx: any, userId: string): Promise<Dash
 }
 
 export async function computeDashboardTotalsFromSource(ctx: any, userId: string): Promise<DashboardTotalsSnapshot> {
-  const activeMemoriesByStore = { ...ZERO_COUNTS };
-  let activeMemories = 0;
-  let archivedMemories = 0;
-  let totalMemories = 0;
-  let lastCaptureMemory: any = undefined;
+  const totals: DashboardTotalsSnapshot = newEmptyTotals(userId);
+  let cursor: string | null = null;
 
-  for await (const memory of ctx.db
-    .query("crystalMemories")
-    .withIndex("by_user", (q: any) => q.eq("userId", userId))) {
-    totalMemories += 1;
-    if (memory.archived) {
-      archivedMemories += 1;
-      continue;
+  while (true) {
+    const page = await ctx.db
+      .query("crystalMemories")
+      .withIndex("by_user", (q: any) => q.eq("userId", userId))
+      .paginate({
+        numItems: 400,
+        cursor,
+        maximumBytesRead: 4_000_000,
+      });
+
+    for (const memory of (page as any).page as Array<any>) {
+      totals.totalMemories += 1;
+      if (memory.archived) {
+        totals.archivedMemories += 1;
+        continue;
+      }
+
+      totals.activeMemories += 1;
+      if (memory.store in totals.activeMemoriesByStore) {
+        totals.activeMemoriesByStore[memory.store as MemoryStore] = clampCount(
+          (totals.activeMemoriesByStore[memory.store as MemoryStore] || 0) + 1,
+        );
+      }
+
+      if (
+        memory.createdAt !== undefined &&
+        (totals.lastCaptureCreatedAt === undefined || memory.createdAt > (totals.lastCaptureCreatedAt ?? Number.NEGATIVE_INFINITY))
+      ) {
+        totals.lastCaptureMemoryId = memory._id;
+        totals.lastCaptureStore = normalizeStore(memory.store);
+        totals.lastCaptureTitle = memory.title;
+        totals.lastCaptureCreatedAt = memory.createdAt;
+      }
     }
 
-    activeMemories += 1;
-    if (memory.store in activeMemoriesByStore) {
-      activeMemoriesByStore[memory.store as MemoryStore] = clampCount(
-        (activeMemoriesByStore[memory.store as MemoryStore] || 0) + 1
-      );
+    if (page.isDone) {
+      break;
     }
 
-    if (
-      memory.createdAt !== undefined &&
-      (!lastCaptureMemory ||
-        memory.createdAt > (lastCaptureMemory.createdAt ?? Number.NEGATIVE_INFINITY))
-    ) {
-      lastCaptureMemory = memory;
+    const nextCursor = (page as any).continueCursor ?? null;
+    if (!nextCursor) {
+      break;
     }
+
+    cursor = nextCursor;
   }
 
-  let totalMessages = 0;
-  for await (const _ of ctx.db
-    .query("crystalMessages")
-    .withIndex("by_user_time", (q: any) => q.eq("userId", userId))) {
-    totalMessages += 1;
+  let messageCursor: string | null = null;
+  while (true) {
+    const page = await ctx.db
+      .query("crystalMessages")
+      .withIndex("by_user_time", (q: any) => q.eq("userId", userId))
+      .paginate({
+        numItems: 400,
+        cursor: messageCursor,
+        maximumBytesRead: 4_000_000,
+      });
+
+    totals.totalMessages += (page.page ?? []).length;
+
+    if (page.isDone) {
+      break;
+    }
+
+    const nextCursor = (page as any).continueCursor ?? null;
+    if (!nextCursor) {
+      break;
+    }
+
+    messageCursor = nextCursor;
   }
 
+  totals.activeStoreCount = Object.values(totals.activeMemoriesByStore).filter((count) => count > 0).length;
+  totals.updatedAt = Date.now();
+
+  return normalizeStorePayload(totals) as DashboardTotalsSnapshot;
+}
+
+const BACKFILL_PAGE_SIZE = 150;
+const BACKFILL_MAX_BYTES = 4_000_000;
+
+function hydrateTotalsFromMemory(totals: DashboardTotalsSnapshot, memory: any): void {
+  totals.totalMemories += 1;
+
+  if (memory.archived) {
+    totals.archivedMemories += 1;
+    return;
+  }
+
+  totals.activeMemories += 1;
+  if (memory.store in totals.activeMemoriesByStore) {
+    totals.activeMemoriesByStore[memory.store as MemoryStore] = clampCount(
+      (totals.activeMemoriesByStore[memory.store as MemoryStore] || 0) + 1,
+    );
+  }
+
+  if (
+    memory.createdAt !== undefined &&
+    (totals.lastCaptureCreatedAt === undefined || memory.createdAt > (totals.lastCaptureCreatedAt ?? Number.NEGATIVE_INFINITY))
+  ) {
+    totals.lastCaptureCreatedAt = memory.createdAt;
+    totals.lastCaptureMemoryId = memory._id;
+    totals.lastCaptureStore = normalizeStore(memory.store);
+    totals.lastCaptureTitle = memory.title;
+  }
+}
+
+function getBackfillAccumulator(args: any, userId: string): DashboardTotalsSnapshot {
   return {
     userId,
-    totalMemories,
-    activeMemories,
-    archivedMemories,
-    totalMessages,
-    activeMemoriesByStore,
-    activeStoreCount: Object.values(activeMemoriesByStore).filter((count) => count > 0).length,
-    lastCaptureMemoryId: lastCaptureMemory?._id,
-    lastCaptureStore: normalizeStore(lastCaptureMemory?.store),
-    lastCaptureTitle: lastCaptureMemory?.title,
-    lastCaptureCreatedAt: lastCaptureMemory?.createdAt,
+    totalMemories: clampCount(args.totalMemories ?? 0),
+    activeMemories: clampCount(args.activeMemories ?? 0),
+    archivedMemories: clampCount(args.archivedMemories ?? 0),
+    totalMessages: clampCount(args.totalMessages ?? 0),
+    activeMemoriesByStore: {
+      sensory: clampCount(args.activeSensory ?? 0),
+      episodic: clampCount(args.activeEpisodic ?? 0),
+      semantic: clampCount(args.activeSemantic ?? 0),
+      procedural: clampCount(args.activeProcedural ?? 0),
+      prospective: clampCount(args.activeProspective ?? 0),
+    },
+    activeStoreCount: 0,
+    lastCaptureMemoryId: args.lastCaptureMemoryId,
+    lastCaptureStore: normalizeStore(args.lastCaptureStore ?? ""),
+    lastCaptureTitle: args.lastCaptureTitle,
+    lastCaptureCreatedAt: args.lastCaptureCreatedAt,
     updatedAt: Date.now(),
   };
 }
+
+export const adminRepairBackfillDashboardTotalsForUser = internalMutation({
+  args: {
+    userId: v.string(),
+    stage: v.union(v.literal("memories"), v.literal("messages")),
+    memoryCursor: v.optional(v.string()),
+    messageCursor: v.optional(v.string()),
+    pageSize: v.optional(v.number()),
+    totalMemories: v.optional(v.number()),
+    activeMemories: v.optional(v.number()),
+    archivedMemories: v.optional(v.number()),
+    totalMessages: v.optional(v.number()),
+    activeSensory: v.optional(v.number()),
+    activeEpisodic: v.optional(v.number()),
+    activeSemantic: v.optional(v.number()),
+    activeProcedural: v.optional(v.number()),
+    activeProspective: v.optional(v.number()),
+    lastCaptureMemoryId: v.optional(v.id("crystalMemories")),
+    lastCaptureStore: v.optional(
+      v.union(
+        v.literal("sensory"),
+        v.literal("episodic"),
+        v.literal("semantic"),
+        v.literal("procedural"),
+        v.literal("prospective"),
+      ),
+    ),
+    lastCaptureTitle: v.optional(v.string()),
+    lastCaptureCreatedAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const pageSize = clampCount(args.pageSize ?? BACKFILL_PAGE_SIZE) || BACKFILL_PAGE_SIZE;
+    const totals = getBackfillAccumulator(args, args.userId);
+
+    if (args.stage === "memories") {
+      const page = await ctx.db
+        .query("crystalMemories")
+        .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
+        .order("desc")
+        .paginate({
+          numItems: pageSize,
+          cursor: args.memoryCursor,
+          maximumBytesRead: BACKFILL_MAX_BYTES,
+        });
+
+      for (const memory of (page as any).page as Array<any>) {
+        hydrateTotalsFromMemory(totals, memory);
+      }
+
+      if (!page.isDone) {
+        const continueCursor = (page as any).continueCursor as string | undefined;
+        if (continueCursor) {
+          await ctx.scheduler.runAfter(0, internal.crystal.dashboardTotals.adminRepairBackfillDashboardTotalsForUser, {
+            userId: args.userId,
+            stage: "memories",
+            memoryCursor: continueCursor,
+            pageSize,
+            totalMemories: totals.totalMemories,
+            activeMemories: totals.activeMemories,
+            archivedMemories: totals.archivedMemories,
+            totalMessages: totals.totalMessages,
+            activeSensory: totals.activeMemoriesByStore.sensory,
+            activeEpisodic: totals.activeMemoriesByStore.episodic,
+            activeSemantic: totals.activeMemoriesByStore.semantic,
+            activeProcedural: totals.activeMemoriesByStore.procedural,
+            activeProspective: totals.activeMemoriesByStore.prospective,
+            lastCaptureMemoryId: totals.lastCaptureMemoryId as string | undefined,
+            lastCaptureStore: totals.lastCaptureStore,
+            lastCaptureTitle: totals.lastCaptureTitle,
+            lastCaptureCreatedAt: totals.lastCaptureCreatedAt,
+          });
+          return { ok: true, userId: args.userId, stage: "memories", status: "running" };
+        }
+      }
+
+      await ctx.scheduler.runAfter(0, internal.crystal.dashboardTotals.adminRepairBackfillDashboardTotalsForUser, {
+        userId: args.userId,
+        stage: "messages",
+        pageSize,
+        totalMemories: totals.totalMemories,
+        activeMemories: totals.activeMemories,
+        archivedMemories: totals.archivedMemories,
+        totalMessages: totals.totalMessages,
+        activeSensory: totals.activeMemoriesByStore.sensory,
+        activeEpisodic: totals.activeMemoriesByStore.episodic,
+        activeSemantic: totals.activeMemoriesByStore.semantic,
+        activeProcedural: totals.activeMemoriesByStore.procedural,
+        activeProspective: totals.activeMemoriesByStore.prospective,
+        lastCaptureMemoryId: totals.lastCaptureMemoryId as string | undefined,
+        lastCaptureStore: totals.lastCaptureStore,
+        lastCaptureTitle: totals.lastCaptureTitle,
+        lastCaptureCreatedAt: totals.lastCaptureCreatedAt,
+      });
+      return { ok: true, userId: args.userId, stage: "messages", status: "running" };
+    }
+
+    const messagePage = await ctx.db
+      .query("crystalMessages")
+      .withIndex("by_user_time", (q: any) => q.eq("userId", args.userId))
+      .order("desc")
+      .paginate({
+        numItems: pageSize,
+        cursor: args.messageCursor,
+        maximumBytesRead: BACKFILL_MAX_BYTES,
+      });
+
+    totals.totalMessages += ((messagePage as any).page?.length ?? 0);
+
+    if (!messagePage.isDone) {
+      const continueCursor = (messagePage as any).continueCursor as string | undefined;
+      if (continueCursor) {
+        await ctx.scheduler.runAfter(0, internal.crystal.dashboardTotals.adminRepairBackfillDashboardTotalsForUser, {
+          userId: args.userId,
+          stage: "messages",
+          pageSize,
+          messageCursor: continueCursor,
+          totalMemories: totals.totalMemories,
+          activeMemories: totals.activeMemories,
+          archivedMemories: totals.archivedMemories,
+          totalMessages: totals.totalMessages,
+          activeSensory: totals.activeMemoriesByStore.sensory,
+          activeEpisodic: totals.activeMemoriesByStore.episodic,
+          activeSemantic: totals.activeMemoriesByStore.semantic,
+          activeProcedural: totals.activeMemoriesByStore.procedural,
+          activeProspective: totals.activeMemoriesByStore.prospective,
+          lastCaptureMemoryId: totals.lastCaptureMemoryId as string | undefined,
+          lastCaptureStore: totals.lastCaptureStore,
+          lastCaptureTitle: totals.lastCaptureTitle,
+          lastCaptureCreatedAt: totals.lastCaptureCreatedAt,
+        });
+        return { ok: true, userId: args.userId, stage: "messages", status: "running" };
+      }
+    }
+
+    totals.activeStoreCount = Object.values(totals.activeMemoriesByStore).filter((count) => count > 0).length;
+    await writeTotals(ctx, args.userId, totals);
+
+    return {
+      ok: true,
+      userId: args.userId,
+      stage: "messages",
+      status: "complete",
+      totalMemories: totals.totalMemories,
+      activeMemories: totals.activeMemories,
+      archivedMemories: totals.archivedMemories,
+      totalMessages: totals.totalMessages,
+      activeStoreCount: totals.activeStoreCount,
+    };
+  },
+});
 
 export const backfillDashboardTotalsForUser = internalMutation({
   args: { userId: v.string() },
@@ -355,10 +591,114 @@ export const backfillAllDashboardTotals = internalMutation({
         continue;
       }
       seen.add(profile.userId);
-      const rebuilt = await computeDashboardTotalsFromSource(ctx, profile.userId);
-      await writeTotals(ctx, profile.userId, rebuilt);
+      await ctx.scheduler.runAfter(0, internal.crystal.dashboardTotals.adminRepairBackfillDashboardTotalsForUser, {
+        userId: profile.userId,
+        stage: "memories",
+      });
       count += 1;
     }
     return { usersProcessed: count };
+  },
+});
+
+export const adminRepairBackfillAllDashboardTotals = mutation({
+  args: { webhookToken: v.string() },
+  handler: async (ctx, { webhookToken }) => {
+    requireDashboardTotalsWebhookToken(webhookToken);
+
+    const users = await ctx.db
+      .query("crystalUserProfiles")
+      .withIndex("by_user")
+      .collect();
+
+    const seen = new Set<string>();
+    let count = 0;
+    for (const profile of users) {
+      if (!profile.userId || seen.has(profile.userId)) {
+        continue;
+      }
+
+      seen.add(profile.userId);
+      await ctx.scheduler.runAfter(0, internal.crystal.dashboardTotals.adminRepairBackfillDashboardTotalsForUser, {
+        userId: profile.userId,
+        stage: "memories",
+      });
+      count += 1;
+    }
+
+    return {
+      ok: true,
+      usersScheduled: count,
+      note: "Backfill workers are running in the background; call this function again to confirm completion.",
+    };
+  },
+});
+
+export const adminListBackfillUsers = query({
+  args: { webhookToken: v.string() },
+  handler: async (ctx, { webhookToken }) => {
+    requireDashboardTotalsWebhookToken(webhookToken);
+
+    const users = await ctx.db
+      .query("crystalUserProfiles")
+      .withIndex("by_user")
+      .collect();
+
+    const seen = new Set<string>();
+    for (const profile of users) {
+      if (!profile.userId) continue;
+      seen.add(profile.userId);
+    }
+
+    return Array.from(seen).sort();
+  },
+});
+
+export const adminGetDashboardTotalsForUser = query({
+  args: {
+    webhookToken: v.string(),
+    userId: v.string(),
+  },
+  handler: async (ctx, { webhookToken, userId }) => {
+    requireDashboardTotalsWebhookToken(webhookToken);
+
+    const rows = await ctx.db
+      .query("crystalDashboardTotals")
+      .withIndex("by_user", (q: any) => q.eq("userId", userId))
+      .collect();
+
+    if (rows.length === 0) {
+      return null;
+    }
+
+    const sorted = rows.sort((a: any, b: any) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+    return normalizeTotals(sorted[0]);
+  },
+});
+
+export const adminListDashboardTotals = query({
+  args: { webhookToken: v.string() },
+  handler: async (ctx, { webhookToken }) => {
+    requireDashboardTotalsWebhookToken(webhookToken);
+
+    const userIds = await ctx.runQuery(internal.crystal.dashboardTotals.adminListBackfillUsers, { webhookToken });
+
+    const rows = await Promise.all(
+      userIds.map(async (userId: string) => {
+        const totals = await getStoredTotals(ctx, userId);
+        return {
+          userId,
+          hasTotals: !!totals,
+          totalMemories: totals?.totalMemories ?? 0,
+          activeMemories: totals?.activeMemories ?? 0,
+          archivedMemories: totals?.archivedMemories ?? 0,
+          totalMessages: totals?.totalMessages ?? 0,
+          activeStoreCount: totals?.activeStoreCount ?? 0,
+          lastCaptureCreatedAt: totals?.lastCaptureCreatedAt,
+        };
+      }),
+    );
+
+    return rows;
   },
 });
