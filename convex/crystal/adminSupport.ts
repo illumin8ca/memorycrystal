@@ -54,7 +54,7 @@ async function getActorForQuery(ctx: any) {
 
   return {
     actorUserId,
-    actorProfile: pickLatestProfile(profiles) ?? { roles: ["subscriber"] },
+    actorProfile: (pickLatestProfile(profiles as any[]) ?? { roles: ["subscriber"] }) as any,
   };
 }
 
@@ -81,7 +81,7 @@ async function writeAdminAudit(
   });
 }
 
-export const getSupportUserContext = query({
+export const getSupportUserContext: any = query({
   args: { targetUserId: v.string() },
   handler: async (ctx, { targetUserId }) => {
     const { actorProfile } = await getActorForQuery(ctx);
@@ -106,7 +106,7 @@ export const getSupportUserContext = query({
   },
 });
 
-export const adminUpdateUserRoles = mutation({
+export const adminUpdateUserRoles: any = mutation({
   args: {
     targetUserId: v.string(),
     roles: v.array(v.union(v.literal("subscriber"), v.literal("manager"), v.literal("admin"))),
@@ -147,7 +147,7 @@ export const adminUpdateUserRoles = mutation({
   },
 });
 
-export const adminRevokeUserApiKey = mutation({
+export const adminRevokeUserApiKey: any = mutation({
   args: {
     targetUserId: v.string(),
     keyId: v.id("crystalApiKeys"),
@@ -179,7 +179,7 @@ export const adminRevokeUserApiKey = mutation({
   },
 });
 
-export const adminRegenerateUserApiKey = mutation({
+export const adminRegenerateUserApiKey: any = mutation({
   args: {
     targetUserId: v.string(),
     oldKeyId: v.id("crystalApiKeys"),
@@ -226,7 +226,7 @@ export const adminRegenerateUserApiKey = mutation({
   },
 });
 
-export const adminEnsureUserProfile = mutation({
+export const adminEnsureUserProfile: any = mutation({
   args: {
     targetUserId: v.string(),
     email: v.optional(v.string()),
@@ -262,7 +262,7 @@ export const adminEnsureUserProfile = mutation({
   },
 });
 
-export const adminResyncUserSubscriptionLinkage = mutation({
+export const adminResyncUserSubscriptionLinkage: any = mutation({
   args: {
     targetUserId: v.string(),
   },
@@ -281,6 +281,7 @@ export const adminResyncUserSubscriptionLinkage = mutation({
         userId: targetUserId,
       });
     }
+    if (!latest) throw new Error("Failed to ensure target profile");
 
     const normalizedRoles = normalizeRoles(latest.roles);
 

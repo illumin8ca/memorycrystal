@@ -10,6 +10,8 @@
 
 import type * as auth from "../auth.js";
 import type * as crons from "../crons.js";
+import type * as crystal_admin from "../crystal/admin.js";
+import type * as crystal_adminSupport from "../crystal/adminSupport.js";
 import type * as crystal_apiKeys from "../crystal/apiKeys.js";
 import type * as crystal_associations from "../crystal/associations.js";
 import type * as crystal_auth from "../crystal/auth.js";
@@ -19,9 +21,12 @@ import type * as crystal_consolidate from "../crystal/consolidate.js";
 import type * as crystal_dashboard from "../crystal/dashboard.js";
 import type * as crystal_decay from "../crystal/decay.js";
 import type * as crystal_graph from "../crystal/graph.js";
+import type * as crystal_impersonation from "../crystal/impersonation.js";
 import type * as crystal_mcp from "../crystal/mcp.js";
 import type * as crystal_memories from "../crystal/memories.js";
 import type * as crystal_messages from "../crystal/messages.js";
+import type * as crystal_permissions from "../crystal/permissions.js";
+import type * as crystal_polarWebhook from "../crystal/polarWebhook.js";
 import type * as crystal_recall from "../crystal/recall.js";
 import type * as crystal_reflection from "../crystal/reflection.js";
 import type * as crystal_sessions from "../crystal/sessions.js";
@@ -42,6 +47,8 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   crons: typeof crons;
+  "crystal/admin": typeof crystal_admin;
+  "crystal/adminSupport": typeof crystal_adminSupport;
   "crystal/apiKeys": typeof crystal_apiKeys;
   "crystal/associations": typeof crystal_associations;
   "crystal/auth": typeof crystal_auth;
@@ -51,9 +58,12 @@ declare const fullApi: ApiFromModules<{
   "crystal/dashboard": typeof crystal_dashboard;
   "crystal/decay": typeof crystal_decay;
   "crystal/graph": typeof crystal_graph;
+  "crystal/impersonation": typeof crystal_impersonation;
   "crystal/mcp": typeof crystal_mcp;
   "crystal/memories": typeof crystal_memories;
   "crystal/messages": typeof crystal_messages;
+  "crystal/permissions": typeof crystal_permissions;
+  "crystal/polarWebhook": typeof crystal_polarWebhook;
   "crystal/recall": typeof crystal_recall;
   "crystal/reflection": typeof crystal_reflection;
   "crystal/sessions": typeof crystal_sessions;

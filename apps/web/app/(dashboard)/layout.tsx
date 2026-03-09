@@ -5,10 +5,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { Brain, Flag, LayoutDashboard, MessageSquare, Settings, BarChart2, type LucideIcon } from "lucide-react";
+import { Brain, Flag, LayoutDashboard, MessageSquare, Settings, BarChart2, Shield, type LucideIcon } from "lucide-react";
 import CrystalIcon from "../components/CrystalIcon";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
+import { ImpersonationProvider, useImpersonation } from "./ImpersonationContext";
 
 type NavItem = {
   label: string;
@@ -16,7 +17,7 @@ type NavItem = {
   icon: LucideIcon;
 };
 
-const nav: NavItem[] = [
+const baseNav: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Memories", href: "/memories", icon: Brain },
   { label: "Messages", href: "/messages", icon: MessageSquare },
@@ -26,14 +27,26 @@ const nav: NavItem[] = [
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ImpersonationProvider>
+      <DashboardLayoutInner>{children}</DashboardLayoutInner>
+    </ImpersonationProvider>
+  );
+}
+
+function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [targetUserId, setTargetUserId] = useState("");
+  const [impersonationError, setImpersonationError] = useState("");
   const pathname = usePathname();
   const currentUser = useQuery(api.crystal.userProfiles.getCurrentUser, {});
+  const currentProfile = useQuery(api.crystal.userProfiles.getByUser, {});
   const ensureProfile = useMutation(api.crystal.userProfiles.createOrGet);
   const router = useRouter();
   const { signOut } = useAuthActions();
   const currentEmail = currentUser?.email ?? "";
   const currentName = currentUser?.name ?? "";
+  const { canImpersonate, activeSession, startImpersonation, stopImpersonation } = useImpersonation();
   const handleSignOut = async () => {
     await signOut();
     router.push("/");
@@ -47,6 +60,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [currentUser?.userId, ensureProfile]);
 
   const isActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`);
+  const roles = currentProfile?.roles ?? ["subscriber"];
+  const canAccessAdmin = roles.includes("manager") || roles.includes("admin");
+  const nav = canAccessAdmin
+    ? [...baseNav, { label: "Admin", href: "/admin/users", icon: Shield }]
+    : baseNav;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#0d1820" }}>
@@ -210,7 +228,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Bottom tab bar — mobile only */}
       <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40" style={{ backgroundColor: "#0d1820", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-        <ul className="grid grid-cols-6">
+        <ul className="grid" style={{ gridTemplateColumns: `repeat(${nav.length}, minmax(0, 1fr))` }}>
           {nav.map((item) => {
             const Icon = item.icon;
             return (
