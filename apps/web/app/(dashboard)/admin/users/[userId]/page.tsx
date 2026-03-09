@@ -21,8 +21,17 @@ const fmt = (ts?: number | null) => (ts ? new Date(ts).toLocaleString() : "—")
 
 export default function AdminUserDetailPage() {
   const params = useParams<{ userId: string }>();
-  const userId = decodeURIComponent(params.userId);
-  const data = useQuery(api.crystal.admin.getUserDetail, { userId });
+  const rawUserId = params.userId;
+  const userId = useMemo(() => {
+    if (!rawUserId) return "";
+    try {
+      return decodeURIComponent(rawUserId);
+    } catch {
+      return "";
+    }
+  }, [rawUserId]);
+  const hasValidUserId = userId.length > 0;
+  const data = useQuery(api.crystal.admin.getUserDetail, hasValidUserId ? { userId } : "skip");
 
   const adminSupportApi = (api as unknown as Record<string, Record<string, unknown>>)["crystal/adminSupport"];
   const ensureProfile = useMutation(adminSupportApi.adminEnsureUserProfile as never) as unknown as (args: {
@@ -91,7 +100,11 @@ export default function AdminUserDetailPage() {
       <Link href="/admin/users" className="text-accent text-xs font-mono hover:underline">← BACK TO USERS</Link>
       <h1 className="font-mono font-bold text-xl sm:text-2xl text-primary mt-3 mb-6 tracking-wide">USER DETAIL</h1>
 
-      {!data ? (
+      {!hasValidUserId ? (
+        <div className="text-secondary">Invalid user id in URL.</div>
+      ) : data === null ? (
+        <div className="text-secondary">User not found.</div>
+      ) : !data ? (
         <div className="text-secondary">Loading...</div>
       ) : (
         <div className="space-y-4 sm:space-y-5">
