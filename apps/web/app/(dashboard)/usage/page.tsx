@@ -20,10 +20,10 @@ type TierInfo = {
 type TierName = "free" | "starter" | "pro" | "ultra";
 
 const PLAN_PRICES: Record<TierName, string> = {
-  free: "$0",
-  starter: "$9/mo",
-  pro: "$19/mo",
-  ultra: "$49/mo",
+  free: "$0/mo",
+  starter: "$10/mo",
+  pro: "$20/mo",
+  ultra: "$100/mo",
 };
 
 const TIERS: TierInfo[] = (["free", "starter", "pro", "ultra"] as const).map((name: TierName) => {

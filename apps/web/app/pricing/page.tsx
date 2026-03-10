@@ -29,7 +29,7 @@ const planFeatureFromTier = (name: keyof typeof TIER_LIMITS) => {
 const pricingPlans: PricingPlan[] = [
   {
     name: "FREE",
-    price: "$0/forever",
+    price: "$0/mo",
     button: "START FREE",
     checkoutHref: "/api/polar/checkout?plan=free",
     features: [
@@ -47,7 +47,7 @@ const pricingPlans: PricingPlan[] = [
   },
   {
     name: "STARTER",
-    price: "$9/mo",
+    price: "$10/mo",
     button: "START STARTER",
     checkoutHref: "/api/polar/checkout?plan=starter",
     features: [
@@ -65,7 +65,7 @@ const pricingPlans: PricingPlan[] = [
   },
   {
     name: "PRO",
-    price: "$19/mo",
+    price: "$20/mo",
     button: "START PRO",
     checkoutHref: "/api/polar/checkout?plan=pro",
     badge: "MOST POPULAR",
@@ -85,7 +85,7 @@ const pricingPlans: PricingPlan[] = [
   },
   {
     name: "ULTRA",
-    price: "$49/mo",
+    price: "$100/mo",
     button: "START ULTRA",
     checkoutHref: "/api/polar/checkout?plan=ultra",
     features: [

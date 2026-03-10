@@ -25,10 +25,10 @@ const formatChannels = (channels: number | null): string =>
   channels === null ? "Unlimited" : channels.toLocaleString();
 
 const PRICING_ROWS: string[][] = [
-  ["FREE", "$0", formatLimit(TIER_LIMITS.free.memories), formatLimit(TIER_LIMITS.free.stmMessages), formatTtlDays(TIER_LIMITS.free.stmTtlDays), formatChannels(TIER_LIMITS.free.channels)],
+  ["FREE", "$0/mo", formatLimit(TIER_LIMITS.free.memories), formatLimit(TIER_LIMITS.free.stmMessages), formatTtlDays(TIER_LIMITS.free.stmTtlDays), formatChannels(TIER_LIMITS.free.channels)],
   [
     "STARTER",
-    "$9/mo",
+    "$10/mo",
     formatLimit(TIER_LIMITS.starter.memories),
     formatLimit(TIER_LIMITS.starter.stmMessages),
     formatTtlDays(TIER_LIMITS.starter.stmTtlDays),
@@ -36,7 +36,7 @@ const PRICING_ROWS: string[][] = [
   ],
   [
     "PRO",
-    "$19/mo",
+    "$20/mo",
     formatLimit(TIER_LIMITS.pro.memories),
     formatLimit(TIER_LIMITS.pro.stmMessages),
     formatTtlDays(TIER_LIMITS.pro.stmTtlDays),
@@ -44,7 +44,7 @@ const PRICING_ROWS: string[][] = [
   ],
   [
     "ULTRA",
-    "$49/mo",
+    "$100/mo",
     formatLimit(TIER_LIMITS.ultra.memories),
     formatLimit(TIER_LIMITS.ultra.stmMessages),
     formatTtlDays(TIER_LIMITS.ultra.stmTtlDays),

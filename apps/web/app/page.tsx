@@ -81,7 +81,7 @@ const formatChannels = (channels: number | null): string =>
 const pricingPlans = [
   {
     name: "FREE",
-    price: "$0/forever",
+    price: "$0/mo",
     button: "START FREE",
     checkoutHref: "/api/polar/checkout?plan=free",
     features: [
@@ -99,7 +99,7 @@ const pricingPlans = [
   },
   {
     name: "STARTER",
-    price: "$9/mo",
+    price: "$10/mo",
     button: "START STARTER",
     checkoutHref: "/api/polar/checkout?plan=starter",
     features: [
@@ -117,7 +117,7 @@ const pricingPlans = [
   },
   {
     name: "PRO",
-    price: "$19/mo",
+    price: "$20/mo",
     button: "START PRO",
     checkoutHref: "/api/polar/checkout?plan=pro",
     badge: "MOST POPULAR",
@@ -138,7 +138,7 @@ const pricingPlans = [
   },
   {
     name: "ULTRA",
-    price: "$49/mo",
+    price: "$100/mo",
     button: "START ULTRA",
     checkoutHref: "/api/polar/checkout?plan=ultra",
     features: [
