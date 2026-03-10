@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { useConvexAuth } from "convex/react";
 import { Brain, Flag, LayoutDashboard, MessageSquare, Settings, BarChart2, Shield, type LucideIcon } from "lucide-react";
 import CrystalIcon from "../components/CrystalIcon";
 import { useMutation, useQuery } from "convex/react";
@@ -35,6 +36,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 }
 
 function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [targetUserId, setTargetUserId] = useState("");
   const [impersonationError, setImpersonationError] = useState("");
@@ -58,6 +60,18 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
       // Non-fatal: tier checks safely default to free.
     });
   }, [currentUser?.userId, ensureProfile]);
+
+  // During sign-out, auth state clears before navigation completes.
+  // Return a minimal loading shell to prevent Convex query errors.
+  if (authLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-void flex items-center justify-center">
+        <div className="animate-pulse">
+          <CrystalIcon size={32} glow />
+        </div>
+      </div>
+    );
+  }
 
   const isActive = (href: string) => pathname === href || pathname?.startsWith(`${href}/`);
   const roles = currentProfile?.roles ?? ["subscriber"];
