@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useConvexAuth } from "convex/react";
 import CrystalIcon from "./components/CrystalIcon";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -242,6 +244,15 @@ function BouncingCrystals() {
 }
 
 export default function HomePage() {
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useConvexAuth();
+
+  // Redirect authenticated users to dashboard (client-side fallback for OAuth callback timing)
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace("/dashboard");
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
     const handleScroll = () => {
