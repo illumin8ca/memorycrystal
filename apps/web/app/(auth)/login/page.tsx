@@ -7,14 +7,24 @@ import CrystalIcon from "../../components/CrystalIcon";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 
-type Step = "credentials" | "verify";
+type Step = "credentials" | "verify" | "reset" | "reset-verify";
+
+type LoadingMode =
+  | "idle"
+  | "password"
+  | "verify"
+  | "resend"
+  | "github"
+  | "google"
+  | "reset"
+  | "reset-verify"
+  | "reset-resend";
 
 function friendlyVerifyError(msg: string): string {
   const m = msg.toLowerCase();
   if (m.includes("invalid") || m.includes("incorrect") || m.includes("wrong"))
     return "Incorrect code. Check your email and try again.";
-  if (m.includes("expired"))
-    return "That code has expired. Request a new one.";
+  if (m.includes("expired")) return "That code has expired. Request a new one.";
   return "Verification failed. Please try again.";
 }
 
@@ -25,15 +35,18 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [resendMsg, setResendMsg] = useState("");
-  const [loadingMode, setLoadingMode] = useState<"idle" | "password" | "verify" | "resend" | "github" | "google">("idle");
+  const [loadingMode, setLoadingMode] = useState<LoadingMode>("idle");
 
   const isLoading = loadingMode !== "idle";
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
+    setResendMsg("");
     setLoadingMode("password");
     try {
       const result = await signIn("password", {
@@ -52,13 +65,13 @@ export default function LoginPage() {
       }
     } catch (err) {
       const msg = (err as Error).message ?? "";
-      // If the error is verification-related, switch to the verify step
+      console.error("[login] signIn error:", msg);
       if (/verif/i.test(msg)) {
         setStep("verify");
-      } else if (/invalid password|incorrect password|invalid credentials/i.test(msg)) {
+      } else if (/no.*account|account.*not.*found|could not find/i.test(msg)) {
+        setError("No account found with that email.");
+      } else if (/invalid.*credentials|wrong.*password|incorrect/i.test(msg)) {
         setError("Incorrect email or password.");
-      } else if (/could not find account|no account|user not found/i.test(msg)) {
-        setError("No account found with that email. Sign up instead?");
       } else {
         setError("Sign in failed. Please try again.");
       }
@@ -69,6 +82,7 @@ export default function LoginPage() {
   const handleVerify = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
+    setResendMsg("");
     setLoadingMode("verify");
     try {
       await signIn("password", {
@@ -102,8 +116,78 @@ export default function LoginPage() {
     }
   };
 
+  const handleResetRequest = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    setResendMsg("");
+    setLoadingMode("reset");
+    try {
+      await signIn("password", {
+        email: email.trim(),
+        flow: "reset",
+      });
+      setStep("reset-verify");
+    } catch (err) {
+      const msg = (err as Error).message ?? "";
+      console.error("[login] signIn error:", msg);
+      if (/no.*account|account.*not.*found|could not find/i.test(msg)) {
+        setError("No account found with that email.");
+      } else if (/unverified|not verified/i.test(msg)) {
+        setError("Sign in failed. Please try again.");
+      } else {
+        setError("Failed to send reset code. Please try again.");
+      }
+    } finally {
+      setLoadingMode("idle");
+    }
+  };
+
+  const handleResetVerification = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    setResendMsg("");
+
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoadingMode("reset-verify");
+    try {
+      await signIn("password", {
+        email: email.trim(),
+        code: code.trim(),
+        newPassword,
+        flow: "reset-verification",
+      });
+      router.push("/dashboard");
+    } catch (err) {
+      setError(friendlyVerifyError((err as Error).message ?? ""));
+    } finally {
+      setLoadingMode("idle");
+    }
+  };
+
+  const handleResetResend = async () => {
+    setError("");
+    setResendMsg("");
+    setLoadingMode("reset-resend");
+    try {
+      await signIn("password", {
+        email: email.trim(),
+        flow: "reset",
+      });
+      setResendMsg("A new code has been sent to your email.");
+    } catch {
+      // silently ignore resend errors
+    } finally {
+      setLoadingMode("idle");
+    }
+  };
+
   const handleGitHubSignIn = async () => {
     setError("");
+    setResendMsg("");
     setLoadingMode("github");
     try {
       const result = await signIn("github", { redirectTo: "/dashboard" });
@@ -118,6 +202,7 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     setError("");
+    setResendMsg("");
     setLoadingMode("google");
     try {
       const result = await signIn("google", { redirectTo: "/dashboard" });
@@ -128,6 +213,15 @@ export default function LoginPage() {
       setError((err as Error).message ?? "Google sign in failed");
       setLoadingMode("idle");
     }
+  };
+
+  const switchToSignIn = () => {
+    setStep("credentials");
+    setCode("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setError("");
+    setResendMsg("");
   };
 
   // Step 2: Email verification code entry
@@ -154,7 +248,7 @@ export default function LoginPage() {
                   placeholder="000000"
                   maxLength={6}
                   value={code}
-                  onChange={(e) => setCode(e.target.value)}
+                  onChange={(event) => setCode(event.target.value)}
                   required
                   disabled={isLoading}
                   className="input-glass w-full text-primary p-3 text-sm outline-none placeholder:text-secondary text-center tracking-widest"
@@ -186,7 +280,175 @@ export default function LoginPage() {
             <p className="text-center mt-3 text-xs text-secondary">
               <button
                 type="button"
-                onClick={() => { setStep("credentials"); setCode(""); setError(""); setResendMsg(""); }}
+                onClick={() => switchToSignIn()}
+                className="text-secondary hover:underline"
+              >
+                &larr; Back
+              </button>
+            </p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Step 3: Password reset request
+  if (step === "reset") {
+    return (
+      <div className="min-h-screen bg-void flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center px-4 py-16">
+          <div className="auth-glass-card w-full max-w-sm p-6 sm:p-10">
+            <div className="flex items-center justify-center gap-2 mb-8">
+              <CrystalIcon size={26} glow />
+              <span className="font-logo text-lg tracking-wide neon-text">MEMORY CRYSTAL</span>
+            </div>
+            <h2 className="text-primary text-base font-semibold mb-2 text-center">Reset your password</h2>
+            <p className="text-secondary text-sm text-center mb-6">
+              Enter your email and we&apos;ll send a 6-digit reset code.
+            </p>
+            <form onSubmit={handleResetRequest} className="space-y-5">
+              <div>
+                <label className="block text-secondary text-xs tracking-widest uppercase mb-2">Email</label>
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="input-glass w-full text-primary p-3 text-sm outline-none placeholder:text-secondary"
+                  style={{ borderRadius: 0 }}
+                />
+              </div>
+              {error ? <p className="text-red-400 text-sm">{error}</p> : null}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="btn-primary w-full p-3 min-h-11 text-sm disabled:opacity-60"
+                style={{ borderRadius: 0 }}
+              >
+                {loadingMode === "reset" ? "Sending..." : "SEND RESET CODE"}
+              </button>
+            </form>
+            <p className="text-center mt-6 text-sm">
+              <button
+                type="button"
+                onClick={() => switchToSignIn()}
+                className="text-accent hover:underline"
+              >
+                &larr; Back to sign in
+              </button>
+            </p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Step 4: Reset verification + new password
+  if (step === "reset-verify") {
+    return (
+      <div className="min-h-screen bg-void flex flex-col">
+        <Header />
+        <div className="flex-1 flex items-center justify-center px-4 py-16">
+          <div className="auth-glass-card w-full max-w-sm p-6 sm:p-10">
+            <div className="flex items-center justify-center gap-2 mb-8">
+              <CrystalIcon size={26} glow />
+              <span className="font-logo text-lg tracking-wide neon-text">MEMORY CRYSTAL</span>
+            </div>
+            <h2 className="text-primary text-base font-semibold mb-2 text-center">Reset your password</h2>
+            <p className="text-secondary text-sm text-center mb-6">
+              We sent a 6-digit code to <span className="text-primary">{email}</span>
+            </p>
+            <form onSubmit={handleResetVerification} className="space-y-5">
+              <div>
+                <label className="block text-secondary text-xs tracking-widest uppercase mb-2">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  readOnly
+                  disabled={isLoading}
+                  className="input-glass w-full text-primary p-3 text-sm outline-none placeholder:text-secondary"
+                  style={{ borderRadius: 0 }}
+                />
+              </div>
+              <div>
+                <label className="block text-secondary text-xs tracking-widest uppercase mb-2">Verification Code</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="000000"
+                  maxLength={6}
+                  value={code}
+                  onChange={(event) => setCode(event.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="input-glass w-full text-primary p-3 text-sm outline-none placeholder:text-secondary text-center tracking-widest"
+                  style={{ borderRadius: 0 }}
+                />
+              </div>
+              <div>
+                <label className="block text-secondary text-xs tracking-widest uppercase mb-2">New Password</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="input-glass w-full text-primary p-3 text-sm outline-none placeholder:text-secondary"
+                  style={{ borderRadius: 0 }}
+                />
+              </div>
+              <div>
+                <label className="block text-secondary text-xs tracking-widest uppercase mb-2">Confirm New Password</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="input-glass w-full text-primary p-3 text-sm outline-none placeholder:text-secondary"
+                  style={{ borderRadius: 0 }}
+                />
+              </div>
+              {error ? <p className="text-red-400 text-sm">{error}</p> : null}
+              {resendMsg ? <p className="text-green-400 text-sm">{resendMsg}</p> : null}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="btn-primary w-full p-3 min-h-11 text-sm disabled:opacity-60"
+                style={{ borderRadius: 0 }}
+              >
+                {loadingMode === "reset-verify" ? "Resetting..." : "RESET PASSWORD"}
+              </button>
+            </form>
+            <p className="text-center mt-6 text-sm text-secondary">
+              Didn&apos;t receive it?{" "}
+              <button
+                type="button"
+                onClick={handleResetResend}
+                disabled={isLoading}
+                className="text-accent hover:underline disabled:opacity-60"
+              >
+                {loadingMode === "reset-resend" ? "Sending..." : "Resend code"}
+              </button>
+            </p>
+            <p className="text-center mt-3 text-xs text-secondary">
+              <button
+                type="button"
+                onClick={() => {
+                  setStep("reset");
+                  setCode("");
+                  setNewPassword("");
+                  setConfirmPassword("");
+                  setError("");
+                  setResendMsg("");
+                }}
                 className="text-secondary hover:underline"
               >
                 &larr; Back
@@ -237,6 +499,20 @@ export default function LoginPage() {
               />
             </div>
             {error ? <p className="text-red-400 text-sm">{error}</p> : null}
+            <p className="text-right">
+              <button
+                type="button"
+                onClick={() => {
+                  setStep("reset");
+                  setCode("");
+                  setError("");
+                  setResendMsg("");
+                }}
+                className="text-accent hover:underline text-sm"
+              >
+                Forgot password?
+              </button>
+            </p>
             <button
               type="submit"
               disabled={isLoading}
