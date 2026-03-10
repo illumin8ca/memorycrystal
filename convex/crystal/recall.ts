@@ -13,6 +13,62 @@ const maxLimit = 20;
 const defaultLimit = 8;
 const recencyDecayFactor = 0.1;
 
+type RecallMode = "general" | "decision" | "project" | "people" | "workflow" | "conversation";
+
+const RECALL_MODE_PRESETS: Record<
+  RecallMode,
+  {
+    stores?: string[];
+    categories?: string[];
+    limit?: number;
+    strengthWeight?: number;
+    recencyWeight?: number;
+    vectorWeight?: number;
+  }
+> = {
+  general: {}, // defaults, no overrides
+  decision: {
+    stores: ["semantic", "episodic"],
+    categories: ["decision", "lesson", "rule"],
+    limit: 12,
+    strengthWeight: 0.35,
+    recencyWeight: 0.15,
+    vectorWeight: 0.35,
+  },
+  project: {
+    stores: ["semantic", "episodic", "procedural"],
+    categories: ["goal", "workflow", "decision", "fact"],
+    limit: 12,
+    strengthWeight: 0.30,
+    recencyWeight: 0.25,
+    vectorWeight: 0.30,
+  },
+  people: {
+    stores: ["semantic", "episodic"],
+    categories: ["person", "decision", "event"],
+    limit: 8,
+    strengthWeight: 0.35,
+    recencyWeight: 0.10,
+    vectorWeight: 0.40,
+  },
+  workflow: {
+    stores: ["procedural", "semantic"],
+    categories: ["workflow", "rule", "lesson"],
+    limit: 10,
+    strengthWeight: 0.25,
+    recencyWeight: 0.20,
+    vectorWeight: 0.40,
+  },
+  conversation: {
+    stores: ["sensory", "episodic"],
+    categories: ["conversation", "event"],
+    limit: 6,
+    strengthWeight: 0.20,
+    recencyWeight: 0.35,
+    vectorWeight: 0.35,
+  },
+};
+
 const memoryStore = v.union(
   v.literal("sensory"),
   v.literal("episodic"),
@@ -74,6 +130,16 @@ const requestSchema = v.object({
   includeAssociations: v.optional(v.boolean()),
   includeArchived: v.optional(v.boolean()),
   recentMemoryIds: v.optional(v.array(v.string())),
+  mode: v.optional(
+    v.union(
+      v.literal("general"),
+      v.literal("decision"),
+      v.literal("project"),
+      v.literal("people"),
+      v.literal("workflow"),
+      v.literal("conversation"),
+    )
+  ),
 });
 
 type RecallSet = {
@@ -227,9 +293,23 @@ export const searchMemoriesByText = internalQuery({
 export const recallMemories = action({
   args: requestSchema,
   handler: async (ctx, args) => {
-    const requestedLimit = Math.floor(args.limit ?? defaultLimit);
+    const preset = RECALL_MODE_PRESETS[args.mode ?? "general"];
+
+    const resolvedStores = args.stores?.length ? args.stores : preset.stores;
+    const resolvedCategories = args.categories?.length ? args.categories : preset.categories;
+
+    const requestedLimit = Math.floor(args.limit ?? preset.limit ?? defaultLimit);
     const normalizedLimit = Math.min(Math.max(requestedLimit, minLimit), maxLimit);
     const vectorTake = Math.min(Math.max(normalizedLimit * 4, vectorTakeMin), vectorTakeMax);
+
+    const scoringWeights = {
+      strengthWeight: preset.strengthWeight ?? 0.3,
+      recencyWeight: preset.recencyWeight ?? 0.2,
+      vectorWeight: preset.vectorWeight ?? 0.35,
+      accessWeight: 0.1,
+      bm25Weight: 0.05,
+    };
+
     // Task 1: Default includeAssociations to true
     const includeAssociations = args.includeAssociations ?? true;
     const includeArchived = args.includeArchived ?? false;
@@ -284,15 +364,15 @@ export const recallMemories = action({
           return false;
         }
 
-        if (args.stores?.length) {
-          const hasStore = args.stores.some((store) => store === candidate.store);
+        if (resolvedStores?.length) {
+          const hasStore = resolvedStores.some((store) => store === candidate.store);
           if (!hasStore) {
             return false;
           }
         }
 
-        if (args.categories?.length) {
-          const hasCategory = args.categories.some((category) => category === candidate.category);
+        if (resolvedCategories?.length) {
+          const hasCategory = resolvedCategories.some((category) => category === candidate.category);
           if (!hasCategory) {
             return false;
           }
@@ -324,10 +404,14 @@ export const recallMemories = action({
         // - accessScore (0.10): normalized access frequency (cap 20 accesses)
         // - bm25Boost (0.05): keyword match bonus from FTS (if hybrid search enabled)
         // - nodeBoost (0.05): knowledge graph node linkage bonus
-        // Note: components sum to 1.05 to allow slight upward pressure on well-connected memories
+        // Weights for strength/recency/vector can be overridden by recall mode presets.
         const bm25Boost = bm25BoostMap.get(candidate._id) ?? 0;
         const scoreValue =
-          candidate.strength * 0.3 + recency * 0.2 + accessScore * 0.1 + vectorScore * 0.35 + bm25Boost * 0.05;
+          candidate.strength * scoringWeights.strengthWeight
+          + recency * scoringWeights.recencyWeight
+          + accessScore * scoringWeights.accessWeight
+          + vectorScore * scoringWeights.vectorWeight
+          + bm25Boost * scoringWeights.bm25Weight;
         // nodeBoost applied in post-processing below
 
         return {

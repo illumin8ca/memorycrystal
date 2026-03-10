@@ -15,6 +15,9 @@ import { handleWhyDidWeTool, whyDidWeTool } from "./tools/why-did-we.js";
 import { handleWakeTool, wakeTool } from "./tools/wake.js";
 import { handleRecentTool, recentTool } from "./tools/recent.js";
 import { handleSearchMessagesTool, searchMessagesTool } from "./tools/search-messages.js";
+import { handleWhoOwnsTool, whoOwnsTool } from "./tools/who-owns.js";
+import { handleExplainConnectionTool, explainConnectionTool } from "./tools/explain-connection.js";
+import { handleDependencyChainTool, dependencyChainTool } from "./tools/dependency-chain.js";
 
 function createMcpServer() {
   const server = new Server(
@@ -38,6 +41,9 @@ function createMcpServer() {
         searchMessagesTool,
         whatDoIKnowTool,
         whyDidWeTool,
+        whoOwnsTool,
+        explainConnectionTool,
+        dependencyChainTool,
         forgetTool,
         statsTool,
         checkpointTool,
@@ -62,6 +68,12 @@ function createMcpServer() {
           return handleWhatDoIKnowTool(args);
       case "crystal_why_did_we":
         return handleWhyDidWeTool(args);
+      case "crystal_who_owns":
+        return handleWhoOwnsTool(args);
+      case "crystal_explain_connection":
+        return handleExplainConnectionTool(args);
+      case "crystal_dependency_chain":
+        return handleDependencyChainTool(args);
       case "crystal_forget":
         return handleForgetTool(args);
       case "crystal_stats":

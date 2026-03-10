@@ -214,10 +214,14 @@ export const seedKnowledgeGraphFromMemory = mutation({
     const maxMemories = Math.floor(clamp(args.maxMemories ?? 400, 1, 5000));
     const maxAssociations = Math.floor(clamp(args.maxAssociations ?? 400, 0, 10000));
 
-    const memories = await ctx.db
-      .query("crystalMemories")
-      .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
-      .take(maxMemories);
+    const memories = (
+      await ctx.db
+        .query("crystalMemories")
+        .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
+        // Skip already-enriched memories — handled by real-time pipeline in graphEnrich.ts
+        .filter((q) => q.neq(q.field("graphEnriched"), true))
+        .take(maxMemories)
+    );
 
     const created = {
       nodes: 0,

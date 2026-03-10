@@ -203,6 +203,11 @@ export const captureMemory = internalMutation({
 
     // Schedule async embedding generation
     await ctx.scheduler.runAfter(0, internal.crystal.mcp.embedMemory, { memoryId: id });
+    await ctx.scheduler.runAfter(50, internal.crystal.salience.computeAndStoreSalience, { memoryId: id });
+    await ctx.scheduler.runAfter(100, internal.crystal.graphEnrich.enrichMemoryGraph, {
+      memoryId: id,
+      userId: args.userId,
+    });
     return { id };
   },
 });

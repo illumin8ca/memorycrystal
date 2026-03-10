@@ -230,7 +230,10 @@ export const buildAssociations = action({
           userId,
           limit: Math.min(maxSamples, MAX_BATCH),
         })
-      ).sort((a: { lastAccessedAt: number }, b: { lastAccessedAt: number }) => b.lastAccessedAt - a.lastAccessedAt);
+      )
+        // Skip already-enriched memories — handled by real-time pipeline in graphEnrich.ts
+        .filter((memory: { graphEnriched?: boolean }) => memory.graphEnriched !== true)
+        .sort((a: { lastAccessedAt: number }, b: { lastAccessedAt: number }) => b.lastAccessedAt - a.lastAccessedAt);
 
       for (const source of memories) {
         const hasRecent = await ctx.runQuery(internal.crystal.associations.hasRecentAssociationQuery, {

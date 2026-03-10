@@ -91,6 +91,7 @@ const parseInput = async () => {
       channel: "",
       sessionId: "",
       sessionKey: "",
+      mode: "",
       env,
     };
   }
@@ -102,6 +103,7 @@ const parseInput = async () => {
       channel: safeGetString(parsed?.channel),
       sessionId: safeGetString(parsed?.sessionId),
       sessionKey: safeGetString(parsed?.sessionKey) || safeGetString(parsed?.sessionId),
+      mode: safeGetString(parsed?.mode),
       env,
     };
   } catch {
@@ -110,6 +112,7 @@ const parseInput = async () => {
       channel: "",
       sessionId: "",
       sessionKey: "",
+      mode: "",
       env,
     };
   }
@@ -194,7 +197,8 @@ const normalizeMemory = (memory) => {
   };
 };
 
-const searchMemories = async ({ embedding, query, sessionKey, env }) => {
+const searchMemories = async ({ embedding, query, mode, sessionKey, env }) => {
+  const normalizedMode = mode && mode.trim().length > 0 ? mode.trim() : undefined;
   // Prefer authenticated HTTP endpoint (/api/mcp/recall) when CRYSTAL_SITE + CRYSTAL_API_KEY
   // are available. This avoids the Convex action auth requirement (ctx.auth.getUserIdentity()).
   const crystalSite = (env.CRYSTAL_SITE || "").replace(/\/+$/, "");
@@ -202,16 +206,18 @@ const searchMemories = async ({ embedding, query, sessionKey, env }) => {
 
   if (crystalSite && crystalApiKey) {
     try {
+      const payload = {
+        query: query || "",
+        limit: DEFAULT_LIMIT,
+        ...(normalizedMode ? { mode: normalizedMode } : {}),
+      };
       const mcpResponse = await fetch(`${crystalSite}/api/mcp/recall`, {
         method: "POST",
         headers: {
           "content-type": "application/json",
           Authorization: `Bearer ${crystalApiKey}`,
         },
-        body: JSON.stringify({
-          query: query || "",
-          limit: DEFAULT_LIMIT,
-        }),
+        body: JSON.stringify(payload),
       });
       if (mcpResponse.ok) {
         const mcpPayload = await mcpResponse.json().catch(() => null);
@@ -232,6 +238,14 @@ const searchMemories = async ({ embedding, query, sessionKey, env }) => {
     return [];
   }
 
+  const args = {
+    embedding,
+    limit: DEFAULT_LIMIT,
+    query: query, // enables BM25 hybrid search
+    recentMemoryIds: getSessionMemoryIds(sessionKey), // session dedup
+    ...(normalizedMode ? { mode: normalizedMode } : {}),
+  };
+
   for (const path of RECALL_PATHS) {
     const actionResponse = await fetch(`${convexUrl}${CONVEX_ACTION}`, {
       method: "POST",
@@ -240,12 +254,7 @@ const searchMemories = async ({ embedding, query, sessionKey, env }) => {
       },
       body: JSON.stringify({
         path,
-        args: {
-          embedding,
-          limit: DEFAULT_LIMIT,
-          query: query, // enables BM25 hybrid search
-          recentMemoryIds: getSessionMemoryIds(sessionKey), // session dedup
-        },
+        args,
       }),
     });
 
@@ -348,7 +357,7 @@ function shouldRecall(query) {
 }
 
 const main = async () => {
-  const { query, env, channel, sessionKey } = await parseInput();
+  const { query, mode, env, channel, sessionKey } = await parseInput();
 
   if (!shouldRecall(query)) {
     process.stdout.write(JSON.stringify({ injectionBlock: "", memories: [] }));
@@ -360,7 +369,7 @@ const main = async () => {
     return;
   }
 
-  const memories = (await searchMemories({ embedding, query, sessionKey, env }))
+  const memories = (await searchMemories({ embedding, query, mode, sessionKey, env }))
     .slice(0, DEFAULT_LIMIT)
     .map(normalizeMemory)
     .filter(Boolean);

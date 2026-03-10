@@ -84,6 +84,9 @@ export default defineSchema({
     archivedAt: v.optional(v.number()),
     promotedFrom: v.optional(v.id("crystalMemories")),
     checkpointId: v.optional(v.id("crystalCheckpoints")),
+    graphEnriched: v.optional(v.boolean()),
+    graphEnrichedAt: v.optional(v.number()),
+    salienceScore: v.optional(v.float64()),
   })
     .vectorIndex("by_embedding", {
       vectorField: "embedding",
@@ -95,6 +98,8 @@ export default defineSchema({
     .index("by_strength", ["strength", "archived"])
     .index("by_last_accessed", ["lastAccessedAt"])
     .index("by_session", ["sessionId"])
+    .index("by_graph_enriched", ["graphEnriched", "userId"])
+    .index("by_salience", ["userId", "salienceScore"])
     .searchIndex("search_content", {
       searchField: "content",
       filterFields: ["userId", "archived"],

@@ -15,6 +15,19 @@
       "convexUrl": {
         "type": "string",
         "default": "https://rightful-mockingbird-389.convex.site"
+      },
+      "defaultRecallMode": {
+        "type": "string",
+        "enum": ["general", "decision", "project", "people", "workflow", "conversation"],
+        "description": "Default recall mode for this agent. Controls which memory stores and categories are prioritized.",
+        "default": "general"
+      },
+      "defaultRecallLimit": {
+        "type": "number",
+        "description": "Default number of memories to recall per query.",
+        "default": 8,
+        "minimum": 1,
+        "maximum": 20
       }
     }
   }

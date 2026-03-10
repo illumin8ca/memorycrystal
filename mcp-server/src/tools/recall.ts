@@ -15,6 +15,8 @@ const memoryCategories = [
   "conversation",
 ] as const;
 
+const recallModes = ["general", "decision", "project", "people", "workflow", "conversation"] as const;
+
 export type CrystalRecallInput = {
   query: string;
   stores?: string[];
@@ -23,6 +25,7 @@ export type CrystalRecallInput = {
   limit?: number;
   includeArchived?: boolean;
   includeAssociations?: boolean;
+  mode?: string;
 };
 
 type RecallResult = {
@@ -47,6 +50,11 @@ export const recallTool: Tool = {
       query: {
         type: "string",
         minLength: 1,
+      },
+      mode: {
+        type: "string",
+        enum: recallModes,
+        description: "Recall mode preset. 'decision' prioritizes decisions/lessons from semantic store. 'project' pulls goals/workflows/facts. 'people' focuses on person memories. 'workflow' pulls procedural rules and patterns. 'conversation' pulls recent conversational context. Default: 'general'.",
       },
       stores: {
         type: "array",
@@ -114,7 +122,7 @@ const ensureRecallInput = (value: unknown): CrystalRecallInput => {
   }
 
   const input = value as Record<string, unknown>;
-  const { query, stores, categories, tags, limit, includeArchived, includeAssociations } = input;
+  const { query, stores, categories, tags, limit, includeArchived, includeAssociations, mode } = input;
 
   if (typeof query !== "string" || query.trim().length === 0) {
     throw new Error("query is required");
@@ -177,6 +185,15 @@ const ensureRecallInput = (value: unknown): CrystalRecallInput => {
             throw new Error("limit must be a number");
           })();
 
+  const validatedMode =
+    mode === undefined
+      ? undefined
+      : typeof mode === "string" && recallModes.includes(mode as (typeof recallModes)[number])
+        ? mode
+        : (() => {
+            throw new Error("invalid mode value");
+          })();
+
   if (includeArchived !== undefined && typeof includeArchived !== "boolean") {
     throw new Error("includeArchived must be boolean");
   }
@@ -193,6 +210,7 @@ const ensureRecallInput = (value: unknown): CrystalRecallInput => {
       limit: parsedLimit,
       includeArchived,
       includeAssociations: includeAssociations ?? true,
+      mode: validatedMode,
     };
 };
 
@@ -236,6 +254,7 @@ export const handleRecallTool = async (args: unknown): Promise<CallToolResult> =
       limit: parsed.limit,
       includeAssociations: parsed.includeAssociations,
       includeArchived: parsed.includeArchived,
+      mode: parsed.mode,
     })) as { memories: RecallResult[]; injectionBlock: string };
 
     const { memories, injectionBlock } = response;

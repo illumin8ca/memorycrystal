@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { action, internalAction, internalQuery } from "../_generated/server";
+import { type Id } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -38,6 +39,11 @@ type ReflectionStats = {
   skipped?: string;
 };
 
+type LowSalienceReviewResult = {
+  promoted: number;
+  decayed: number;
+};
+
 // ── Prompt builder ─────────────────────────────────────────────────────────────
 
 const buildReflectionPrompt = (memories: MemoryInput[]): string => {
@@ -69,6 +75,17 @@ Rules:
 - Keep each item to 1-2 sentences max`;
 };
 
+const buildLowSalienceReviewPrompt = (memories: {
+  title: string;
+  content: string;
+}[]): string => {
+  const memoryContext = memories
+    .map((memory, index) => `${index}. ${memory.title}\n${memory.content.slice(0, 200)}`)
+    .join("\n\n");
+
+  return `You are a memory curator. Review these low-salience sensory memories and decide which (if any) deserve promotion to episodic memory for longer retention.\n\nMemories:\n${memoryContext}\n\nFor each memory, respond with ONLY valid JSON:\n{\n  "promote": [\n    { "index": 0, "reason": "contains important decision", "newSalienceScore": 0.72 }\n  ],\n  "decay": [0, 1, 2]\n}\n\n\"promote\" = indexes to upgrade to episodic store with updated salience\n\"decay\" = indexes that are pure noise and can be archived\nOnly promote if genuinely valuable. When in doubt, leave it as-is (return empty arrays).`;
+};
+
 // ── Internal query: fetch recent sensory + episodic memories ──────────────────
 
 export const getRecentMemoriesForReflection = internalQuery({
@@ -96,6 +113,159 @@ export const getRecentMemoriesForReflection = internalQuery({
       .slice(0, args.limit);
   },
 });
+
+// ── Low-salience LLM review for sensory archival/promotions ────────────────
+
+export const reviewLowSalienceMemories = internalAction({
+  args: {
+    userId: v.string(),
+    windowHours: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<LowSalienceReviewResult> => {
+    const windowHours = Math.min(Math.max(args.windowHours ?? DEFAULT_WINDOW_HOURS, 0.5), 72);
+    const windowMs = windowHours * 60 * 60 * 1000;
+    const cutoff = Date.now() - windowMs;
+
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    if (!openaiApiKey) {
+      console.log(`[reviewLowSalienceMemories] user ${args.userId}: OPENAI_API_KEY not set`);
+      return { promoted: 0, decayed: 0 };
+    }
+
+    const lowSalienceMemories = (
+      (await ctx.runQuery(internal.crystal.salience.getLowSalienceMemoriesForPromotion, {
+        userId: args.userId,
+        store: "sensory",
+        limit: 50,
+        maxSalienceScore: 0.45,
+      })) as Array<{
+        _id: string;
+        title: string;
+        content: string;
+        createdAt: number;
+        strength: number;
+        salienceScore?: number;
+      }>
+    ).filter((memory) => memory.createdAt >= cutoff);
+
+    if (lowSalienceMemories.length === 0) {
+      return { promoted: 0, decayed: 0 };
+    }
+
+    const prompt = buildLowSalienceReviewPrompt(
+      lowSalienceMemories.map((memory) => ({
+        title: memory.title,
+        content: memory.content,
+      }))
+    );
+
+    let responsePayload: unknown;
+
+    try {
+      const response = await fetch(OPENAI_COMPLETIONS_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${openaiApiKey}`,
+        },
+        body: JSON.stringify({
+          model: REFLECTION_MODEL,
+          temperature: 0.1,
+          messages: [
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "unknown error");
+        console.log(`[reviewLowSalienceMemories] user ${args.userId}: OpenAI API error ${response.status}: ${errorText}`);
+        return { promoted: 0, decayed: 0 };
+      }
+
+      const payload = (await response.json()) as any;
+      const rawContent = payload?.choices?.[0]?.message?.content ?? "";
+      if (!rawContent?.trim()) {
+        console.log(`[reviewLowSalienceMemories] user ${args.userId}: Empty model response`);
+        return { promoted: 0, decayed: 0 };
+      }
+
+      const cleaned = rawContent
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
+
+      responsePayload = JSON.parse(cleaned) as unknown;
+    } catch (err) {
+      console.log(`[reviewLowSalienceMemories] user ${args.userId}: Failed to call or parse OpenAI response`, err);
+      return { promoted: 0, decayed: 0 };
+    }
+
+    const rawPromote = Array.isArray((responsePayload as any)?.promote) ? (responsePayload as any).promote : [];
+    const rawDecay = Array.isArray((responsePayload as any)?.decay) ? (responsePayload as any).decay : [];
+
+    let promoted = 0;
+    let decayed = 0;
+
+    const usedPromote = new Set<number>();
+    const usedDecay = new Set<number>();
+
+    const now = Date.now();
+
+    for (const raw of rawDecay) {
+      const index = Number((raw as any)?.index);
+      if (!Number.isInteger(index) || index < 0 || index >= lowSalienceMemories.length) continue;
+      if (usedPromote.has(index)) continue;
+      usedDecay.add(index);
+
+      const memory = lowSalienceMemories[index];
+      try {
+        await ctx.runMutation(internal.crystal.salience.decayLowSalienceMemory, {
+          userId: args.userId,
+          memoryId: memory._id as Id<"crystalMemories">,
+          archivedAt: now,
+        });
+        decayed += 1;
+      } catch (err) {
+        console.log(`[reviewLowSalienceMemories] user ${args.userId}: failed decay memory ${memory._id}`, err);
+      }
+    }
+
+    for (const raw of rawPromote) {
+      const index = Number((raw as any)?.index);
+      if (!Number.isInteger(index) || index < 0 || index >= lowSalienceMemories.length) continue;
+      if (usedDecay.has(index)) continue;
+      usedPromote.add(index);
+
+      const memory = lowSalienceMemories[index];
+      const newSalienceScore = Number((raw as any)?.newSalienceScore);
+      const sanitizedSalience = Number.isFinite(newSalienceScore)
+        ? clampScore(newSalienceScore)
+        : clampScore(memory.salienceScore ?? 0.45);
+      const boostedStrength = clampScore((memory.strength ?? 0.8) + 0.1);
+
+      try {
+        await ctx.runMutation(internal.crystal.salience.promoteLowSalienceMemory, {
+          userId: args.userId,
+          memoryId: memory._id as Id<"crystalMemories">,
+          salienceScore: sanitizedSalience,
+          strength: boostedStrength,
+        });
+        promoted += 1;
+      } catch (err) {
+        console.log(`[reviewLowSalienceMemories] user ${args.userId}: failed promote memory ${memory._id}`, err);
+      }
+    }
+
+    return { promoted, decayed };
+  },
+});
+
+const clampScore = (value: number) => Math.min(Math.max(value, 0), 1);
 
 // ── Core internal action ───────────────────────────────────────────────────────
 
@@ -347,8 +517,18 @@ export const runReflectionForUser = internalAction({
       }
     }
 
+    let lowSalienceReview: LowSalienceReviewResult = { promoted: 0, decayed: 0 };
+    try {
+      lowSalienceReview = await ctx.runAction(internal.crystal.reflection.reviewLowSalienceMemories, {
+        userId: args.userId,
+        windowHours,
+      }) as LowSalienceReviewResult;
+    } catch (err) {
+      console.log(`[reflection] user ${args.userId}: low-salience review step failed`, err);
+    }
+
     console.log(
-      `[reflection] user ${args.userId}: read ${memories.length}, wrote ${decisionsWritten} decisions, ${lessonsWritten} lessons, ${openLoopsWritten} open loops, summary: ${summaryWritten}`
+      `[reflection] user ${args.userId}: read ${memories.length}, wrote ${decisionsWritten} decisions, ${lessonsWritten} lessons, ${openLoopsWritten} open loops, summary: ${summaryWritten}, low-salience promoted ${lowSalienceReview.promoted}, decayed ${lowSalienceReview.decayed}`
     );
 
     return {

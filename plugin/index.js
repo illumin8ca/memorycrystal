@@ -1,6 +1,7 @@
 const DEFAULT_CONVEX_URL = "https://rightful-mockingbird-389.convex.site";
 
 const pendingUserMessages = new Map();
+const sessionConfigs = new Map(); // sessionKey → { mode, limit }
 const wakeInjectedSessions = new Set();
 
 /**
@@ -91,9 +92,22 @@ module.exports = (api) => {
     async (event, ctx) => {
       const text = event?.content || event?.text || "";
       const sessionKey = ctx?.sessionKey || event?.conversationId || "";
+      const defaultMode = ctx?.config?.defaultRecallMode || "general";
+      const defaultLimit = ctx?.config?.defaultRecallLimit || 8;
+
       if (text && sessionKey) {
         pendingUserMessages.set(sessionKey, String(text));
       }
+
+      // Store resolved recall defaults per-session for future recall-API wiring.
+      // Recall occurs in recall-hook.js, but these defaults are captured here for consistency.
+      if (sessionKey) {
+        sessionConfigs.set(sessionKey, {
+          mode: defaultMode,
+          limit: defaultLimit,
+        });
+      }
+
       await injectWakeBriefing(api, event, ctx);
     },
     { name: "crystal-memory.message-received", description: "Buffer messages + inject wake briefing" }
@@ -109,6 +123,9 @@ module.exports = (api) => {
 
       const sessionKey = ctx?.sessionKey || event?.sessionId || "";
       const userMessage = sessionKey ? (pendingUserMessages.get(sessionKey) || "") : "";
+      const sessionDefaults = sessionKey ? sessionConfigs.get(sessionKey) : null;
+      // sessionDefaults is currently reserved for future recall-hook wiring (e.g., mode/limit defaults).
+      void sessionDefaults;
       if (sessionKey) pendingUserMessages.delete(sessionKey);
 
       if (!shouldCapture(userMessage, assistantText)) return;
