@@ -9,8 +9,10 @@ const sections = [
   { id: "what-is-memory-crystal", label: "What is Memory Crystal?" },
   { id: "getting-started", label: "Getting Started" },
   { id: "memory-architecture", label: "Memory Architecture" },
+  { id: "memory-stores", label: "Memory Stores" },
   { id: "memory-categories", label: "Memory Categories" },
   { id: "wake-briefing", label: "Wake Briefing" },
+  { id: "reflection-pipeline", label: "Reflection Pipeline" },
   { id: "storage-decay", label: "Storage-Based Decay" },
   { id: "mcp-api-reference", label: "MCP API Reference" },
   { id: "openclaw-integration", label: "OpenClaw Integration" },
@@ -97,163 +99,238 @@ export default function DocsPage() {
           <div className="space-y-8">
             <section id="what-is-memory-crystal" className="glass-card border border-white/[0.08] p-6 sm:p-8">
               <h2 className="font-heading text-3xl">1. What is Memory Crystal?</h2>
-              <p className="mt-4 text-secondary">Memory Crystal is persistent memory infrastructure for AI agents. Instead of forgetting everything between sessions, your agent captures context, stores it in a structured memory system, and recalls relevant details later.</p>
-              <p className="mt-3 text-secondary">Memory cycle: <span className="text-primary">capture → store → recall</span>.</p>
+              <p className="mt-4 text-secondary">Memory Crystal is an MCP-compatible memory layer for agents. It captures, stores, and recalls context so your model can continue across sessions with less loss of continuity.</p>
+              <p className="mt-3 text-secondary">The system has two memory domains: short-term messages and long-term memories. Short-term keeps active conversation context with tier-based retention. Long-term stores durable facts, events, decisions, and summaries that can be recalled much later.</p>
+              <p className="mt-3 text-secondary">Use it to power wake-up briefings, semantic recall, checkpointer snapshots, and automated reflection outputs.</p>
               <ul className="mt-4 space-y-2 text-secondary list-disc pl-5">
-                <li><span className="text-primary">Episodic</span>: what happened (events, conversations, experiences)</li>
-                <li><span className="text-primary">Semantic</span>: what you know (facts, concepts, stable knowledge)</li>
-                <li><span className="text-primary">Procedural</span>: how to do things (workflows, playbooks, methods)</li>
-                <li><span className="text-primary">Sensory</span>: immediate/raw perception (live context, fresh signal)</li>
-                <li><span className="text-primary">Prospective</span>: what you plan to do (intentions, reminders, follow-ups)</li>
+                <li><span className="text-primary">Fast setup</span>: drop-in MCP endpoints and existing OpenClaw integrations</li>
+                <li><span className="text-primary">Production-ready</span>: rate limits, auth, tiers, and decay controls</li>
+                <li><span className="text-primary">Search-oriented</span>: vector + lexical memory retrieval</li>
+                <li><span className="text-primary">Action-oriented</span>: memory tools exposed as functions your system can call</li>
               </ul>
             </section>
 
             <section id="getting-started" className="glass-card border border-white/[0.08] p-6 sm:p-8">
               <h2 className="font-heading text-3xl">2. Getting Started</h2>
               <ol className="mt-4 space-y-2 text-secondary list-decimal pl-5">
-                <li>Sign up at <span className="text-primary">memorycrystal.ai</span></li>
                 <li>Create an API key in <span className="text-primary">Settings → API Keys</span></li>
-                <li>Install OpenClaw hook:</li>
+                <li>Keep your key available for Authorization header calls to <span className="text-primary">https://memorycrystal.ai/api/mcp</span></li>
+                <li>Call <span className="text-primary">POST /wake</span> to begin a session and get the initial briefing</li>
+                <li>Use <span className="text-primary">POST /capture</span> for durable context and <span className="text-primary">POST /log</span> for turn-level messages</li>
+                <li>Test recall with <span className="text-primary">POST /recall</span> and verify results in Dashboard</li>
               </ol>
-              <CodeBlock code={`curl -fsSL https://memorycrystal.ai/install | bash`} />
-              <p className="mt-4 text-secondary">Verify by sending messages through your agent, then check Dashboard → Messages and Dashboard → Memories for new entries.</p>
+
+              <p className="mt-4 text-secondary">All requests include the same auth header:</p>
+              <CodeBlock code={`Authorization: Bearer <api-key>`} />
+              <p className="mt-3 text-secondary">Every endpoint validates your API key and routes to your account&apos;s plan limits.</p>
             </section>
 
             <section id="memory-architecture" className="glass-card border border-white/[0.08] p-6 sm:p-8">
-              <h2 className="font-heading text-3xl">3. Memory Architecture</h2>
-              <p className="mt-4 text-secondary"><span className="text-primary">Short-term memory (Messages tab)</span>: raw conversation turns with automatic expiration based on plan.</p>
-              <p className="mt-2 text-secondary"><span className="text-primary">Long-term memory (Memories tab)</span>: persisted captures with embeddings for semantic recall.</p>
-              <p className="mt-4 text-secondary">Use stores intentionally:</p>
-              <ul className="mt-2 space-y-2 text-secondary list-disc pl-5">
-                <li>Episodic: events and conversation history</li>
-                <li>Semantic: durable factual knowledge</li>
-                <li>Procedural: repeatable processes and tactics</li>
-                <li>Sensory: high-frequency, near-real-time context</li>
-                <li>Prospective: tasks, commitments, future intent</li>
+              <h2 className="font-heading text-3xl">3. Memory Architecture (short-term messages + long-term memories)</h2>
+              <p className="mt-4 text-secondary"><span className="text-primary">Short-term memory</span> stores raw conversation turns through <span className="text-primary">/log</span> and is useful for ongoing context in the current interaction window.</p>
+              <p className="mt-2 text-secondary">When message retention is reached, older short-term entries are managed according to your tier&apos;s configured TTL.</p>
+              <p className="mt-3 text-secondary"><span className="text-primary">Long-term memory</span> is written with <span className="text-primary">/capture</span> and is optimized for retrieval and reuse across sessions.</p>
+              <ul className="mt-3 space-y-2 text-secondary list-disc pl-5">
+                <li><span className="text-primary">/recall</span> performs semantic search first (OpenAI text-embedding-3-small) then lexical fallback</li>
+                <li><span className="text-primary">/checkpoint</span> creates structured snapshots for continuity and auditability</li>
+                <li><span className="text-primary">/wake</span> builds a session context packet using recent memories and last checkpoint</li>
+                <li><span className="text-primary">/reflect</span> distills recent context into higher-level memories (Pro+)</li>
+              </ul>
+            </section>
+
+            <section id="memory-stores" className="glass-card border border-white/[0.08] p-6 sm:p-8">
+              <h2 className="font-heading text-3xl">4. Memory Stores</h2>
+              <p className="mt-4 text-secondary">Use one of the five stores when capturing to keep behavior consistent and make recall more useful.</p>
+              <ul className="mt-4 space-y-2 text-secondary list-disc pl-5">
+                <li><span className="text-primary">sensory</span>: immediate/raw perception, high-frequency live context</li>
+                <li><span className="text-primary">episodic</span>: what happened in events, conversations, experiences</li>
+                <li><span className="text-primary">semantic</span>: stable knowledge and durable facts</li>
+                <li><span className="text-primary">procedural</span>: workflows, playbooks, and methods</li>
+                <li><span className="text-primary">prospective</span>: plans, reminders, and follow-ups</li>
               </ul>
             </section>
 
             <section id="memory-categories" className="glass-card border border-white/[0.08] p-6 sm:p-8">
-              <h2 className="font-heading text-3xl">4. Memory Categories</h2>
-              <p className="mt-4 text-secondary">When capturing a memory, you can assign a <span className="text-primary">category</span> to help with filtering, recall, and organization. Supported categories:</p>
+              <h2 className="font-heading text-3xl">5. Memory Categories</h2>
+              <p className="mt-4 text-secondary">Captured memories can be tagged with these categories:</p>
               <ul className="mt-4 space-y-2 text-secondary list-disc pl-5">
-                <li><span className="text-primary">decision</span>: a choice made — architecture, tooling, process, etc.</li>
-                <li><span className="text-primary">lesson</span>: something learned the hard way or worth remembering</li>
-                <li><span className="text-primary">person</span>: information about a person (collaborator, stakeholder, etc.)</li>
-                <li><span className="text-primary">rule</span>: a standing constraint, policy, or convention</li>
-                <li><span className="text-primary">event</span>: a notable occurrence — a launch, incident, meeting, etc.</li>
-                <li><span className="text-primary">fact</span>: stable factual knowledge about a system, domain, or entity</li>
-                <li><span className="text-primary">goal</span>: an intention or objective to pursue</li>
-                <li><span className="text-primary">workflow</span>: a repeatable process or standard operating procedure</li>
-                <li><span className="text-primary">conversation</span>: a distilled summary of a notable exchange</li>
+                <li><span className="text-primary">decision</span>: a formal or tactical choice</li>
+                <li><span className="text-primary">lesson</span>: an insight from success or failure</li>
+                <li><span className="text-primary">person</span>: details about people and relationships</li>
+                <li><span className="text-primary">rule</span>: constraints, standards, and guardrails</li>
+                <li><span className="text-primary">event</span>: significant occurrences</li>
+                <li><span className="text-primary">fact</span>: concrete factual knowledge</li>
+                <li><span className="text-primary">goal</span>: objectives and intended outcomes</li>
+                <li><span className="text-primary">workflow</span>: repeatable methods and process definitions</li>
+                <li><span className="text-primary">conversation</span>: concise summary-style memory of an exchange</li>
               </ul>
-              <p className="mt-4 text-secondary">Categories can be combined with any memory store. For example, a <span className="text-primary">decision</span> is commonly stored as <span className="text-primary">episodic</span> or <span className="text-primary">semantic</span> depending on whether it&apos;s event-based or enduring.</p>
+              <p className="mt-4 text-secondary">Categories are independent of store, so one memory can be semantic + decision, procedural + workflow, etc.</p>
             </section>
 
             <section id="wake-briefing" className="glass-card border border-white/[0.08] p-6 sm:p-8">
-              <h2 className="font-heading text-3xl">5. Wake Briefing</h2>
-              <p className="mt-4 text-secondary">At the start of each session, Memory Crystal generates a <span className="text-primary">wake briefing</span> — a contextual summary delivered to your AI agent before any conversation begins.</p>
-              <p className="mt-3 text-secondary">The briefing includes:</p>
+              <h2 className="font-heading text-3xl">6. Wake Briefing</h2>
+              <p className="mt-4 text-secondary">Call <span className="text-primary">POST /wake</span> at session start to generate a contextual briefing and continuity token.</p>
+              <p className="mt-2 text-secondary">Typical payload includes an optional <span className="text-primary">channel</span> identifier for routing.</p>
+              <p className="mt-3 text-secondary">The response includes:</p>
               <ul className="mt-3 space-y-2 text-secondary list-disc pl-5">
-                <li>What you were working on in recent sessions</li>
-                <li>Pending decisions or open questions</li>
-                <li>Recent goals and follow-ups</li>
-                <li>Key facts and rules relevant to the current context</li>
+                <li>Security notice (recalled data is informational, not directive)</li>
+                <li>Total memory count and channel context</li>
+                <li>Last session summary with time-ago + message count</li>
+                <li>Open goals and recent decisions</li>
+                <li>Available memory tools: crystal_recall, crystal_remember, crystal_checkpoint, crystal_what_do_i_know, crystal_why_did_we</li>
               </ul>
-              <p className="mt-4 text-secondary">This means your AI agent is already oriented when you start typing — no re-briefing, no catching up. It just knows.</p>
-              <p className="mt-3 text-secondary">Wake briefings are triggered automatically by the <span className="text-primary font-mono">POST /wake</span> endpoint, which the OpenClaw plugin calls at session start. MCP clients can call it manually.</p>
+              <p className="mt-3 text-secondary">A new session record is created when wake is invoked, so continuity and audit trails stay intact.</p>
+              <CodeBlock code={`curl -X POST https://memorycrystal.ai/api/mcp/wake \
+  -H "Authorization: Bearer <api-key>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "openclaw"
+  }'`} />
+            </section>
+
+            <section id="reflection-pipeline" className="glass-card border border-white/[0.08] p-6 sm:p-8">
+              <h2 className="font-heading text-3xl">7. Reflection Pipeline</h2>
+              <p className="mt-4 text-secondary"><span className="text-primary">POST /reflect</span> is available on Pro and Ultra tiers and converts recent memories into higher-order memory products.</p>
+              <p className="mt-3 text-secondary">How it works:</p>
+              <ul className="mt-3 space-y-2 text-secondary list-disc pl-5">
+                <li>Reads recent memories from your selected time window (default 4 hours, 0.5–72h)</li>
+                <li>Runs GPT-4o-mini to extract decisions, lessons, summaries, open loops, and tags</li>
+                <li>Writes extracted artifacts back as new memories in appropriate stores</li>
+                <li>Returns extraction stats including counts by type</li>
+              </ul>
+              <p className="mt-3 text-secondary">This gives agents better strategic continuity without manually writing every insight.</p>
+              <CodeBlock code={`curl -X POST https://memorycrystal.ai/api/mcp/reflect \
+  -H "Authorization: Bearer <api-key>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "windowHours": 4,
+    "sessionId": "optional-session-id"
+  }'`} />
             </section>
 
             <section id="storage-decay" className="glass-card border border-white/[0.08] p-6 sm:p-8">
-              <h2 className="font-heading text-3xl">6. Storage-Based Decay</h2>
-              <p className="mt-4 text-secondary">Memory Crystal does <span className="text-primary">not</span> expire memories by time. Your memories persist indefinitely — until you approach your storage limit.</p>
-              <p className="mt-3 text-secondary">When you&apos;re near your tier&apos;s memory limit, the decay system activates:</p>
+              <h2 className="font-heading text-3xl">8. Storage-Based Decay</h2>
+              <p className="mt-4 text-secondary">Memories do not expire on a schedule. They persist regardless of age until your storage boundaries are at risk.</p>
+              <p className="mt-3 text-secondary">Decay only activates near capacity and prioritizes removal of records with lower recall frequency and importance while preserving durable items.</p>
               <ul className="mt-4 space-y-2 text-secondary list-disc pl-5">
-                <li>Oldest memories are evaluated first</li>
-                <li>Weakest memories (low recall frequency, low importance score) are pruned</li>
-                <li>Critical memories — decisions, goals, rules — are protected longer</li>
-                <li>Decay only fires when you&apos;re near the limit, not on a schedule</li>
+                <li>Priority removals: oldest + weakest memories first</li>
+                <li>Protected longer: decisions, goals, and rules</li>
+                <li>Result: critical context remains while stale noise is reclaimed</li>
               </ul>
-              <p className="mt-4 text-secondary">This means your most-used and most-important context stays forever. Stale, low-signal memories make room when needed.</p>
-              <p className="mt-3 text-secondary">To avoid decay entirely, upgrade to a higher tier or delete unused memories manually from the Dashboard.</p>
+              <p className="mt-4 text-secondary">If decay behavior is undesirable, upgrade your tier or prune memories manually in the dashboard.</p>
             </section>
 
             <section id="mcp-api-reference" className="glass-card border border-white/[0.08] p-6 sm:p-8">
-              <h2 className="font-heading text-3xl">7. MCP API Reference</h2>
-              <p className="mt-3 text-secondary">All endpoints require: <span className="text-primary font-mono">Authorization: Bearer &lt;api-key&gt;</span></p>
-              <p className="mt-2 text-secondary">Base URL: <span className="text-primary font-mono">https://memorycrystal.ai/api/mcp</span></p>
+              <h2 className="font-heading text-3xl">9. MCP API Reference</h2>
+              <p className="mt-3 text-secondary">Base URL: <span className="text-primary font-mono">https://memorycrystal.ai/api/mcp</span></p>
+              <p className="mt-2 text-secondary">All endpoints require <span className="text-primary font-mono">Authorization: Bearer &lt;api-key&gt;</span>.</p>
 
               <h3 className="mt-6 text-xl font-heading">POST /capture — store a memory</h3>
+              <p className="mt-2 text-secondary">Required: <span className="text-primary">title</span> (max 500 chars), <span className="text-primary">content</span> (max 50KB). Optional: <span className="text-primary">store</span> (default episodic), <span className="text-primary">category</span> (default conversation), <span className="text-primary">tags</span>, <span className="text-primary">channel</span>.</p>
               <CodeBlock code={`curl -X POST https://memorycrystal.ai/api/mcp/capture \
   -H "Authorization: Bearer <api-key>" \
   -H "Content-Type: application/json" \
   -d '{
-    "title":"Decision: deploy at 7pm",
-    "content":"Deploy window approved after QA signoff.",
-    "store":"episodic",
-    "category":"decision",
-    "tags":["deploy","release"],
-    "channel":"openclaw"
+    "title": "Deployment decision",
+    "content": "Team approved shipping at 7:00 PM after QA clearance.",
+    "store": "episodic",
+    "category": "decision",
+    "tags": ["deploy", "release"],
+    "channel": "openclaw"
   }'`} />
-              <p className="mt-2 text-xs text-secondary">Stores: episodic, semantic, procedural, sensory, prospective</p>
+              <p className="mt-2 text-xs text-secondary">Response: <span className="font-mono">{`{ ok: true, id }`}</span> or <span className="font-mono">{`{ error, limit }`}</span> (403 if at memory limit).</p>
 
-              <h3 className="mt-6 text-xl font-heading">POST /recall — vector + text memory search</h3>
+              <h3 className="mt-6 text-xl font-heading">POST /recall — vector + lexical memory search</h3>
+              <p className="mt-2 text-secondary">Required: <span className="text-primary">query</span>. Optional: <span className="text-primary">store</span>, <span className="text-primary">limit</span> (1–50, default 10).</p>
               <CodeBlock code={`curl -X POST https://memorycrystal.ai/api/mcp/recall \
   -H "Authorization: Bearer <api-key>" \
   -H "Content-Type: application/json" \
   -d '{"query":"what did we decide about deploy timing?","store":"episodic","limit":10}'`} />
+              <p className="mt-2 text-xs text-secondary">Response: <span className="font-mono">{`{ memories: [{ _id, title, content, store, category, tags, createdAt, score }] }`}</span>.</p>
 
               <h3 className="mt-6 text-xl font-heading">POST /checkpoint — create a snapshot</h3>
+              <p className="mt-2 text-secondary">Required: <span className="text-primary">label</span> or <span className="text-primary">title</span>. Optional: <span className="text-primary">description</span> or <span className="text-primary">content</span>.</p>
               <CodeBlock code={`curl -X POST https://memorycrystal.ai/api/mcp/checkpoint \
   -H "Authorization: Bearer <api-key>" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Pre-Launch","content":"Feature flags locked, waiting on monitoring checks."}'`} />
+  -d '{
+    "label": "Pre-Launch Summary",
+    "content": "Monitoring ready, release notes complete, hold on QA final check."
+  }'`} />
+              <p className="mt-2 text-xs text-secondary">Response: <span className="font-mono">{`{ ok: true, id }`}</span>.</p>
 
-              <h3 className="mt-6 text-xl font-heading">POST /log — log to short-term memory</h3>
+              <h3 className="mt-6 text-xl font-heading">POST /log — log a message to short-term memory</h3>
+              <p className="mt-2 text-secondary">Required: <span className="text-primary">content</span>. Optional: <span className="text-primary">role</span> (user|assistant|system, default assistant), <span className="text-primary">channel</span>, <span className="text-primary">sessionKey</span>.</p>
               <CodeBlock code={`curl -X POST https://memorycrystal.ai/api/mcp/log \
   -H "Authorization: Bearer <api-key>" \
   -H "Content-Type: application/json" \
-  -d '{"role":"assistant","content":"Implemented Starter tier and updated docs.","channel":"openclaw","sessionKey":"session-123"}'`} />
+  -d '{
+    "role": "assistant",
+    "content": "Updated docs page and opened pricing table validation.",
+    "channel": "openclaw",
+    "sessionKey": "session-123"
+  }'`} />
+              <p className="mt-2 text-xs text-secondary">Response: <span className="font-mono">{`{ ok: true, id }`}</span> or 403 if message limit reached.</p>
 
-              <h3 className="mt-6 text-xl font-heading">GET /stats and POST /stats — memory statistics</h3>
+              <h3 className="mt-6 text-xl font-heading">POST /reflect — trigger reflection pipeline (Pro+)</h3>
+              <p className="mt-2 text-secondary">Optional: <span className="text-primary">windowHours</span> (0.5–72, default 4), <span className="text-primary">sessionId</span>.</p>
+              <p className="mt-1 text-secondary">Pro and Ultra plans can use this endpoint.</p>
+              <CodeBlock code={`curl -X POST https://memorycrystal.ai/api/mcp/reflect \
+  -H "Authorization: Bearer <api-key>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "windowHours": 4
+  }'`} />
+              <p className="mt-2 text-xs text-secondary">Response: <span className="font-mono">{`{ ok: true, stats }`}</span> containing extraction counts.</p>
+
+              <h3 className="mt-6 text-xl font-heading">GET|POST /stats — memory statistics</h3>
+              <p className="mt-2 text-secondary">Returns totals, store breakdown, and key label information for the current API key.</p>
               <CodeBlock code={`curl -X GET https://memorycrystal.ai/api/mcp/stats \
   -H "Authorization: Bearer <api-key>"
 
 curl -X POST https://memorycrystal.ai/api/mcp/stats \
   -H "Authorization: Bearer <api-key>"`} />
+              <p className="mt-2 text-xs text-secondary">Response: <span className="font-mono">{`{ total, byStore: { episodic, semantic, ... }, apiKeyLabel }`}</span>.</p>
 
-              <h3 className="mt-6 text-xl font-heading">GET /auth — validate API key</h3>
+              <h3 className="mt-6 text-xl font-heading">GET|POST /auth — validate API key</h3>
+              <p className="mt-2 text-secondary">Checks API key validity and resolves account identity.</p>
               <CodeBlock code={`curl -X GET https://memorycrystal.ai/api/mcp/auth \
   -H "Authorization: Bearer <api-key>"`} />
+              <p className="mt-2 text-xs text-secondary">Response: <span className="font-mono">{`{ ok: true, userId }`}</span>.</p>
 
-              <h3 className="mt-6 text-xl font-heading">POST /wake — wake/ping memory system</h3>
+              <h3 className="mt-6 text-xl font-heading">GET|POST /wake — wake briefing and session start</h3>
+              <p className="mt-2 text-secondary">Optional POST body: <span className="text-primary">channel</span> (string). Returns briefing metadata, recent memories, and last checkpoint.</p>
               <CodeBlock code={`curl -X POST https://memorycrystal.ai/api/mcp/wake \
-  -H "Authorization: Bearer <api-key>"`} />
+  -H "Authorization: Bearer <api-key>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "openclaw"
+  }'`} />
             </section>
 
             <section id="openclaw-integration" className="glass-card border border-white/[0.08] p-6 sm:p-8">
-              <h2 className="font-heading text-3xl">8. OpenClaw Integration</h2>
-              <p className="mt-4 text-secondary">The <span className="text-primary font-mono">crystal-capture</span> plugin captures interaction flow automatically via real-time hooks.</p>
+              <h2 className="font-heading text-3xl">10. OpenClaw Integration</h2>
+              <p className="mt-4 text-secondary">The <span className="text-primary font-mono">crystal-capture</span> plugin hooks interaction flow in real time; no cron job needed.</p>
               <ul className="mt-3 space-y-2 text-secondary list-disc pl-5">
-                <li><span className="text-primary font-mono">message_received</span> → buffer user message</li>
-                <li><span className="text-primary font-mono">llm_output</span> → log conversation turn + capture to sensory memory</li>
+                <li><span className="text-primary font-mono">message_received</span>: buffers inbound user messages</li>
+                <li><span className="text-primary font-mono">llm_output</span>: logs each conversation turn and captures to sensory memory</li>
               </ul>
-              <p className="mt-3 text-secondary">Troubleshooting log: <span className="text-primary font-mono">/tmp/crystal-hook-log.txt</span></p>
+              <p className="mt-3 text-secondary">Troubleshooting log location: <span className="text-primary font-mono">/tmp/crystal-hook-log.txt</span></p>
             </section>
 
             <section id="dashboard-guide" className="glass-card border border-white/[0.08] p-6 sm:p-8">
-              <h2 className="font-heading text-3xl">9. Dashboard Guide</h2>
+              <h2 className="font-heading text-3xl">11. Dashboard Guide</h2>
               <ul className="mt-4 space-y-2 text-secondary list-disc pl-5">
-                <li><span className="text-primary">Dashboard</span>: usage stats + recent activity</li>
-                <li><span className="text-primary">Memories</span>: browse/search memories, filter by store</li>
-                <li><span className="text-primary">Messages</span>: raw conversation feed, role filtering</li>
+                <li><span className="text-primary">Dashboard</span>: usage stats + recent activity (8 recent memories, 8 recent messages)</li>
+                <li><span className="text-primary">Memories</span>: browse/search, filter by store, infinite scroll pagination</li>
+                <li><span className="text-primary">Messages</span>: raw conversation feed, role filtering, infinite scroll pagination</li>
                 <li><span className="text-primary">Checkpoints</span>: create and review snapshots</li>
                 <li><span className="text-primary">Settings</span>: API keys + subscription management</li>
               </ul>
             </section>
 
             <section id="pricing-limits" className="glass-card border border-white/[0.08] p-6 sm:p-8 overflow-x-auto">
-              <h2 className="font-heading text-3xl">10. Pricing & Limits</h2>
+              <h2 className="font-heading text-3xl">12. Pricing & Limits</h2>
               <div className="mt-4 min-w-[680px] border border-white/[0.08]">
                 <div className="grid grid-cols-6 text-xs font-mono border-b border-white/[0.08] bg-white/[0.03]">
                   <div className="p-3">Tier</div><div className="p-3">Price</div><div className="p-3">Memories</div><div className="p-3">Messages</div><div className="p-3">Retention</div><div className="p-3">Channels</div>
@@ -266,22 +343,21 @@ curl -X POST https://memorycrystal.ai/api/mcp/stats \
               </div>
               <p className="mt-4 text-secondary">Additional features by tier:</p>
               <ul className="mt-2 space-y-1 text-secondary list-disc pl-5">
-                <li><span className="text-primary">Pro</span>: Reflection pipeline — automatic conversation distillation into lasting memories</li>
-                <li><span className="text-primary">Ultra</span>: Priority recall + full API access</li>
+                <li><span className="text-primary">Pro</span>: Reflection pipeline and higher limits</li>
+                <li><span className="text-primary">Ultra</span>: Priority recall + full API capabilities</li>
               </ul>
-              <p className="mt-4 text-secondary">Rate limit: <span className="text-primary">60 requests/minute per API key</span>.</p>
-              <p className="mt-1 text-secondary">Storage limits are enforced on capture. Memory decay only activates when you approach your limit — memories do not expire by time.</p>
+              <p className="mt-4 text-secondary">Global API rate limit: <span className="text-primary">60 requests/minute per API key</span> (returns 429 with <span className="text-primary">Retry-After</span>).</p>
             </section>
 
             <section id="faq" className="glass-card border border-white/[0.08] p-6 sm:p-8">
-              <h2 className="font-heading text-3xl">11. FAQ</h2>
+              <h2 className="font-heading text-3xl">13. FAQ</h2>
               <div className="mt-5 space-y-5">
-                <div><h3 className="font-heading text-xl">Is my data private?</h3><p className="text-secondary mt-1">Yes. Data is user-scoped with no cross-user access.</p></div>
-                <div><h3 className="font-heading text-xl">Can I use this without OpenClaw?</h3><p className="text-secondary mt-1">Yes. Any tool that can make HTTP requests can use the MCP API.</p></div>
-                <div><h3 className="font-heading text-xl">How does vector search work?</h3><p className="text-secondary mt-1">Embeddings are generated on capture, then cosine similarity ranks recall results.</p></div>
-                <div><h3 className="font-heading text-xl">What happens when I hit my limit?</h3><p className="text-secondary mt-1">Storage-based decay activates: oldest and weakest memories are pruned to make room. You can also upgrade your tier or delete memories manually. New captures receive a 403 if the limit is hard-capped.</p></div>
-                <div><h3 className="font-heading text-xl">Can I export my data?</h3><p className="text-secondary mt-1">Coming soon.</p></div>
-                <div><h3 className="font-heading text-xl">What models are supported?</h3><p className="text-secondary mt-1">Any model/tooling stack that can make HTTP requests (Claude, GPT, Gemini, and more).</p></div>
+                <div><h3 className="font-heading text-xl">Do I have to use OpenClaw?</h3><p className="text-secondary mt-1">No. Any MCP-compatible client can call these endpoints directly.</p></div>
+                <div><h3 className="font-heading text-xl">How does search work?</h3><p className="text-secondary mt-1">/<span className="text-primary">recall</span> uses semantic search with OpenAI text-embedding-3-small and falls back to lexical matching when needed.</p></div>
+                <div><h3 className="font-heading text-xl">What happens if I hit limits?</h3><p className="text-secondary mt-1">Storage and message caps are enforced by tier. New captures can return 403 with a limit field, and near-capacity decay handles cleanup for memories when needed.</p></div>
+                <div><h3 className="font-heading text-xl">When do memories decay?</h3><p className="text-secondary mt-1">Only when near storage limits. Critical memories (decision/goal/rule) are protected longer.</p></div>
+                <div><h3 className="font-heading text-xl">Can I get a wake briefing without /wake?</h3><p className="text-secondary mt-1">Current implementation generates wake briefings through the /wake endpoint. It is intended as the first call for a new session.</p></div>
+                <div><h3 className="font-heading text-xl">Can I query /auth with POST too?</h3><p className="text-secondary mt-1">Yes. <span className="text-primary">/auth</span> and <span className="text-primary">/stats</span> support GET and POST.</p></div>
               </div>
             </section>
           </div>
