@@ -233,10 +233,10 @@ curl -X POST https://memorycrystal.ai/api/mcp/stats \
 
             <section id="openclaw-integration" className="glass-card border border-white/[0.08] p-6 sm:p-8">
               <h2 className="font-heading text-3xl">8. OpenClaw Integration</h2>
-              <p className="mt-4 text-secondary">The <span className="text-primary font-mono">crystal-stm</span> hook captures interaction flow automatically.</p>
+              <p className="mt-4 text-secondary">The <span className="text-primary font-mono">crystal-capture</span> plugin captures interaction flow automatically via real-time hooks.</p>
               <ul className="mt-3 space-y-2 text-secondary list-disc pl-5">
-                <li><span className="text-primary font-mono">message:received</span> → log user message to STM</li>
-                <li><span className="text-primary font-mono">message:sent</span> → log AI response + capture to sensory memory</li>
+                <li><span className="text-primary font-mono">message_received</span> → buffer user message</li>
+                <li><span className="text-primary font-mono">llm_output</span> → log conversation turn + capture to sensory memory</li>
               </ul>
               <p className="mt-3 text-secondary">Troubleshooting log: <span className="text-primary font-mono">/tmp/crystal-hook-log.txt</span></p>
             </section>
