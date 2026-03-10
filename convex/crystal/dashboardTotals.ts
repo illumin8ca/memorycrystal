@@ -457,7 +457,7 @@ export const adminRepairBackfillDashboardTotalsForUser = internalMutation({
         .order("desc")
         .paginate({
           numItems: pageSize,
-          cursor: args.memoryCursor,
+          cursor: args.memoryCursor ?? null,
           maximumBytesRead: BACKFILL_MAX_BYTES,
         });
 
@@ -482,7 +482,7 @@ export const adminRepairBackfillDashboardTotalsForUser = internalMutation({
             activeSemantic: totals.activeMemoriesByStore.semantic,
             activeProcedural: totals.activeMemoriesByStore.procedural,
             activeProspective: totals.activeMemoriesByStore.prospective,
-            lastCaptureMemoryId: totals.lastCaptureMemoryId as string | undefined,
+            lastCaptureMemoryId: totals.lastCaptureMemoryId as any,
             lastCaptureStore: totals.lastCaptureStore,
             lastCaptureTitle: totals.lastCaptureTitle,
             lastCaptureCreatedAt: totals.lastCaptureCreatedAt,
@@ -504,7 +504,7 @@ export const adminRepairBackfillDashboardTotalsForUser = internalMutation({
         activeSemantic: totals.activeMemoriesByStore.semantic,
         activeProcedural: totals.activeMemoriesByStore.procedural,
         activeProspective: totals.activeMemoriesByStore.prospective,
-        lastCaptureMemoryId: totals.lastCaptureMemoryId as string | undefined,
+        lastCaptureMemoryId: totals.lastCaptureMemoryId as any,
         lastCaptureStore: totals.lastCaptureStore,
         lastCaptureTitle: totals.lastCaptureTitle,
         lastCaptureCreatedAt: totals.lastCaptureCreatedAt,
@@ -518,7 +518,7 @@ export const adminRepairBackfillDashboardTotalsForUser = internalMutation({
       .order("desc")
       .paginate({
         numItems: pageSize,
-        cursor: args.messageCursor,
+        cursor: args.messageCursor ?? null,
         maximumBytesRead: BACKFILL_MAX_BYTES,
       });
 
@@ -541,7 +541,7 @@ export const adminRepairBackfillDashboardTotalsForUser = internalMutation({
           activeSemantic: totals.activeMemoriesByStore.semantic,
           activeProcedural: totals.activeMemoriesByStore.procedural,
           activeProspective: totals.activeMemoriesByStore.prospective,
-          lastCaptureMemoryId: totals.lastCaptureMemoryId as string | undefined,
+          lastCaptureMemoryId: totals.lastCaptureMemoryId as any,
           lastCaptureStore: totals.lastCaptureStore,
           lastCaptureTitle: totals.lastCaptureTitle,
           lastCaptureCreatedAt: totals.lastCaptureCreatedAt,
@@ -678,12 +678,18 @@ export const adminGetDashboardTotalsForUser = query({
 
 export const adminListDashboardTotals = query({
   args: { webhookToken: v.string() },
-  handler: async (ctx, { webhookToken }) => {
+  handler: async (ctx, { webhookToken }): Promise<any[]> => {
     requireDashboardTotalsWebhookToken(webhookToken);
 
-    const userIds = await ctx.runQuery(internal.crystal.dashboardTotals.adminListBackfillUsers, { webhookToken });
+    // Inline the user-list logic instead of cross-referencing the public query
+    const profiles = await ctx.db.query("crystalUserProfiles").withIndex("by_user").collect();
+    const seen = new Set<string>();
+    for (const profile of profiles) {
+      if (profile.userId) seen.add(profile.userId);
+    }
+    const userIds: string[] = Array.from(seen);
 
-    const rows = await Promise.all(
+    const rows: any[] = await Promise.all(
       userIds.map(async (userId: string) => {
         const totals = await getStoredTotals(ctx, userId);
         return {
