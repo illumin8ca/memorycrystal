@@ -3,16 +3,19 @@ import { query } from "../_generated/server";
 import { v } from "convex/values";
 import { TIER_LIMITS, TIER_ORDER, type UserTier } from "../../shared/tierLimits";
 import { resolveEffectiveUserId } from "./impersonation";
+import { getDashboardTotals } from "./dashboardTotals";
 
 const nowMs = () => Date.now();
 const msPerDay = 24 * 60 * 60 * 1000;
 
 const PROFILE_SAMPLE_LIMIT = 20;
-const ACTIVE_MEMORY_SAMPLE_LIMIT = 2000;
-const ARCHIVED_MEMORY_SAMPLE_LIMIT = 2000;
-const MESSAGE_SAMPLE_LIMIT = 5000;
-const SESSION_SAMPLE_LIMIT = 5000;
-const CHECKPOINT_SAMPLE_LIMIT = 5000;
+// Keep sample sizes small to stay well within Convex's 8MB read limit.
+// For exact counts, we use the pre-computed dashboardTotals table.
+const ACTIVE_MEMORY_SAMPLE_LIMIT = 500;
+const ARCHIVED_MEMORY_SAMPLE_LIMIT = 100;
+const MESSAGE_SAMPLE_LIMIT = 100;
+const SESSION_SAMPLE_LIMIT = 100;
+const CHECKPOINT_SAMPLE_LIMIT = 100;
 
 function pickLatestProfile<T extends { updatedAt?: number }>(profiles: T[]): T | undefined {
   return profiles.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
@@ -58,33 +61,48 @@ export const getUserUsageStats = query({
     const limits = TIER_LIMITS[tier];
     const subscriptionStatus = profile?.subscriptionStatus ?? "inactive";
 
-    // -- Active memories --
+    // -- Use pre-computed totals for counts (avoids 8MB read limit) --
+    const totals = await getDashboardTotals(ctx, userId);
+    const totalMemories = totals?.activeMemories ?? 0;
+    const archivedMemories = totals?.archivedMemories ?? 0;
+    const totalStmMessages = totals?.totalMessages ?? 0;
+
+    // -- Sample active memories for breakdown stats (store, category, age) --
     const activeSample = await ctx.db
       .query("crystalMemories")
       .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
       .take(ACTIVE_MEMORY_SAMPLE_LIMIT + 1);
 
-    const archivedSample = await ctx.db
-      .query("crystalMemories")
-      .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", true))
-      .take(ARCHIVED_MEMORY_SAMPLE_LIMIT + 1);
-
     const activeBounded = activeSample.length > ACTIVE_MEMORY_SAMPLE_LIMIT;
-    const archivedBounded = archivedSample.length > ARCHIVED_MEMORY_SAMPLE_LIMIT;
     const activeMemories = activeSample.slice(0, ACTIVE_MEMORY_SAMPLE_LIMIT);
 
-    const totalMemories = activeMemories.length;
-    const archivedMemories = archivedSample.slice(0, ARCHIVED_MEMORY_SAMPLE_LIMIT).length;
+    // -- Breakdown by store (from pre-computed totals if available, else sample) --
+    const byStore = totals?.activeMemoriesByStore
+      ? {
+          sensory: totals.activeMemoriesByStore.sensory ?? 0,
+          episodic: totals.activeMemoriesByStore.episodic ?? 0,
+          semantic: totals.activeMemoriesByStore.semantic ?? 0,
+          procedural: totals.activeMemoriesByStore.procedural ?? 0,
+          prospective: totals.activeMemoriesByStore.prospective ?? 0,
+        }
+      : (() => {
+          const raw: Record<string, number> = {};
+          for (const m of activeMemories) raw[m.store] = (raw[m.store] ?? 0) + 1;
+          return {
+            sensory: raw["sensory"] ?? 0,
+            episodic: raw["episodic"] ?? 0,
+            semantic: raw["semantic"] ?? 0,
+            procedural: raw["procedural"] ?? 0,
+            prospective: raw["prospective"] ?? 0,
+          };
+        })();
 
-    // -- Breakdown by store --
-    const byStoreRaw: Record<string, number> = {};
+    // -- Category breakdown and age stats (from sample) --
     const byCategory: Record<string, number> = {};
-
     let oldestMs: number | null = null;
     let newestMs: number | null = null;
 
     for (const m of activeMemories) {
-      byStoreRaw[m.store] = (byStoreRaw[m.store] ?? 0) + 1;
       if (m.category) {
         byCategory[m.category] = (byCategory[m.category] ?? 0) + 1;
       }
@@ -92,27 +110,11 @@ export const getUserUsageStats = query({
       if (newestMs === null || m.createdAt > newestMs) newestMs = m.createdAt;
     }
 
-    const byStore = {
-      sensory: byStoreRaw["sensory"] ?? 0,
-      episodic: byStoreRaw["episodic"] ?? 0,
-      semantic: byStoreRaw["semantic"] ?? 0,
-      procedural: byStoreRaw["procedural"] ?? 0,
-      prospective: byStoreRaw["prospective"] ?? 0,
-    };
-
     const now = nowMs();
     const oldestMemoryDays = oldestMs !== null ? Math.floor((now - oldestMs) / msPerDay) : null;
     const newestMemoryDays = newestMs !== null ? Math.floor((now - newestMs) / msPerDay) : null;
 
-    // -- STM messages (cap at 5000 for performance) --
-    const messageSample = await ctx.db
-      .query("crystalMessages")
-      .withIndex("by_user_time", (q) => q.eq("userId", userId))
-      .take(MESSAGE_SAMPLE_LIMIT + 1);
-    const messagesBounded = messageSample.length > MESSAGE_SAMPLE_LIMIT;
-    const totalStmMessages = messageSample.slice(0, MESSAGE_SAMPLE_LIMIT).length;
-
-    // -- Sessions --
+    // -- Sessions (small sample for count) --
     const sessionSample = await ctx.db
       .query("crystalSessions")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -120,7 +122,7 @@ export const getUserUsageStats = query({
     const sessionsBounded = sessionSample.length > SESSION_SAMPLE_LIMIT;
     const totalSessions = sessionSample.slice(0, SESSION_SAMPLE_LIMIT).length;
 
-    // -- Checkpoints --
+    // -- Checkpoints (small sample for count) --
     const checkpointSample = await ctx.db
       .query("crystalCheckpoints")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -139,8 +141,8 @@ export const getUserUsageStats = query({
     const upgradeAvailable = tierIdx < TIER_ORDER.indexOf("ultra");
 
     const usageNote =
-      activeBounded || archivedBounded || messagesBounded || sessionsBounded || checkpointsBounded
-        ? `Usage stats are approximate; sampling caps: active=${ACTIVE_MEMORY_SAMPLE_LIMIT}, archived=${ARCHIVED_MEMORY_SAMPLE_LIMIT}, messages=${MESSAGE_SAMPLE_LIMIT}, sessions=${SESSION_SAMPLE_LIMIT}, checkpoints=${CHECKPOINT_SAMPLE_LIMIT}.`
+      activeBounded || sessionsBounded || checkpointsBounded
+        ? `Some breakdown stats are approximate; sampling caps: active=${ACTIVE_MEMORY_SAMPLE_LIMIT}, sessions=${SESSION_SAMPLE_LIMIT}, checkpoints=${CHECKPOINT_SAMPLE_LIMIT}. Totals use pre-computed counts.`
         : undefined;
 
     return {
