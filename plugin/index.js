@@ -85,6 +85,28 @@ async function injectWakeBriefing(api, event, ctx) {
   wakeInjectedSessions.add(sessionKey);
 }
 
+async function logMessage(ctx, payload) {
+  await request(ctx?.config, "POST", "/api/mcp/log", payload);
+}
+
+async function captureTurn(ctx, userMessage, assistantText) {
+  if (!shouldCapture(userMessage, assistantText)) return;
+
+  const content = [
+    userMessage ? `User: ${userMessage}` : null,
+    `Assistant: ${assistantText}`,
+  ].filter(Boolean).join("\n\n");
+
+  await request(ctx?.config, "POST", "/api/mcp/capture", {
+    title: `OpenClaw — ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
+    content,
+    store: "sensory",
+    category: "conversation",
+    tags: ["openclaw", "auto-capture"],
+    channel: ctx?.messageProvider || "openclaw",
+  });
+}
+
 module.exports = (api) => {
   // Buffer inbound message + inject wake briefing on first turn
   api.registerHook(
@@ -96,7 +118,14 @@ module.exports = (api) => {
       const defaultLimit = ctx?.config?.defaultRecallLimit || 8;
 
       if (text && sessionKey) {
-        pendingUserMessages.set(sessionKey, String(text));
+        const normalized = String(text);
+        pendingUserMessages.set(sessionKey, normalized);
+        await logMessage(ctx, {
+          role: "user",
+          content: normalized,
+          channel: ctx?.messageProvider || "openclaw",
+          sessionKey,
+        });
       }
 
       // Store resolved recall defaults per-session for future recall-API wiring.
@@ -126,25 +155,44 @@ module.exports = (api) => {
       const sessionDefaults = sessionKey ? sessionConfigs.get(sessionKey) : null;
       // sessionDefaults is currently reserved for future recall-hook wiring (e.g., mode/limit defaults).
       void sessionDefaults;
-      if (sessionKey) pendingUserMessages.delete(sessionKey);
 
-      if (!shouldCapture(userMessage, assistantText)) return;
-
-      const content = [
-        userMessage ? `User: ${userMessage}` : null,
-        `Assistant: ${assistantText}`,
-      ].filter(Boolean).join("\n\n");
-
-      await request(ctx?.config, "POST", "/api/mcp/capture", {
-        title: `OpenClaw — ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
-        content,
-        store: "sensory",
-        category: "conversation",
-        tags: ["openclaw", "auto-capture"],
+      await logMessage(ctx, {
+        role: "assistant",
+        content: assistantText,
         channel: ctx?.messageProvider || "openclaw",
+        sessionKey: sessionKey || undefined,
       });
+
+      if (sessionKey) pendingUserMessages.delete(sessionKey);
+      await captureTurn(ctx, userMessage, assistantText);
     },
     { name: "crystal-memory.llm-output", description: "Capture AI response to Memory Crystal" }
+  );
+
+  // Fallback when llm_output is not emitted by a provider/runtime.
+  // If there's no pending user message, llm_output likely already handled this turn.
+  api.registerHook(
+    "message_sent",
+    async (event, ctx) => {
+      const sessionKey = ctx?.sessionKey || event?.sessionId || "";
+      if (!sessionKey || !pendingUserMessages.has(sessionKey)) return;
+
+      const assistantText = String(event?.content || event?.text || "").trim();
+      if (!assistantText) return;
+
+      const userMessage = pendingUserMessages.get(sessionKey) || "";
+
+      await logMessage(ctx, {
+        role: "assistant",
+        content: assistantText,
+        channel: ctx?.messageProvider || "openclaw",
+        sessionKey,
+      });
+
+      pendingUserMessages.delete(sessionKey);
+      await captureTurn(ctx, userMessage, assistantText);
+    },
+    { name: "crystal-memory.message-sent-fallback", description: "Fallback assistant capture when llm_output is absent" }
   );
 
   // Trigger memory reflection on session boundary
@@ -164,5 +212,5 @@ module.exports = (api) => {
     { name: 'crystal-memory.command-reset', description: 'Trigger memory reflection on /reset' }
   );
 
-  api.logger?.info?.("[crystal-memory] hooks registered: message_received + llm_output + command:new + command:reset");
+  api.logger?.info?.("[crystal-memory] hooks registered: message_received + llm_output + message_sent + command:new + command:reset");
 };
