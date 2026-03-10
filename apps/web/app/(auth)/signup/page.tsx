@@ -3,9 +3,11 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { useQuery } from "convex/react";
 import CrystalIcon from "../../components/CrystalIcon";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import { api } from "../../../../../convex/_generated/api";
 
 type Step = "credentials" | "verify";
 
@@ -29,6 +31,20 @@ function friendlyVerifyError(msg: string): string {
   return "Verification failed. Please try again.";
 }
 
+function formatProviderName(provider: string): string {
+  if (provider === "google") return "Google";
+  if (provider === "github") return "GitHub";
+  return provider;
+}
+
+function getOAuthFallbackError(providerLabel: string, message: string): string {
+  const msg = message.toLowerCase();
+  if (/already exists|already.*account|already registered|account exists|already linked|could not sign in/i.test(msg)) {
+    return `Could not complete ${providerLabel} sign in. If you already have a password account, try signing in with your email and password first.`;
+  }
+  return `Could not complete ${providerLabel} sign in. If this continues, please try signing in with your email and password first.`;
+}
+
 export default function SignupPage() {
   const router = useRouter();
   const { signIn } = useAuthActions();
@@ -40,12 +56,19 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [resendMsg, setResendMsg] = useState("");
   const [loadingMode, setLoadingMode] = useState<"idle" | "password" | "verify" | "resend" | "github" | "google">("idle");
+  const [suggestedProvider, setSuggestedProvider] = useState<string | null>(null);
+
+  const authMethods = useQuery(
+    api.crystal.authLookup.getAuthMethodsForEmail,
+    email.trim() ? { email: email.trim() } : "skip"
+  );
 
   const isLoading = loadingMode !== "idle";
 
   const handleCredentials = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
+    setSuggestedProvider(null);
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -65,7 +88,28 @@ export default function SignupPage() {
       // Always transition to the verify step.
       setStep("verify");
     } catch (err) {
-      setError(friendlySignupError((err as Error).message ?? ""));
+      const msg = (err as Error).message ?? "";
+      console.error("[signup] signIn error:", msg);
+
+      const oauthProviders = authMethods?.exists
+        ? authMethods.providers.filter((p) => p !== "password")
+        : [];
+      const hasOAuthProvider = oauthProviders.length > 0;
+
+      if (
+        /already exists|already registered|already taken|already has an account|already.*account|duplicate/i.test(
+          msg
+        ) && hasOAuthProvider
+      ) {
+        const providerNames = oauthProviders.map((provider) => formatProviderName(provider));
+        const providerList = providerNames.join(" and ");
+        const message = `An account with that email already exists via ${providerList}. Please sign in with ${providerList}, or use 'Forgot password?' on the login page to set a password.`;
+        setSuggestedProvider(providerNames[0] ?? null);
+        setError(message);
+      } else {
+        setSuggestedProvider(null);
+        setError(friendlySignupError(msg));
+      }
     } finally {
       setLoadingMode("idle");
     }
@@ -116,7 +160,9 @@ export default function SignupPage() {
         router.push("/dashboard");
       }
     } catch (err) {
-      setError((err as Error).message ?? "GitHub sign up failed");
+      const msg = (err as Error).message ?? "";
+      console.error("[signup] github signIn error:", msg);
+      setError(getOAuthFallbackError("GitHub", msg));
       setLoadingMode("idle");
     }
   };
@@ -130,7 +176,9 @@ export default function SignupPage() {
         router.push("/dashboard");
       }
     } catch (err) {
-      setError((err as Error).message ?? "Google sign up failed");
+      const msg = (err as Error).message ?? "";
+      console.error("[signup] google signIn error:", msg);
+      setError(getOAuthFallbackError("Google", msg));
       setLoadingMode("idle");
     }
   };
@@ -221,7 +269,10 @@ export default function SignupPage() {
                 type="email"
                 placeholder="you@example.com"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setSuggestedProvider(null);
+                }}
                 required
                 disabled={isLoading}
                 className="input-glass w-full text-primary p-3 text-sm outline-none placeholder:text-secondary"
@@ -255,6 +306,11 @@ export default function SignupPage() {
               />
             </div>
             {error ? <p className="text-red-400 text-sm">{error}</p> : null}
+            {suggestedProvider ? (
+              <p className="text-sm text-secondary">
+                Existing account is linked with {suggestedProvider}.
+              </p>
+            ) : null}
             <button
               type="submit"
               disabled={isLoading}

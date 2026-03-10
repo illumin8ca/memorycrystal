@@ -3,9 +3,11 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { useQuery } from "convex/react";
 import CrystalIcon from "../../components/CrystalIcon";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import { api } from "../../../../../convex/_generated/api";
 
 type Step = "credentials" | "verify" | "reset" | "reset-verify";
 
@@ -28,6 +30,20 @@ function friendlyVerifyError(msg: string): string {
   return "Verification failed. Please try again.";
 }
 
+function formatProviderName(provider: string): string {
+  if (provider === "google") return "Google";
+  if (provider === "github") return "GitHub";
+  return provider;
+}
+
+function getOAuthFallbackError(providerLabel: string, message: string): string {
+  const msg = message.toLowerCase();
+  if (/already exists|already.*account|already registered|account exists|already linked|could not sign in/i.test(msg)) {
+    return `Could not complete ${providerLabel} sign in. If you already have a password account, try signing in with email and password instead.`;
+  }
+  return `Could not complete ${providerLabel} sign in. If this continues, please try signing in with email and password first.`;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const { signIn } = useAuthActions();
@@ -40,6 +56,12 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [resendMsg, setResendMsg] = useState("");
   const [loadingMode, setLoadingMode] = useState<LoadingMode>("idle");
+  const [suggestedProvider, setSuggestedProvider] = useState<string | null>(null);
+
+  const authMethods = useQuery(
+    api.crystal.authLookup.getAuthMethodsForEmail,
+    email.trim() ? { email: email.trim() } : "skip"
+  );
 
   const isLoading = loadingMode !== "idle";
 
@@ -47,6 +69,7 @@ export default function LoginPage() {
     event.preventDefault();
     setError("");
     setResendMsg("");
+    setSuggestedProvider(null);
     setLoadingMode("password");
     try {
       const result = await signIn("password", {
@@ -66,11 +89,29 @@ export default function LoginPage() {
     } catch (err) {
       const msg = (err as Error).message ?? "";
       console.error("[login] signIn error:", msg);
+
+      // Check if account exists with a different provider
+      if (authMethods?.exists && authMethods.providers.length > 0) {
+        const oauthProviders = authMethods.providers.filter((p) => p !== "password");
+        if (oauthProviders.length > 0 && !authMethods.providers.includes("password")) {
+          const providerNames = oauthProviders.map((provider) => formatProviderName(provider));
+          const providerList = providerNames.join(" and ");
+          setSuggestedProvider(providerNames[0] ?? null);
+          setError(
+            `This email is linked to ${providerList}. Please sign in with ${providerNames[0]} instead.`
+          );
+          setLoadingMode("idle");
+          return;
+        }
+      }
+
+      setSuggestedProvider(null);
+
       if (/verif/i.test(msg)) {
         setStep("verify");
       } else if (/no.*account|account.*not.*found|could not find/i.test(msg)) {
         setError("No account found with that email.");
-      } else if (/invalid.*credentials|wrong.*password|incorrect/i.test(msg)) {
+      } else if (/invalid.*credentials|wrong.*password|incorrect|invalid password/i.test(msg)) {
         setError("Incorrect email or password.");
       } else {
         setError("Sign in failed. Please try again.");
@@ -188,6 +229,7 @@ export default function LoginPage() {
   const handleGitHubSignIn = async () => {
     setError("");
     setResendMsg("");
+    setSuggestedProvider(null);
     setLoadingMode("github");
     try {
       const result = await signIn("github", { redirectTo: "/dashboard" });
@@ -195,7 +237,9 @@ export default function LoginPage() {
         router.push("/dashboard");
       }
     } catch (err) {
-      setError((err as Error).message ?? "GitHub sign in failed");
+      const msg = (err as Error).message ?? "";
+      console.error("[login] github signIn error:", msg);
+      setError(getOAuthFallbackError("GitHub", msg));
       setLoadingMode("idle");
     }
   };
@@ -203,6 +247,7 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     setError("");
     setResendMsg("");
+    setSuggestedProvider(null);
     setLoadingMode("google");
     try {
       const result = await signIn("google", { redirectTo: "/dashboard" });
@@ -210,7 +255,9 @@ export default function LoginPage() {
         router.push("/dashboard");
       }
     } catch (err) {
-      setError((err as Error).message ?? "Google sign in failed");
+      const msg = (err as Error).message ?? "";
+      console.error("[login] google signIn error:", msg);
+      setError(getOAuthFallbackError("Google", msg));
       setLoadingMode("idle");
     }
   };
@@ -222,6 +269,7 @@ export default function LoginPage() {
     setConfirmPassword("");
     setError("");
     setResendMsg("");
+    setSuggestedProvider(null);
   };
 
   // Step 2: Email verification code entry
@@ -478,7 +526,10 @@ export default function LoginPage() {
                 type="email"
                 placeholder="you@example.com"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setSuggestedProvider(null);
+                }}
                 required
                 disabled={isLoading}
                 className="input-glass w-full text-primary p-3 text-sm outline-none placeholder:text-secondary"
@@ -499,6 +550,9 @@ export default function LoginPage() {
               />
             </div>
             {error ? <p className="text-red-400 text-sm">{error}</p> : null}
+            {suggestedProvider && (
+              <p className="text-sm text-secondary">Please use the {suggestedProvider} button above to continue.</p>
+            )}
             <p className="text-right">
               <button
                 type="button"
