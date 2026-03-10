@@ -53,7 +53,7 @@ export const getMemoryHealthStats = query({
     const memories = await ctx.db
       .query("crystalMemories")
       .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
-      .collect();
+      .take(2000);
 
     const byStore = {
       sensory: 0,
@@ -132,7 +132,7 @@ export const getTopRecalledMemories = query({
     const memories = await ctx.db
       .query("crystalMemories")
       .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
-      .collect();
+      .take(2000);
 
     return memories
       .map((memory) => ({
@@ -167,7 +167,7 @@ export const getNeverRecalledMemories = query({
     const memories = await ctx.db
       .query("crystalMemories")
       .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
-      .collect();
+      .take(2000);
 
     return memories
       .filter((memory) => memory.accessCount === 0)
@@ -201,7 +201,7 @@ export const getCaptureTrend = query({
     const memories = await ctx.db
       .query("crystalMemories")
       .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
-      .collect();
+      .take(2000);
 
     for (const memory of memories) {
       if (memory.createdAt < startMs) continue;
@@ -239,7 +239,7 @@ export const getGraphCoverageTrend = query({
     const memories = await ctx.db
       .query("crystalMemories")
       .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
-      .collect();
+      .take(2000);
 
     for (const memory of memories) {
       if (memory.createdAt >= startMs) {
