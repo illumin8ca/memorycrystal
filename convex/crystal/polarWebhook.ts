@@ -1,5 +1,6 @@
 import { httpAction } from "../_generated/server";
 import { validateEvent, WebhookVerificationError } from "@polar-sh/sdk/webhooks";
+import { Webhook } from "standardwebhooks";
 import { api } from "../_generated/api";
 
 const HANDLED_SUBSCRIPTION_EVENTS = new Set([
@@ -51,27 +52,32 @@ export const polarWebhook = httpAction(async (ctx, request) => {
     headers[key] = value;
   });
 
+  // Step 1: Verify the webhook signature (independent of SDK schema parsing)
+  let rawEvent: any;
+  try {
+    const base64Secret = Buffer.from(secret, "utf-8").toString("base64");
+    const webhook = new Webhook(base64Secret);
+    rawEvent = webhook.verify(body, headers);
+  } catch (err) {
+    console.error("[polarWebhook] signature verification failed", err);
+    return json({ error: "Invalid webhook signature" }, 400);
+  }
+
+  const eventType = rawEvent?.type as string | undefined;
+
+  // Step 2: If this isn't an event we handle, ack immediately (200 OK)
+  if (!eventType || !HANDLED_SUBSCRIPTION_EVENTS.has(eventType)) {
+    return json({ received: true, ignored: eventType ?? "unknown" }, 200);
+  }
+
+  // Step 3: For events we handle, try SDK schema validation for typed access
   let event: any;
   try {
     event = validateEvent(body, headers, secret);
   } catch (err) {
-    if (err instanceof WebhookVerificationError) {
-      return json({ error: "Invalid webhook signature" }, 400);
-    }
-    const message = err instanceof Error ? err.message : String(err);
-    if (
-      message.toLowerCase().includes("signature") ||
-      message.toLowerCase().includes("header") ||
-      message.toLowerCase().includes("webhook")
-    ) {
-      return json({ error: "Invalid webhook signature" }, 400);
-    }
-    console.error("[polarWebhook] unexpected validateEvent error", err);
-    return json({ error: "Webhook verification failed" }, 400);
-  }
-
-  if (!HANDLED_SUBSCRIPTION_EVENTS.has(event.type)) {
-    return json({ received: true, ignored: event.type }, 200);
+    // Signature already verified above — if SDK parsing fails, use raw event
+    console.warn("[polarWebhook] SDK parseEvent failed, using raw payload", err);
+    event = rawEvent;
   }
 
   const subscription = (event.data ?? {}) as SubscriptionLike;
