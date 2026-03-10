@@ -36,19 +36,26 @@ export default function LoginPage() {
     setError("");
     setLoadingMode("password");
     try {
-      await signIn("password", {
+      const result = await signIn("password", {
         email: email.trim(),
         password,
         flow: "signIn",
         redirectTo: "/dashboard",
       });
-      router.push("/dashboard");
+      if (result.signingIn) {
+        // Fully authenticated — go to dashboard
+        router.push("/dashboard");
+      } else {
+        // Password was correct but email needs verification — a code was sent
+        setStep("verify");
+        setLoadingMode("idle");
+      }
     } catch (err) {
       const msg = (err as Error).message ?? "";
       // If the error is verification-related, switch to the verify step
       if (/verif/i.test(msg)) {
         setStep("verify");
-      } else if (/invalid password|incorrect password/i.test(msg)) {
+      } else if (/invalid password|incorrect password|invalid credentials/i.test(msg)) {
         setError("Incorrect email or password.");
       } else if (/could not find account|no account|user not found/i.test(msg)) {
         setError("No account found with that email. Sign up instead?");
