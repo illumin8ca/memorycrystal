@@ -91,7 +91,7 @@ export default function LoginPage() {
       console.error("[login] signIn error:", msg);
 
       // Check if account exists with a different provider
-      if (authMethods?.exists && authMethods.providers.length > 0) {
+      if (authMethods && authMethods.providers.length > 0) {
         const oauthProviders = authMethods.providers.filter((p) => p !== "password");
         if (oauthProviders.length > 0 && !authMethods.providers.includes("password")) {
           const providerNames = oauthProviders.map((provider) => formatProviderName(provider));

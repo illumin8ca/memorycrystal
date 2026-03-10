@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { useImpersonation } from "../ImpersonationContext";
-import { useInView } from "../../hooks/useInView";
 
 const PAGE_SIZE = 25;
 const roles = ["ALL", "USER", "AI"];
@@ -36,12 +35,7 @@ export default function MessagesPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const { asUserId } = useImpersonation();
-
-  const { ref, isInView } = useInView<HTMLDivElement>({
-    rootMargin: "250px 0px",
-    threshold: 0.1,
-    once: false,
-  });
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -108,10 +102,25 @@ export default function MessagesPage() {
   const isSearching = search.length > 0;
 
   useEffect(() => {
-    if (!isInView || !hasMore || isLoading || rows.length === 0) return;
+    const node = sentinelRef.current;
+    if (!node || !hasMore || isLoading || rows.length === 0) return;
 
-    setPage((p) => p + 1);
-  }, [isInView, hasMore, isLoading, rows.length]);
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setPage((p) => p + 1);
+        }
+      },
+      {
+        rootMargin: "400px 0px",
+        threshold: 0,
+      }
+    );
+
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  }, [hasMore, isLoading, rows.length]);
 
   const canShowCount = page > 0 || rawPage !== undefined;
 
@@ -181,7 +190,7 @@ export default function MessagesPage() {
 
       {isLoadingMore ? <div className="text-secondary text-sm px-2 py-3 text-center">Loading more messages…</div> : null}
 
-      {rows.length > 0 ? <div ref={ref} className="h-8 w-full" aria-hidden="true" /> : null}
+      <div ref={sentinelRef} className="h-1 w-full" aria-hidden="true" />
     </div>
   );
 }

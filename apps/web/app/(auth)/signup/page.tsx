@@ -91,9 +91,7 @@ export default function SignupPage() {
       const msg = (err as Error).message ?? "";
       console.error("[signup] signIn error:", msg);
 
-      const oauthProviders = authMethods?.exists
-        ? authMethods.providers.filter((p) => p !== "password")
-        : [];
+      const oauthProviders = authMethods ? authMethods.providers.filter((p) => p !== "password") : [];
       const hasOAuthProvider = oauthProviders.length > 0;
 
       if (
