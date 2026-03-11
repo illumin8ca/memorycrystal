@@ -170,24 +170,17 @@ export default function SettingsPage() {
           <p className="text-secondary text-xs mt-1">
             {usage ? `Tier: ${({ free: "FREE", starter: "PRO", pro: "PRO", ultra: "CONTACT", unlimited: "CONTACT" }[usage.tier] ?? usage.tier.toUpperCase())} • Message TTL: ${usage.messageTtlDays} days` : ""}
           </p>
-          {usage && usage.tier !== "ultra" && usage.tier !== "unlimited" ? (
+          {usage && usage.tier === "free" ? (
             <div className="mt-3 flex flex-wrap gap-2">
-              {usage.tier === "free" ? (
-                <a href="/api/polar/checkout?plan=starter" className="btn-primary inline-flex px-4 py-2 text-xs">
-                  Upgrade to Starter
-                </a>
-              ) : null}
-              {usage.tier === "starter" ? (
-                <a href="/api/polar/checkout?plan=pro" className="btn-primary inline-flex px-4 py-2 text-xs">
-                  Upgrade to Pro
-                </a>
-              ) : null}
-              {usage.tier === "pro" ? (
-                <a href="/api/polar/checkout?plan=ultra" className="btn-primary inline-flex px-4 py-2 text-xs">
-                  Upgrade to Ultra
-                </a>
-              ) : null}
+              <a href="/api/polar/checkout?plan=pro" className="btn-primary inline-flex px-4 py-2 text-xs">
+                Start Pro 14-day trial
+              </a>
             </div>
+          ) : null}
+          {usage && usage.tier !== "free" && usage.tier !== "unlimited" ? (
+            <p className="text-secondary text-xs mt-3">
+              Need higher usage than Pro? Contact us for a custom plan at hello@memorycrystal.ai.
+            </p>
           ) : null}
         </div>
 

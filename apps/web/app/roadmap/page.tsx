@@ -11,14 +11,14 @@ type RoadmapItem = {
 const shippedItems: RoadmapItem[] = [
   { title: "MCP API with vector search" },
   { title: "OpenClaw real-time hook integration" },
-  { title: "Tiered billing (Free / Pro / Ultra)" },
+  { title: "Tiered billing (Free / Pro / Contact)" },
   { title: "Dashboard with memories, messages, checkpoints" },
   { title: "Email verification + branded SendGrid" },
   { title: "PWA support" },
 ];
 
 const inProgressItems: RoadmapItem[] = [
-  { title: "Starter plan ($10/mo)" },
+  { title: "Custom higher-usage contact plan" },
   { title: "Claude Desktop / Cursor MCP integration" },
   {
     title: "Memory consolidation engine",

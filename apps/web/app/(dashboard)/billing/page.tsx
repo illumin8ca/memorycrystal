@@ -6,6 +6,15 @@ import { useImpersonation } from "../ImpersonationContext";
 
 const SUPPORT_EMAIL = "support@memorycrystal.ai";
 const POLAR_PORTAL_URL = "https://polar.sh/illumin8ca/portal";
+const CONTACT_HREF = "mailto:hello@memorycrystal.ai?subject=Memory%20Crystal%20higher-usage%20plan";
+
+const displayTierLabel: Record<string, string> = {
+  free: "FREE",
+  starter: "PRO",
+  pro: "PRO",
+  ultra: "CONTACT",
+  unlimited: "CONTACT",
+};
 
 const upgradeHrefByTier: Record<string, string | null> = {
   free: "/api/polar/checkout?plan=pro",
@@ -24,6 +33,7 @@ export default function BillingPage() {
 
   const tier = usage?.tier ?? userTier ?? "free";
   const upgradeHref = upgradeHrefByTier[tier] ?? null;
+  const displayTier = displayTierLabel[tier] ?? String(tier).toUpperCase();
   const refundMailto = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Refund request")}&body=${encodeURIComponent(
     "Hi Memory Crystal support,\n\nI would like to request a refund for my subscription.\n\nAccount email: "
   )}`;
@@ -36,7 +46,7 @@ export default function BillingPage() {
         <h2 className="font-mono font-bold text-lg text-primary mb-4">Current Plan</h2>
         <div className="border border-white/[0.07] bg-surface p-4">
           <p className="text-secondary text-xs tracking-widest uppercase mb-2">Plan Status</p>
-          <p className="text-primary text-base font-medium">{String(tier).toUpperCase()}</p>
+          <p className="text-primary text-base font-medium">{displayTier}</p>
           <p className="text-secondary text-xs mt-1">
             {usage
               ? `${usage.memoriesUsed} / ${usage.memoriesLimit === null ? "∞" : usage.memoriesLimit} memories used • Message TTL: ${usage.messageTtlDays} days`
@@ -48,14 +58,18 @@ export default function BillingPage() {
       <section className="mb-6">
         <h2 className="font-mono font-bold text-lg text-primary mb-4">Upgrade</h2>
         <div className="border border-white/[0.07] bg-surface p-4">
-          <p className="text-primary text-sm mb-2">Pro includes larger limits, full memory health dashboard, and advanced recall workflows.</p>
-          <p className="text-secondary text-xs mb-4">Free trial for Pro is shown at checkout when available.</p>
+          <p className="text-primary text-sm mb-2">Pro includes larger limits, full memory health dashboard, advanced recall workflows, and a 14-day free trial for new upgrades.</p>
+          <p className="text-secondary text-xs mb-4">Need higher usage than Pro? Contact us for a custom plan.</p>
           {upgradeHref ? (
             <a href={upgradeHref} className="btn-primary inline-flex px-4 py-2 text-xs">
-              Upgrade to Pro
+              Start Pro 14-day trial
+            </a>
+          ) : tier === "pro" || tier === "starter" ? (
+            <a href={CONTACT_HREF} className="text-accent underline text-sm font-mono">
+              Need higher usage? Contact us →
             </a>
           ) : (
-            <p className="text-accent text-sm font-mono">You are already on a Pro-level plan.</p>
+            <p className="text-accent text-sm font-mono">You are already on a custom higher-usage plan.</p>
           )}
         </div>
       </section>

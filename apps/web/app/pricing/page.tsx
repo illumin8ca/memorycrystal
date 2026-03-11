@@ -46,30 +46,13 @@ const pricingPlans: PricingPlan[] = [
     borderClass: "border-border/25",
   },
   {
-    name: "STARTER",
-    price: "$10/mo",
-    button: "START STARTER",
-    checkoutHref: "/api/polar/checkout?plan=starter",
-    features: [
-      planFeatureFromTier("starter").memories,
-      planFeatureFromTier("starter").stm,
-      planFeatureFromTier("starter").ttl,
-      planFeatureFromTier("starter").channels,
-      "Knowledge Graph Enrichment — Basic (gpt-4o-mini)",
-      "Adaptive Recall Modes — All 6 modes: general, decision, project, people, workflow, conversation",
-      "Relationship Graph Tools — Included (crystal_who_owns, crystal_explain_connection, crystal_dependency_chain)",
-      "Memory Health Dashboard — Basic (graph coverage %, stale memory counts)",
-      "Salience-Based Memory Filtering — Heuristic salience scoring",
-    ],
-    borderClass: "border-border/45",
-  },
-  {
     name: "PRO",
     price: "$20/mo",
-    button: "START PRO",
+    button: "START 14-DAY TRIAL",
     checkoutHref: "/api/polar/checkout?plan=pro",
     badge: "MOST POPULAR",
     features: [
+      "14-day free trial",
       planFeatureFromTier("pro").memories,
       planFeatureFromTier("pro").stm,
       planFeatureFromTier("pro").ttl,
@@ -84,21 +67,16 @@ const pricingPlans: PricingPlan[] = [
     borderClass: "neon-border glow-pulse",
   },
   {
-    name: "ULTRA",
-    price: "$100/mo",
-    button: "START ULTRA",
-    checkoutHref: "/api/polar/checkout?plan=ultra",
+    name: "CONTACT",
+    price: "Custom",
+    button: "CONTACT US",
+    checkoutHref: "mailto:hello@memorycrystal.ai?subject=Memory%20Crystal%20higher-usage%20plan",
     features: [
-      planFeatureFromTier("ultra").memories,
-      planFeatureFromTier("ultra").stm,
-      planFeatureFromTier("ultra").ttl,
-      planFeatureFromTier("ultra").channels,
-      "Knowledge Graph Enrichment — Premium (o4-mini, best quality)",
-      "Adaptive Recall Modes — All 6 modes included",
-      "Relationship Graph Tools — Included",
-      "Memory Health Dashboard — Full dashboard",
-      "Salience-Based Memory Filtering — Heuristic + LLM promotion pass",
-      "Priority recall + API access",
+      "Need higher usage? Contact us.",
+      "Higher memory and message limits",
+      "Custom retention and channel allowances",
+      "Priority support for larger deployments",
+      "Tailored plan for advanced or team usage",
     ],
     borderClass: "border-border/50",
   },
@@ -122,7 +100,9 @@ export default function PricingPage() {
         <BracketHeading>PRICING</BracketHeading>
         <h1 className="font-heading text-3xl sm:text-4xl md:text-6xl">Simple pricing. Built to scale.</h1>
 
-        <section className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <p className="mt-4 max-w-2xl text-secondary">Start free, then move to Pro with a 14-day free trial. Need higher usage or a larger deployment? Contact us.</p>
+
+        <section className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {pricingPlans.map((plan) => (
             <article
               key={plan.name}

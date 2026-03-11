@@ -27,14 +27,6 @@ const formatChannels = (channels: number | null): string =>
 const PRICING_ROWS: string[][] = [
   ["FREE", "$0/mo", formatLimit(TIER_LIMITS.free.memories), formatLimit(TIER_LIMITS.free.stmMessages), formatTtlDays(TIER_LIMITS.free.stmTtlDays), formatChannels(TIER_LIMITS.free.channels)],
   [
-    "STARTER",
-    "$10/mo",
-    formatLimit(TIER_LIMITS.starter.memories),
-    formatLimit(TIER_LIMITS.starter.stmMessages),
-    formatTtlDays(TIER_LIMITS.starter.stmTtlDays),
-    formatChannels(TIER_LIMITS.starter.channels),
-  ],
-  [
     "PRO",
     "$20/mo",
     formatLimit(TIER_LIMITS.pro.memories),
@@ -43,12 +35,12 @@ const PRICING_ROWS: string[][] = [
     formatChannels(TIER_LIMITS.pro.channels),
   ],
   [
-    "ULTRA",
-    "$100/mo",
-    formatLimit(TIER_LIMITS.ultra.memories),
-    formatLimit(TIER_LIMITS.ultra.stmMessages),
-    formatTtlDays(TIER_LIMITS.ultra.stmTtlDays),
-    formatChannels(TIER_LIMITS.ultra.channels),
+    "CONTACT",
+    "Custom",
+    "Need higher usage?",
+    "Contact us",
+    "Custom retention",
+    "Custom channels",
   ],
 ];
 
@@ -190,7 +182,7 @@ export default function DocsPage() {
 
             <section id="reflection-pipeline" className="glass-card border border-white/[0.08] p-6 sm:p-8">
               <h2 className="font-heading text-3xl">7. Reflection Pipeline</h2>
-              <p className="mt-4 text-secondary"><span className="text-primary">POST /reflect</span> is available on Pro and Ultra tiers and converts recent memories into higher-order memory products.</p>
+              <p className="mt-4 text-secondary"><span className="text-primary">POST /reflect</span> is available on Pro and higher-usage custom plans and converts recent memories into higher-order memory products.</p>
               <p className="mt-3 text-secondary">How it works:</p>
               <ul className="mt-3 space-y-2 text-secondary list-disc pl-5">
                 <li>Reads recent memories from your selected time window (default 4 hours, 0.5–72h)</li>
@@ -274,7 +266,7 @@ export default function DocsPage() {
 
               <h3 className="mt-6 text-xl font-heading">POST /reflect — trigger reflection pipeline (Pro+)</h3>
               <p className="mt-2 text-secondary">Optional: <span className="text-primary">windowHours</span> (0.5–72, default 4), <span className="text-primary">sessionId</span>.</p>
-              <p className="mt-1 text-secondary">Pro and Ultra plans can use this endpoint.</p>
+              <p className="mt-1 text-secondary">Pro and higher-usage custom plans can use this endpoint.</p>
               <CodeBlock code={`curl -X POST https://memorycrystal.ai/api/mcp/reflect \
   -H "Authorization: Bearer <api-key>" \
   -H "Content-Type: application/json" \
@@ -343,8 +335,8 @@ curl -X POST https://memorycrystal.ai/api/mcp/stats \
               </div>
               <p className="mt-4 text-secondary">Additional features by tier:</p>
               <ul className="mt-2 space-y-1 text-secondary list-disc pl-5">
-                <li><span className="text-primary">Pro</span>: Reflection pipeline and higher limits</li>
-                <li><span className="text-primary">Ultra</span>: Priority recall + full API capabilities</li>
+                <li><span className="text-primary">Pro</span>: Includes a 14-day free trial, reflection pipeline, and higher limits</li>
+                <li><span className="text-primary">Contact</span>: Need higher usage, custom retention, or larger deployment support? Contact us.</li>
               </ul>
               <p className="mt-4 text-secondary">Global API rate limit: <span className="text-primary">60 requests/minute per API key</span> (returns 429 with <span className="text-primary">Retry-After</span>).</p>
             </section>

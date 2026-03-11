@@ -11,7 +11,7 @@ const changelogEntries = [
       "OpenClaw one-liner installer: curl -fsSL https://memorycrystal.ai/install | bash",
       "Real-time semantic search with OpenAI embeddings",
       "Per-API-key rate limiting (60 req/min)",
-      "Polar billing integration (Free / Pro / Ultra)",
+      "Polar billing integration (Free / Pro plans + custom contact sales)",
       "PWA support — installable on iOS and Android",
     ],
   },

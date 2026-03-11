@@ -17,16 +17,14 @@ type TierInfo = {
   channels: string;
 };
 
-type TierName = "free" | "starter" | "pro" | "ultra";
+type TierName = "free" | "pro";
 
 const PLAN_PRICES: Record<TierName, string> = {
   free: "$0/mo",
-  starter: "$10/mo",
   pro: "$20/mo",
-  ultra: "$100/mo",
 };
 
-const TIERS: TierInfo[] = (["free", "starter", "pro", "ultra"] as const).map((name: TierName) => {
+const TIERS: TierInfo[] = (["free", "pro"] as const).map((name: TierName) => {
   const limits = TIER_LIMITS[name];
   const memories = formatLimit(limits.memories);
   const stm = limits.stmMessages === null ? "Unlimited" : `${formatLimit(limits.stmMessages)} msgs`;
@@ -44,16 +42,22 @@ const TIERS: TierInfo[] = (["free", "starter", "pro", "ultra"] as const).map((na
 });
 
 const NEXT_TIER: Record<string, string> = {
-  free: "starter",
-  starter: "pro",
-  pro: "ultra",
+  free: "pro",
 };
 
 const UPGRADE_HREF: Record<string, string> = {
-  free: "/api/polar/checkout?plan=starter",
-  starter: "/api/polar/checkout?plan=pro",
-  pro: "/api/polar/checkout?plan=ultra",
+  free: "/api/polar/checkout?plan=pro",
 };
+
+const DISPLAY_TIER_LABEL: Record<string, string> = {
+  free: "Free",
+  starter: "Pro",
+  pro: "Pro",
+  ultra: "Contact",
+  unlimited: "Contact",
+};
+
+const CONTACT_HREF = "mailto:hello@memorycrystal.ai?subject=Memory%20Crystal%20higher-usage%20plan";
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -186,6 +190,7 @@ export default function UsagePage() {
     usage.byStore.procedural +
     usage.byStore.prospective;
 
+  const displayedTier = DISPLAY_TIER_LABEL[tier] ?? tier;
   const nextTierName = NEXT_TIER[tier];
   const nextTierInfo = nextTierName
     ? TIERS.find((t) => t.name === nextTierName)
@@ -214,7 +219,7 @@ export default function UsagePage() {
             className="text-xs font-mono border px-3 py-1 uppercase"
             style={{ color: statusColor, borderColor: statusColor }}
           >
-            {tier}
+            {displayedTier}
           </span>
           <span className="text-secondary text-xs font-mono uppercase tracking-wider">
             {subscriptionStatus}
@@ -222,10 +227,10 @@ export default function UsagePage() {
         </div>
         {upgradeAvailable && (
           <a
-            href={UPGRADE_HREF[tier] ?? "#"}
+            href={tier === "free" ? (UPGRADE_HREF[tier] ?? "#") : CONTACT_HREF}
             className="btn-primary inline-flex items-center px-4 py-2 text-xs sm:ml-auto"
           >
-            Upgrade to {nextTierName?.toUpperCase() ?? "next plan"} →
+{tier === "free" ? "Start Pro trial →" : "Contact us for higher usage →"}
           </a>
         )}
       </div>
@@ -336,7 +341,7 @@ export default function UsagePage() {
             UPGRADE TO {nextTierInfo.label.toUpperCase()}
           </p>
           <p className="text-secondary text-xs mb-3">
-            Get more memories, longer message history, and additional channels.
+{tier === "free" ? "Start a 14-day Pro trial for more memories, longer message history, and additional channels." : "Need higher usage than Pro? Contact us for a custom plan."}
           </p>
           <ul className="text-secondary text-xs space-y-1 mb-4">
             <li>→ {nextTierInfo.memories} memories</li>
@@ -345,10 +350,10 @@ export default function UsagePage() {
             <li>→ {nextTierInfo.channels} channel{nextTierInfo.channels !== "1" ? "s" : ""}</li>
           </ul>
           <a
-            href={UPGRADE_HREF[tier] ?? "#"}
+            href={tier === "free" ? (UPGRADE_HREF[tier] ?? "#") : CONTACT_HREF}
             className="btn-primary inline-flex items-center px-5 py-2 text-xs"
           >
-            Upgrade for {nextTierInfo.price} →
+{tier === "free" ? "Start Pro trial →" : "Contact us for higher usage →"}
           </a>
         </section>
       )}

@@ -45,7 +45,7 @@ export default function AcceptableUsePage() {
 
           <section>
             <h2 className="font-heading text-2xl text-primary mb-3">4. Rate Limits and Fair Use</h2>
-            <p>Each plan includes defined memory and API limits. Exceeding these limits may result in throttling or temporary suspension. Ultra plan subscribers may negotiate custom limits.</p>
+            <p>Each plan includes defined memory and API limits. Exceeding these limits may result in throttling or temporary suspension. Customers who need higher usage may contact us to discuss custom limits.</p>
           </section>
 
           <section>
