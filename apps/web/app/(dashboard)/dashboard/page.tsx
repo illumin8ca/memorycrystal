@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useConvex, useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
+import { InstallCommandCard } from "../../components/InstallCommandCard";
 import { useImpersonation } from "../ImpersonationContext";
 
 const formatTime = (value: number) =>
@@ -118,6 +119,14 @@ export default function DashboardPage() {
   return (
     <div>
       <h1 className="font-mono font-bold text-xl sm:text-2xl text-primary mb-5 sm:mb-8 tracking-wide">DASHBOARD</h1>
+
+      <div className="mb-8 sm:mb-10">
+        <InstallCommandCard
+          title="Install on your OpenClaw client"
+          description="This is the fastest way to get Memory Crystal running. Paste it into a terminal on the machine where OpenClaw is installed, then enter your API key when prompted."
+        />
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-10">
         {cards.map((s) => (
           <div key={s.label} className="bg-surface border border-white/[0.07] p-4 sm:p-6 min-w-0">
