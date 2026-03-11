@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useConvex, useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import { InstallCommandCard } from "../../components/InstallCommandCard";
 import { useImpersonation } from "../ImpersonationContext";
 
 const formatTime = (value: number) =>
@@ -120,13 +119,6 @@ export default function DashboardPage() {
     <div>
       <h1 className="font-mono font-bold text-xl sm:text-2xl text-primary mb-5 sm:mb-8 tracking-wide">DASHBOARD</h1>
 
-      <div className="mb-8 sm:mb-10">
-        <InstallCommandCard
-          title="Install on your OpenClaw client"
-          description="This is the fastest way to get Memory Crystal running. Paste it into a terminal on the machine where OpenClaw is installed, then enter your API key when prompted."
-        />
-      </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-10">
         {cards.map((s) => (
           <div key={s.label} className="bg-surface border border-white/[0.07] p-4 sm:p-6 min-w-0">
@@ -147,7 +139,7 @@ export default function DashboardPage() {
         <div className="mb-8 sm:mb-10 bg-surface border border-accent/50 p-4 sm:p-5">
           <p className="text-primary text-sm">You&apos;re using {usage.memoriesUsed} of {usage.memoriesLimit} memories.</p>
           <p className="text-secondary text-xs mt-1 mb-3">Upgrade now to avoid capture interruptions.</p>
-          <Link href="/dashboard/settings" className="btn-primary inline-flex px-4 py-2 text-xs">
+          <Link href="/settings" className="btn-primary inline-flex px-4 py-2 text-xs">
             Upgrade
           </Link>
         </div>

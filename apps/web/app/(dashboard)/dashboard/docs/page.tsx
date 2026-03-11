@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { InstallCommandCard, DEFAULT_INSTALL_COMMAND } from "../../../components/InstallCommandCard";
+import { DEFAULT_INSTALL_COMMAND } from "../../../components/InstallCommandCard";
 
 const installSteps = [
   "Open a terminal on the machine where OpenClaw is installed.",
@@ -25,9 +25,9 @@ export default function DashboardDocsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-6 sm:mb-8">
         <div>
           <p className="text-accent text-[11px] tracking-[0.22em] uppercase mb-2">Documentation</p>
-          <h1 className="font-mono font-bold text-xl sm:text-2xl text-primary tracking-wide">INSTALL DOCS</h1>
+          <h1 className="font-mono font-bold text-xl sm:text-2xl text-primary tracking-wide">DOCS</h1>
           <p className="text-secondary text-sm mt-2 max-w-3xl">
-            Everything your client needs to install Memory Crystal on OpenClaw and verify it is working.
+            Reference documentation for installation, verification, and what the Memory Crystal installer changes on an OpenClaw client.
           </p>
         </div>
         <Link href="/settings" className="text-accent text-xs font-mono hover:underline">
@@ -36,12 +36,23 @@ export default function DashboardDocsPage() {
       </div>
 
       <div className="space-y-6">
-        <InstallCommandCard
-          title="One-line install"
-          description="Use this on the target OpenClaw machine. It installs the plugin, validates the API key, and finishes the basic wiring for you."
-          command={DEFAULT_INSTALL_COMMAND}
-          showDocsLink={false}
-        />
+        <section className="bg-surface border border-white/[0.07] p-5 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="font-mono font-bold text-base sm:text-lg text-primary">Install command reference</h2>
+              <p className="text-secondary text-sm mt-2 max-w-3xl">
+                The primary onboarding flow now lives in Get Started. Keep this page handy when you need the exact one-line installer or a quick reminder of the verification steps.
+              </p>
+            </div>
+            <Link href="/get-started" className="text-accent text-xs font-mono hover:underline shrink-0">
+              OPEN GET STARTED
+            </Link>
+          </div>
+
+          <div className="mt-4 border border-white/[0.09] bg-white/[0.03] overflow-x-auto">
+            <pre className="p-4 sm:p-5 text-sm sm:text-base font-mono text-primary whitespace-pre-wrap break-all">{DEFAULT_INSTALL_COMMAND}</pre>
+          </div>
+        </section>
 
         <section className="bg-surface border border-white/[0.07] p-5 sm:p-6">
           <h2 className="font-mono font-bold text-base sm:text-lg text-primary">Quick install steps</h2>
