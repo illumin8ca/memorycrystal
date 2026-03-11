@@ -17,8 +17,8 @@ const MEMORY_CATEGORIES = [
   "conversation",
 ];
 
-function getConfig(ctx) {
-  return ctx?.config || {};
+function getConfig(ctx, api) {
+  return ctx?.config || api?.config || {};
 }
 
 /**
@@ -143,7 +143,7 @@ async function injectWakeBriefing(api, event, ctx) {
   const sessionKey = ctx?.sessionKey || event?.conversationId;
   if (!sessionKey || wakeInjectedSessions.has(sessionKey)) return;
 
-  const wake = await request(getConfig(ctx), "POST", "/api/mcp/wake", {
+  const wake = await request(getConfig(ctx, api), "POST", "/api/mcp/wake", {
     channel: ctx?.messageProvider || "openclaw",
   });
 
@@ -156,7 +156,7 @@ async function injectWakeBriefing(api, event, ctx) {
 }
 
 async function logMessage(ctx, payload) {
-  await request(getConfig(ctx), "POST", "/api/mcp/log", payload);
+  await request(getConfig(ctx, api), "POST", "/api/mcp/log", payload);
 }
 
 async function captureTurn(ctx, userMessage, assistantText) {
@@ -166,7 +166,7 @@ async function captureTurn(ctx, userMessage, assistantText) {
     .filter(Boolean)
     .join("\n\n");
 
-  await request(getConfig(ctx), "POST", "/api/mcp/capture", {
+  await request(getConfig(ctx, api), "POST", "/api/mcp/capture", {
     title: `OpenClaw — ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
     content,
     store: "sensory",
@@ -271,7 +271,7 @@ module.exports = (api) => {
   api.registerHook(
     "command:new",
     async (event, ctx) => {
-      await triggerReflection(getConfig(ctx), ctx?.sessionKey);
+      await triggerReflection(getConfig(ctx, api), ctx?.sessionKey);
     },
     { name: "crystal-memory.command-new", description: "Trigger memory reflection on /new" }
   );
@@ -279,7 +279,7 @@ module.exports = (api) => {
   api.registerHook(
     "command:reset",
     async (event, ctx) => {
-      await triggerReflection(getConfig(ctx), ctx?.sessionKey);
+      await triggerReflection(getConfig(ctx, api), ctx?.sessionKey);
     },
     { name: "crystal-memory.command-reset", description: "Trigger memory reflection on /reset" }
   );
@@ -301,7 +301,7 @@ module.exports = (api) => {
       try {
         const query = ensureString(params?.query, "query", 2);
         const limit = Number.isFinite(Number(params?.limit)) ? Number(params.limit) : undefined;
-        const data = await crystalRequest(getConfig(ctx), "/api/mcp/recall", {
+        const data = await crystalRequest(getConfig(ctx, api), "/api/mcp/recall", {
           query,
           ...(limit ? { limit } : {}),
         });
@@ -342,7 +342,7 @@ module.exports = (api) => {
         const title = ensureString(params?.title, "title", 5);
         const content = ensureString(params?.content, "content", 1);
         const tags = Array.isArray(params?.tags) ? params.tags.map(String) : [];
-        const data = await crystalRequest(getConfig(ctx), "/api/mcp/capture", {
+        const data = await crystalRequest(getConfig(ctx, api), "/api/mcp/capture", {
           title,
           content,
           store,
@@ -380,7 +380,7 @@ module.exports = (api) => {
       try {
         const topic = ensureString(params?.topic, "topic", 3);
         const limit = Number.isFinite(Number(params?.limit)) ? Number(params.limit) : 8;
-        const data = await crystalRequest(getConfig(ctx), "/api/mcp/recall", {
+        const data = await crystalRequest(getConfig(ctx, api), "/api/mcp/recall", {
           query: topic,
           limit,
         });
@@ -415,7 +415,7 @@ module.exports = (api) => {
       try {
         const decision = ensureString(params?.decision, "decision", 3);
         const limit = Number.isFinite(Number(params?.limit)) ? Number(params.limit) : 8;
-        const data = await crystalRequest(getConfig(ctx), "/api/mcp/recall", {
+        const data = await crystalRequest(getConfig(ctx, api), "/api/mcp/recall", {
           query: decision,
           limit,
         });
@@ -452,7 +452,7 @@ module.exports = (api) => {
       try {
         const label = ensureString(params?.label, "label", 1);
         const description = typeof params?.description === "string" ? params.description : undefined;
-        const data = await crystalRequest(getConfig(ctx), "/api/mcp/checkpoint", {
+        const data = await crystalRequest(getConfig(ctx, api), "/api/mcp/checkpoint", {
           label,
           description,
         });
