@@ -240,10 +240,12 @@ echo "  ✓ Extension files written"
 echo "  → Updating OpenClaw config at $OPENCLAW_CONFIG..."
 node - "$OPENCLAW_CONFIG" "$API_KEY" "$CONVEX_URL" "$EXT_DIR" <<'NODE'
 const fs = require('node:fs');
+const nodePath = require('node:path');
 const path = process.argv[2];
 const apiKey = process.argv[3];
 const convexUrl = process.argv[4];
 const extDir = process.argv[5];
+const preserveDevPath = process.env.CRYSTAL_PRESERVE_DEV_PLUGIN_PATH === '1';
 
 let cfg = {};
 try {
@@ -262,8 +264,35 @@ cfg.plugins.allow = Array.isArray(cfg.plugins.allow) ? cfg.plugins.allow : [];
 if (!cfg.plugins.allow.includes('crystal-memory')) cfg.plugins.allow.push('crystal-memory');
 
 cfg.plugins.load ??= {};
-cfg.plugins.load.paths = Array.isArray(cfg.plugins.load.paths) ? cfg.plugins.load.paths : [];
-if (!cfg.plugins.load.paths.includes(extDir)) cfg.plugins.load.paths.push(extDir);
+const existingPaths = Array.isArray(cfg.plugins.load.paths) ? cfg.plugins.load.paths : [];
+
+const normalize = (p) => String(p || '').replaceAll('\\', '/').replace(/\/$/, '').toLowerCase();
+const extNorm = normalize(extDir);
+const isLikelyRepoDevPath = (p) => {
+  const n = normalize(p);
+  return n.endsWith('/memorycrystal/plugin') || n.includes('/projects/memorycrystal/plugin');
+};
+
+const devPaths = existingPaths.filter(isLikelyRepoDevPath);
+const hasDevPath = devPaths.length > 0;
+const preferDevPath = preserveDevPath && hasDevPath;
+
+let activePath = extDir;
+let nextPaths = [...existingPaths];
+
+if (preferDevPath) {
+  activePath = devPaths[0];
+  nextPaths = nextPaths.filter((p) => normalize(p) !== extNorm);
+  console.log('  ℹ Preserving existing repo dev plugin path for crystal-memory (CRYSTAL_PRESERVE_DEV_PLUGIN_PATH=1).');
+} else {
+  nextPaths = nextPaths.filter((p) => !isLikelyRepoDevPath(p));
+  if (hasDevPath) {
+    console.log('  ℹ Removed repo dev plugin path to avoid duplicate crystal-memory plugin loading.');
+  }
+  if (!nextPaths.some((p) => normalize(p) === extNorm)) nextPaths.push(extDir);
+}
+
+cfg.plugins.load.paths = Array.from(new Set(nextPaths));
 
 cfg.plugins.entries ??= {};
 const existingEntry = (cfg.plugins.entries['crystal-memory'] && typeof cfg.plugins.entries['crystal-memory'] === 'object')
@@ -286,21 +315,41 @@ cfg.plugins.entries['crystal-memory'] = {
 cfg.plugins.installs ??= {};
 cfg.plugins.installs['crystal-memory'] = {
   source: 'path',
-  sourcePath: extDir,
-  installPath: extDir,
+  sourcePath: activePath,
+  installPath: activePath,
   version: '0.1.0',
   installedAt: new Date().toISOString(),
 };
 
-fs.mkdirSync(require('node:path').dirname(path), { recursive: true });
+fs.mkdirSync(nodePath.dirname(path), { recursive: true });
 fs.writeFileSync(path, JSON.stringify(cfg, null, 2));
 NODE
 
 echo "  ✓ OpenClaw config updated"
 
 echo ""
-echo "  → Installed. Restart your gateway to activate:"
-echo "    openclaw gateway restart"
+echo "  → Restart OpenClaw gateway now? [Y/n]"
+RESTART_CHOICE=""
+if [ -r /dev/tty ]; then
+  IFS= read -r RESTART_CHOICE < /dev/tty || true
+fi
+
+case "$RESTART_CHOICE" in
+  ""|[Yy]|[Yy][Ee][Ss])
+    echo "  → Restarting OpenClaw gateway..."
+    if openclaw gateway restart; then
+      echo "  ✓ OpenClaw gateway restarted"
+    else
+      echo "  ✗ Failed to restart gateway automatically."
+      echo "    Run manually: openclaw gateway restart"
+    fi
+    ;;
+  *)
+    echo "  → Skipped restart. Run manually when ready:"
+    echo "    openclaw gateway restart"
+    ;;
+esac
+
 echo ""
 echo "  ┌─────────────────────────────────────────────────────┐"
 echo "  │  ◈  Memory Crystal is active!                       │"
