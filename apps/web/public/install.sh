@@ -2,7 +2,8 @@
 set -euo pipefail
 
 CONVEX_URL="https://rightful-mockingbird-389.convex.site"
-PLUGIN_REPO_BASE="https://raw.githubusercontent.com/illumin8ca/memorycrystal/main/plugin"
+INSTALL_BASE="${CRYSTAL_INSTALL_BASE:-https://memorycrystal.ai}"
+PLUGIN_REPO_BASE="$INSTALL_BASE/install-assets/plugin"
 
 DETECT_OPENCLAW_DIR() {
   if [ -n "${OPENCLAW_DIR:-}" ]; then
