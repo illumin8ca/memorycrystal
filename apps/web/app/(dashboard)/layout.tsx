@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvexAuth } from "convex/react";
-import { ActivitySquare, BookOpen, Brain, Flag, LayoutDashboard, MessageSquare, PlayCircle, Settings, BarChart2, Shield, type LucideIcon } from "lucide-react";
+import { ActivitySquare, BookOpen, Brain, Flag, KeyRound, LayoutDashboard, MessageSquare, PlayCircle, BarChart2, CreditCard, Shield, type LucideIcon } from "lucide-react";
 import CrystalIcon from "../components/CrystalIcon";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -23,7 +23,8 @@ const baseNav: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Eval", href: "/eval", icon: ActivitySquare },
   { label: "Docs", href: "/dashboard/docs", icon: BookOpen },
-  { label: "Settings", href: "/settings", icon: Settings },
+  { label: "API Keys", href: "/api-keys", icon: KeyRound },
+  { label: "Billing", href: "/billing", icon: CreditCard },
   { label: "Memories", href: "/memories", icon: Brain },
   { label: "Messages", href: "/messages", icon: MessageSquare },
   { label: "Checkpoints", href: "/checkpoints", icon: Flag },

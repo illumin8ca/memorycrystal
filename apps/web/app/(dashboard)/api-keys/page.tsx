@@ -16,12 +16,10 @@ type ApiKeyRow = {
   active: boolean;
 };
 
-export default function SettingsPage() {
+export default function ApiKeysPage() {
   const user = useQuery(api.crystal.userProfiles.getCurrentUser, {});
   const { asUserId } = useImpersonation();
   const userId = user?.userId ?? null;
-  const userTier = useQuery(api.crystal.userProfiles.getCurrentUserTier, userId ? { asUserId } : "skip");
-  const usage = useQuery(api.crystal.dashboard.getUsage, userId ? { asUserId } : "skip");
   const apiKeys = useQuery(api.crystal.apiKeys.listApiKeys, userId ? { asUserId } : "skip");
   const createApiKey = useMutation(api.crystal.apiKeys.createApiKey);
   const revokeApiKey = useMutation(api.crystal.apiKeys.revokeApiKey);
@@ -88,10 +86,9 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <h1 className="font-mono font-bold text-xl sm:text-2xl text-primary mb-6 sm:mb-8 tracking-wide">SETTINGS</h1>
+      <h1 className="font-mono font-bold text-xl sm:text-2xl text-primary mb-6 sm:mb-8 tracking-wide">API KEYS</h1>
 
       <section className="mb-10 sm:mb-12">
-        <h2 className="font-mono font-bold text-lg text-primary mb-2">API KEYS</h2>
         <p className="text-secondary text-sm mb-6">Use these keys to connect OpenClaw and other integrations to your Memory Crystal memory.</p>
         {error ? <p className="text-red-400 text-sm mb-4">{error}</p> : null}
         <button
@@ -152,68 +149,6 @@ export default function SettingsPage() {
                 </div>
               ))
             : <div className="border border-white/[0.07] p-4 text-secondary text-sm">Loading...</div>}
-        </div>
-      </section>
-
-      <div className="h-px bg-white/[0.06] mb-8 sm:mb-10" />
-
-      <section>
-        <h2 className="font-mono font-bold text-lg text-primary mb-4">SUBSCRIPTION</h2>
-
-        <div className="border border-white/[0.07] bg-surface p-4 mb-4">
-          <p className="text-secondary text-xs tracking-widest uppercase mb-2">Usage</p>
-          <p className="text-primary text-sm">
-            {usage
-              ? `${usage.memoriesUsed} / ${usage.memoriesLimit === null ? "∞" : usage.memoriesLimit} memories used`
-              : "Loading usage..."}
-          </p>
-          <p className="text-secondary text-xs mt-1">
-            {usage ? `Tier: ${({ free: "FREE", starter: "PRO", pro: "PRO", ultra: "CONTACT", unlimited: "CONTACT" }[usage.tier] ?? usage.tier.toUpperCase())} • Message TTL: ${usage.messageTtlDays} days` : ""}
-          </p>
-          {usage && usage.tier !== "ultra" && usage.tier !== "unlimited" ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {usage.tier === "free" ? (
-                <a href="/api/polar/checkout?plan=starter" className="btn-primary inline-flex px-4 py-2 text-xs">
-                  Upgrade to Starter
-                </a>
-              ) : null}
-              {usage.tier === "starter" ? (
-                <a href="/api/polar/checkout?plan=pro" className="btn-primary inline-flex px-4 py-2 text-xs">
-                  Upgrade to Pro
-                </a>
-              ) : null}
-              {usage.tier === "pro" ? (
-                <a href="/api/polar/checkout?plan=ultra" className="btn-primary inline-flex px-4 py-2 text-xs">
-                  Upgrade to Ultra
-                </a>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
-          {userTier === undefined ? (
-            <span className="text-white/30 text-sm font-mono border border-white/10 px-3 py-2">LOADING…</span>
-          ) : (
-            <span className="text-accent text-sm font-mono border border-accent px-3 py-2">ACTIVE</span>
-          )}
-          <span className="text-primary">{userTier ? `Tier: ${({ free: "FREE", starter: "PRO", pro: "PRO", ultra: "CONTACT", unlimited: "CONTACT" }[userTier] ?? userTier.toUpperCase())}` : "Preparing account"}</span>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm">
-          <a
-            href="https://polar.sh/illumin8ca/portal"
-            target="_blank"
-            rel="noreferrer"
-            className="text-accent underline text-left min-h-11"
-          >
-            Manage with Polar →
-          </a>
-          <button
-            type="button"
-            className="text-secondary hover:text-primary transition-colors text-left min-h-11"
-          >
-            Cancel
-          </button>
         </div>
       </section>
 
