@@ -1,18 +1,72 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
+
+CONVEX_URL="https://rightful-mockingbird-389.convex.site"
+PLUGIN_REPO_BASE="https://raw.githubusercontent.com/illumin8ca/memorycrystal/main/plugin"
+
+DETECT_OPENCLAW_DIR() {
+  if [ -n "${OPENCLAW_DIR:-}" ]; then
+    echo "$OPENCLAW_DIR"
+    return
+  fi
+
+  if [ -d "$HOME/.openclaw" ]; then
+    echo "$HOME/.openclaw"
+    return
+  fi
+
+  if [ -d "$HOME/.config/openclaw" ]; then
+    echo "$HOME/.config/openclaw"
+    return
+  fi
+
+  if [ -n "${XDG_CONFIG_HOME:-}" ] && [ -d "$XDG_CONFIG_HOME/openclaw" ]; then
+    echo "$XDG_CONFIG_HOME/openclaw"
+    return
+  fi
+
+  if [ -d "$HOME/Library/Application Support/openclaw" ]; then
+    echo "$HOME/Library/Application Support/openclaw"
+    return
+  fi
+
+  echo "$HOME/.openclaw"
+}
+
+OPENCLAW_DIR="$(DETECT_OPENCLAW_DIR)"
+OPENCLAW_CONFIG="$OPENCLAW_DIR/openclaw.json"
+HOOK_DIR="$OPENCLAW_DIR/hooks/crystal-stm"
+EXT_DIR="$OPENCLAW_DIR/extensions/crystal-memory"
+
+fetch_plugin_file() {
+  local file="$1"
+  local target="$2"
+  local url="$PLUGIN_REPO_BASE/$file"
+
+  if ! curl -fsSL "$url" -o "$target"; then
+    echo "  ✗ Failed to download plugin file: $url"
+    exit 1
+  fi
+}
 
 echo ""
 echo "  ◈ Memory Crystal Installer"
 echo "  Persistent memory for your AI agents"
 echo ""
 
-# ── Check OpenClaw ────────────────────────────────────────────────────────────
-if ! command -v openclaw &> /dev/null; then
+# ── Check prerequisites ───────────────────────────────────────────────────────
+if ! command -v openclaw >/dev/null 2>&1; then
   echo "  ✗ OpenClaw not found."
   echo "  Install it first: https://openclaw.ai"
   echo ""
   exit 1
 fi
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "  ✗ Node.js is required but was not found."
+  exit 1
+fi
+
 echo "  ✓ OpenClaw detected ($(openclaw --version 2>/dev/null || echo 'version unknown'))"
 
 # ── Get API key ───────────────────────────────────────────────────────────────
@@ -37,7 +91,7 @@ fi
 # Validate key against the API
 echo "  → Validating API key..."
 STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X GET \
-  https://rightful-mockingbird-389.convex.site/api/mcp/auth \
+  "$CONVEX_URL/api/mcp/auth" \
   -H "Authorization: Bearer $API_KEY" \
   2>/dev/null)
 
@@ -47,12 +101,12 @@ if [ "$STATUS" != "200" ]; then
 fi
 echo "  ✓ API key valid"
 
-# ── Install the crystal-stm hook ──────────────────────────────────────────────
-HOOK_DIR="$HOME/.openclaw/hooks/crystal-stm"
+mkdir -p "$OPENCLAW_DIR"
+
+# ── Install the crystal-stm hook (capture) ───────────────────────────────────
 echo "  → Installing crystal-stm hook to $HOOK_DIR..."
 mkdir -p "$HOOK_DIR"
 
-# hook.json
 cat > "$HOOK_DIR/hook.json" << 'HOOKJSON'
 {
   "openclaw": {
@@ -63,7 +117,6 @@ cat > "$HOOK_DIR/hook.json" << 'HOOKJSON'
 }
 HOOKJSON
 
-# HOOK.md
 cat > "$HOOK_DIR/HOOK.md" << 'HOOKMD'
 ---
 name: crystal-stm
@@ -87,7 +140,6 @@ short-term memory (Messages tab) and long-term sensory memory in real-time.
 - AI responses  → crystalMessages (role: assistant) + sensory memory capture
 HOOKMD
 
-# handler.js — single-quoted heredoc prevents shell interpolation
 cat > "$HOOK_DIR/handler.js" << 'HANDLEREOF'
 const { appendFileSync, readFileSync, writeFileSync } = require("node:fs");
 
@@ -161,7 +213,6 @@ module.exports = async function handler(event, ctx) {
 };
 HANDLEREOF
 
-# Inject the actual API key
 node -e '
 const fs = require("fs");
 const p = process.argv[1];
@@ -171,30 +222,92 @@ fs.writeFileSync(p, fs.readFileSync(p, "utf8").replaceAll("__MC_API_KEY__", k));
 
 echo "  ✓ Hook files written"
 
-# ── Enable internal hooks in openclaw.json ────────────────────────────────────
-echo "  → Enabling internal hook system..."
-node -e "
-const fs = require('fs');
-const p = require('os').homedir() + '/.openclaw/openclaw.json';
-let c = {};
-try { c = JSON.parse(fs.readFileSync(p, 'utf8')); } catch {}
-c.hooks = c.hooks || {};
-c.hooks.internal = c.hooks.internal || {};
-c.hooks.internal.enabled = true;
-fs.writeFileSync(p, JSON.stringify(c, null, 2));
-console.log('  ✓ Internal hooks enabled');
-"
+# ── Install crystal-memory extension (tools) ─────────────────────────────────
+echo "  → Installing crystal-memory extension to $EXT_DIR..."
+mkdir -p "$EXT_DIR"
+
+fetch_plugin_file "index.js" "$EXT_DIR/index.js"
+fetch_plugin_file "openclaw.plugin.json" "$EXT_DIR/openclaw.plugin.json"
+fetch_plugin_file "package.json" "$EXT_DIR/package.json"
+fetch_plugin_file "recall-hook.js" "$EXT_DIR/recall-hook.js"
+fetch_plugin_file "capture-hook.js" "$EXT_DIR/capture-hook.js"
+fetch_plugin_file "handler.js" "$EXT_DIR/handler.js"
+fetch_plugin_file "openclaw-hook.json" "$EXT_DIR/openclaw-hook.json"
+
+echo "  ✓ Extension files written"
+
+# ── Configure OpenClaw ────────────────────────────────────────────────────────
+echo "  → Updating OpenClaw config at $OPENCLAW_CONFIG..."
+node - "$OPENCLAW_CONFIG" "$API_KEY" "$CONVEX_URL" "$EXT_DIR" <<'NODE'
+const fs = require('node:fs');
+const path = process.argv[2];
+const apiKey = process.argv[3];
+const convexUrl = process.argv[4];
+const extDir = process.argv[5];
+
+let cfg = {};
+try {
+  cfg = JSON.parse(fs.readFileSync(path, 'utf8'));
+} catch {
+  cfg = {};
+}
+
+cfg.hooks ??= {};
+cfg.hooks.internal ??= {};
+cfg.hooks.internal.enabled = true;
+
+cfg.plugins ??= {};
+
+cfg.plugins.allow = Array.isArray(cfg.plugins.allow) ? cfg.plugins.allow : [];
+if (!cfg.plugins.allow.includes('crystal-memory')) cfg.plugins.allow.push('crystal-memory');
+
+cfg.plugins.load ??= {};
+cfg.plugins.load.paths = Array.isArray(cfg.plugins.load.paths) ? cfg.plugins.load.paths : [];
+if (!cfg.plugins.load.paths.includes(extDir)) cfg.plugins.load.paths.push(extDir);
+
+cfg.plugins.entries ??= {};
+const existingEntry = (cfg.plugins.entries['crystal-memory'] && typeof cfg.plugins.entries['crystal-memory'] === 'object')
+  ? cfg.plugins.entries['crystal-memory']
+  : {};
+const existingConfig = (existingEntry.config && typeof existingEntry.config === 'object')
+  ? existingEntry.config
+  : {};
+
+cfg.plugins.entries['crystal-memory'] = {
+  ...existingEntry,
+  enabled: true,
+  config: {
+    ...existingConfig,
+    apiKey,
+    convexUrl,
+  },
+};
+
+cfg.plugins.installs ??= {};
+cfg.plugins.installs['crystal-memory'] = {
+  source: 'path',
+  sourcePath: extDir,
+  installPath: extDir,
+  version: '0.1.0',
+  installedAt: new Date().toISOString(),
+};
+
+fs.mkdirSync(require('node:path').dirname(path), { recursive: true });
+fs.writeFileSync(path, JSON.stringify(cfg, null, 2));
+NODE
+
+echo "  ✓ OpenClaw config updated"
 
 echo ""
-echo "  → Hook installed. Restart your gateway to activate:"
+echo "  → Installed. Restart your gateway to activate:"
 echo "    openclaw gateway restart"
 echo ""
 echo "  ┌─────────────────────────────────────────────────────┐"
 echo "  │  ◈  Memory Crystal is active!                       │"
 echo "  │                                                     │"
-echo "  │  Every conversation is now captured to:             │"
-echo "  │    • Messages tab  — short-term memory (14 days)    │"
-echo "  │    • Memories tab  — sensory long-term memory       │"
+echo "  │  Installed paths:                                   │"
+echo "  │    • $HOOK_DIR                            │"
+echo "  │    • $EXT_DIR                    │"
 echo "  │                                                     │"
 echo "  │  View your memory:  https://memorycrystal.ai        │"
 echo "  │  Hook logs:         /tmp/crystal-hook-log.txt       │"
