@@ -14,3 +14,7 @@ secrets/
 plugin/openclaw-hook.json
 .serena
 .DS_Store
+.DS_*
+mcp-server/.DS_Store
+.DS_Store
+apps/.DS_Store
