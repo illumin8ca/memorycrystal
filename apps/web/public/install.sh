@@ -18,8 +18,15 @@ echo "  ✓ OpenClaw detected ($(openclaw --version 2>/dev/null || echo 'version
 # ── Get API key ───────────────────────────────────────────────────────────────
 echo ""
 echo "  Get your API key at: https://memorycrystal.ai/dashboard/settings"
+echo "  This installer always asks for your API key on every run."
 echo ""
-read -rp "  Enter your Memory Crystal API key: " API_KEY
+
+if [ ! -r /dev/tty ]; then
+  echo "  ✗ Interactive terminal required to enter your API key."
+  exit 1
+fi
+
+IFS= read -r -p "  Enter your Memory Crystal API key: " API_KEY < /dev/tty
 echo ""
 
 if [ -z "$API_KEY" ]; then
