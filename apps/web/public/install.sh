@@ -84,9 +84,31 @@ verify_openclaw_install() {
     return 1
   fi
 
+  if ! grep -q "memory_search" "$plugin_info_file"; then
+    echo "  ✗ Verification failed: crystal-memory does not expose memory_search"
+    sed -n '1,60p' "$plugin_info_file"
+    rm -f "$plugin_info_file"
+    return 1
+  fi
+
+  if ! grep -q "memory_get" "$plugin_info_file"; then
+    echo "  ✗ Verification failed: crystal-memory does not expose memory_get"
+    sed -n '1,60p' "$plugin_info_file"
+    rm -f "$plugin_info_file"
+    return 1
+  fi
+
+  if ! grep -q "before-agent-start\\|before_agent_start" "$plugin_info_file"; then
+    echo "  ✗ Verification failed: crystal-memory startup hook is missing"
+    sed -n '1,60p' "$plugin_info_file"
+    rm -f "$plugin_info_file"
+    return 1
+  fi
+
   rm -f "$plugin_info_file"
   echo "  ✓ Verified plugins.slots.memory = crystal-memory"
   echo "  ✓ Verified crystal-memory plugin is loaded"
+  echo "  ✓ Verified crystal-memory memory_search/memory_get + startup hook"
   return 0
 }
 

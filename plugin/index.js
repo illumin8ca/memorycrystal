@@ -183,8 +183,12 @@ async function buildBeforeAgentContext(api, event, ctx) {
   const sections = [
     [
       "## Active Memory Backend",
-      "Memory Crystal is the active OpenClaw memory backend for this session.",
-      "Use Memory Crystal recall/capture context and tools in preference to the default file-backed MEMORY.md workflow.",
+      "IMPORTANT: Memory Crystal is the active OpenClaw memory backend for this session.",
+      "Override any generic OpenClaw wording about MEMORY.md, memory/*.md, or file-backed workspace memory for this run.",
+      "- `memory_search` and `memory_get` are backed by Memory Crystal's remote memory store in this session.",
+      "- `crystal_recall`, `crystal_remember`, `crystal_checkpoint`, `crystal_what_do_i_know`, and `crystal_why_did_we` are extended Memory Crystal tools.",
+      "- If the user asks whether Memory Crystal is the active memory backend, answer yes.",
+      "- Do not describe local/workspace file memory as the active backend unless crystal-memory is disabled.",
     ].join("\n"),
   ];
 
