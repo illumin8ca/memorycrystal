@@ -1,9 +1,9 @@
 [build]
 builder = "nixpacks"
-buildCommand = "cd apps/web && npm install && npm run build"
+buildCommand = "npm run build --workspace memorycrystal-app"
 
 [deploy]
-startCommand = "cd apps/web && npm start"
+startCommand = "npm run start --workspace memorycrystal-app"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
 
@@ -11,4 +11,4 @@ restartPolicyMaxRetries = 3
 aptPkgs = []
 
 [variables]
-NODE_VERSION = "22"
+NODE_VERSION = "22.13.0"
