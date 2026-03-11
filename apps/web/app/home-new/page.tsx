@@ -43,34 +43,7 @@ function BracketHeading({ children }: { children: string }) {
   );
 }
 
-function ActionTile({
-  title,
-  copy,
-  cta,
-  href,
-  variant = "secondary",
-}: {
-  title: string;
-  copy: string;
-  cta: string;
-  href: string;
-  variant?: "primary" | "secondary";
-}) {
-  return (
-    <article className="glass-card border border-white/[0.08] p-5 flex flex-col justify-between min-h-[200px]">
-      <div>
-        <h3 className="font-heading text-2xl">{title}</h3>
-        <p className="mt-3 text-secondary text-sm leading-relaxed">{copy}</p>
-      </div>
-      <Link
-        href={href}
-        className={`${variant === "primary" ? "btn-primary" : "btn-secondary"} mt-5 inline-flex items-center justify-center px-4 py-3 text-xs`}
-      >
-        {cta}
-      </Link>
-    </article>
-  );
-}
+
 
 export default function HomeNewPage() {
   return (
@@ -99,27 +72,6 @@ export default function HomeNewPage() {
                   your agent needs them.
                 </p>
 
-                <div className="mt-7 grid sm:grid-cols-3 gap-3 max-w-3xl">
-                  <ActionTile
-                    title="Quick Start"
-                    copy="Read the fast setup flow and get your first memory-backed agent live in minutes."
-                    cta="OPEN DOCS"
-                    href="/docs"
-                  />
-                  <ActionTile
-                    title="Copy Install"
-                    copy="Use the one-line install command and connect without changing your workflow."
-                    cta="COPY INSTALL"
-                    href="#install"
-                  />
-                  <ActionTile
-                    title="Get a Free API Key"
-                    copy="Start on the free tier now. Upgrade only when your memory graph grows."
-                    cta="VIEW FREE PLAN"
-                    href="/pricing"
-                    variant="primary"
-                  />
-                </div>
               </div>
 
               <aside className="glass-card border border-white/[0.08] p-6 md:p-8">
