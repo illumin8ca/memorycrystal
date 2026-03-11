@@ -29,11 +29,10 @@ fi
 
 # Validate key against the API
 echo "  → Validating API key..."
-STATUS=$(curl -sf -o /dev/null -w "%{http_code}" -X POST \
-  https://rightful-mockingbird-389.convex.site/api/mcp/stats \
+STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X GET \
+  https://rightful-mockingbird-389.convex.site/api/mcp/auth \
   -H "Authorization: Bearer $API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{}' 2>/dev/null || echo "000")
+  2>/dev/null)
 
 if [ "$STATUS" != "200" ]; then
   echo "  ✗ Invalid API key (HTTP $STATUS). Check https://memorycrystal.ai/dashboard/settings"
