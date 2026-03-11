@@ -34,25 +34,28 @@ export function InstallCommandCard({
           <h2 className="font-mono font-bold text-lg sm:text-xl text-primary">{title}</h2>
           <p className="text-secondary text-sm mt-2 max-w-3xl">{description}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="btn-primary px-4 py-2 text-xs min-h-10"
-            style={{ borderRadius: 0 }}
-          >
-            {copied ? "COPIED" : "COPY COMMAND"}
-          </button>
-          {showDocsLink ? (
+        {showDocsLink ? (
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <Link href="/dashboard/docs" className="btn-secondary px-4 py-2 text-xs min-h-10 inline-flex items-center" style={{ borderRadius: 0 }}>
               OPEN DOCS
             </Link>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-4 border border-white/[0.09] bg-white/[0.03] overflow-x-auto">
-        <pre className="p-4 sm:p-5 text-sm sm:text-base font-mono text-primary whitespace-pre-wrap break-all">{command}</pre>
+        <div className="flex items-center justify-between gap-3 border-b border-white/[0.09] px-4 py-2 sm:px-5">
+          <span className="text-[11px] font-mono uppercase tracking-[0.18em] text-secondary">Install Command</span>
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="inline-flex min-h-9 items-center justify-center border border-white/[0.12] px-3 py-2 text-[11px] font-mono uppercase tracking-[0.14em] text-primary transition hover:border-accent hover:text-accent"
+            style={{ borderRadius: 0 }}
+          >
+            {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+        <pre className="p-4 sm:p-5 pr-6 text-sm sm:text-base font-mono text-primary whitespace-pre-wrap break-all">{command}</pre>
       </div>
     </section>
   );
