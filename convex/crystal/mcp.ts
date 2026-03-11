@@ -606,6 +606,52 @@ export const mcpCheckpoint = httpAction(async (ctx, request) => {
   return json({ ok: true, id });
 });
 
+export const mcpGetMemory = httpAction(async (ctx, request) => {
+  const auth = await requireAuth(ctx, request);
+  if (!auth) return json({ error: "Unauthorized" }, 401);
+
+  const rateLimitResponse = await withRateLimit(ctx, auth.keyHash);
+  if (rateLimitResponse) return rateLimitResponse;
+
+  await auditLog(ctx, auth.userId, auth.keyHash, "memory_get");
+
+  const body = await parseBody(request);
+  const memoryId = String(body?.memoryId ?? "").trim();
+  if (!memoryId) return json({ error: "memoryId is required" }, 400);
+
+  let memory = null;
+  try {
+    memory = await ctx.runQuery(internal.crystal.mcp.getMemoryById, {
+      memoryId: memoryId as any,
+    });
+  } catch {
+    return json({ error: "Memory not found" }, 404);
+  }
+
+  if (!memory || memory.userId !== auth.userId) {
+    return json({ error: "Memory not found" }, 404);
+  }
+
+  return json({
+    memory: {
+      id: memory._id,
+      title: memory.title,
+      content: memory.content,
+      store: memory.store,
+      category: memory.category,
+      tags: memory.tags,
+      createdAt: memory.createdAt,
+      lastAccessedAt: memory.lastAccessedAt,
+      accessCount: memory.accessCount,
+      strength: memory.strength,
+      confidence: memory.confidence,
+      source: memory.source,
+      channel: memory.channel,
+      archived: memory.archived,
+    },
+  });
+});
+
 const wakeHandler = httpAction(async (ctx, request) => {
   const auth = await requireAuth(ctx, request);
   if (!auth) return json({ error: "Unauthorized" }, 401);
@@ -998,8 +1044,6 @@ export const auditDataIntegrity = internalQuery({
     };
   },
 });
-
-
 
 
 

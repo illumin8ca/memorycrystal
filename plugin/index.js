@@ -146,20 +146,83 @@ function ensureEnum(value, validValues, name) {
   return value;
 }
 
-async function injectWakeBriefing(api, event, ctx) {
-  const sessionKey = ctx?.sessionKey || event?.conversationId;
-  if (!sessionKey || wakeInjectedSessions.has(sessionKey)) return;
+function getSessionKey(ctx, event) {
+  return ctx?.sessionKey || ctx?.sessionId || event?.conversationId || event?.sessionId || "";
+}
 
-  const wake = await request(getPluginConfig(api, ctx), "POST", "/api/mcp/wake", {
-    channel: ctx?.messageProvider || "openclaw",
-  });
+function buildMemoryPath(memoryId) {
+  return `crystal/${String(memoryId)}.md`;
+}
 
-  const briefing = wake?.briefing || wake?.summary || wake?.text;
-  if (briefing && typeof ctx?.injectSystemPrompt === "function") {
-    await ctx.injectSystemPrompt(String(briefing));
+function parseMemoryPath(value) {
+  if (typeof value !== "string") return "";
+  const match = /^crystal\/(.+)\.md$/i.exec(value.trim());
+  return match ? match[1] : "";
+}
+
+function trimSnippet(value, max = 220) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (text.length <= max) return text;
+  return `${text.slice(0, Math.max(0, max - 1)).trimEnd()}…`;
+}
+
+function formatRecallMemory(memory) {
+  const memoryId = memory?.memoryId || memory?._id || memory?.id || "";
+  const store = memory?.store || "unknown";
+  const category = memory?.category || "unknown";
+  const title = trimSnippet(memory?.title || "Untitled memory", 120);
+  const snippet = trimSnippet(memory?.content || "", 220);
+  const path = buildMemoryPath(memoryId);
+  return `- [${store}/${category}] ${title}${snippet ? ` — ${snippet}` : ""} (path: ${path})`;
+}
+
+async function buildBeforeAgentContext(api, event, ctx) {
+  const config = getPluginConfig(api, ctx);
+  if (!config?.apiKey) return "";
+
+  const sections = [
+    [
+      "## Active Memory Backend",
+      "Memory Crystal is the active OpenClaw memory backend for this session.",
+      "Use Memory Crystal recall/capture context and tools in preference to the default file-backed MEMORY.md workflow.",
+    ].join("\n"),
+  ];
+
+  const sessionKey = getSessionKey(ctx, event);
+  if (sessionKey && !wakeInjectedSessions.has(sessionKey)) {
+    const wake = await request(config, "POST", "/api/mcp/wake", {
+      channel: ctx?.messageProvider || "openclaw",
+    });
+    const briefing = wake?.briefing || wake?.summary || wake?.text;
+    if (briefing) {
+      sections.push(String(briefing));
+      wakeInjectedSessions.add(sessionKey);
+    }
   }
 
-  wakeInjectedSessions.add(sessionKey);
+  const prompt = String(event?.prompt || "").trim();
+  if (prompt.length >= 5) {
+    const limit = Number.isFinite(Number(config?.defaultRecallLimit)) ? Number(config.defaultRecallLimit) : 5;
+    const recall = await request(config, "POST", "/api/mcp/recall", {
+      query: prompt,
+      limit: Math.max(1, Math.min(limit, 8)),
+      mode: typeof config?.defaultRecallMode === "string" ? config.defaultRecallMode : "general",
+    });
+    const memories = Array.isArray(recall?.memories) ? recall.memories.slice(0, 5) : [];
+    if (memories.length > 0) {
+      sections.push(
+        [
+          "## Memory Crystal Relevant Recall",
+          `Prompt: ${trimSnippet(prompt, 180)}`,
+          ...memories.map(formatRecallMemory),
+          "",
+          "Use memory_search for broader lookup and memory_get on the returned crystal/<id>.md path for full detail.",
+        ].join("\n")
+      );
+    }
+  }
+
+  return sections.filter(Boolean).join("\n\n").trim();
 }
 
 async function logMessage(api, ctx, payload) {
@@ -184,12 +247,29 @@ async function captureTurn(api, ctx, userMessage, assistantText) {
 }
 
 module.exports = (api) => {
-  // Buffer inbound message + inject wake briefing on first turn
+  api.registerHook(
+    "before_agent_start",
+    async (event, ctx) => {
+      try {
+        const prependContext = await buildBeforeAgentContext(api, event, ctx);
+        if (!prependContext) return;
+        return { prependContext };
+      } catch (err) {
+        api.logger?.warn?.(`[crystal-memory] before_agent_start failed: ${err?.message || String(err)}`);
+      }
+    },
+    {
+      name: "crystal-memory.before-agent-start",
+      description: "Inject Memory Crystal wake briefing + relevant recall before each run",
+    }
+  );
+
+  // Buffer inbound message and persist user-side turn context
   api.registerHook(
     "message_received",
     async (event, ctx) => {
       const text = event?.content || event?.text || "";
-      const sessionKey = ctx?.sessionKey || event?.conversationId || "";
+      const sessionKey = getSessionKey(ctx, event);
       const pluginConfig = getPluginConfig(api, ctx);
       const defaultMode = pluginConfig?.defaultRecallMode || "general";
       const defaultLimit = pluginConfig?.defaultRecallLimit || 8;
@@ -213,10 +293,8 @@ module.exports = (api) => {
           limit: defaultLimit,
         });
       }
-
-      await injectWakeBriefing(api, event, ctx);
     },
-    { name: "crystal-memory.message-received", description: "Buffer messages + inject wake briefing" }
+    { name: "crystal-memory.message-received", description: "Buffer messages + persist user-side turn context" }
   );
 
   // Capture full turn after LLM responds
@@ -227,7 +305,7 @@ module.exports = (api) => {
         (event?.assistantTexts || []).join("\n").trim() || String(event?.lastAssistant || "").trim();
       if (!assistantText) return;
 
-      const sessionKey = ctx?.sessionKey || event?.sessionId || "";
+      const sessionKey = getSessionKey(ctx, event);
       const userMessage = sessionKey ? pendingUserMessages.get(sessionKey) || "" : "";
       const sessionDefaults = sessionKey ? sessionConfigs.get(sessionKey) : null;
       // sessionDefaults is currently reserved for future recall-hook wiring (e.g., mode/limit defaults).
@@ -251,7 +329,7 @@ module.exports = (api) => {
   api.registerHook(
     "message_sent",
     async (event, ctx) => {
-      const sessionKey = ctx?.sessionKey || event?.sessionId || "";
+      const sessionKey = getSessionKey(ctx, event);
       if (!sessionKey || !pendingUserMessages.has(sessionKey)) return;
 
       const assistantText = String(event?.content || event?.text || "").trim();
@@ -291,6 +369,105 @@ module.exports = (api) => {
     },
     { name: "crystal-memory.command-reset", description: "Trigger memory reflection on /reset" }
   );
+
+  api.registerTool({
+    name: "memory_search",
+    label: "Memory Search",
+    description:
+      "Search Memory Crystal for relevant long-term memories. Returns synthetic crystal/<id>.md paths for use with memory_get.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: { type: "string", minLength: 2 },
+        limit: { type: "number", minimum: 1, maximum: 20 },
+      },
+      required: ["query"],
+      additionalProperties: false,
+    },
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      try {
+        const query = ensureString(params?.query, "query", 2);
+        const limit = Number.isFinite(Number(params?.limit)) ? Number(params.limit) : 5;
+        const data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/recall", {
+          query,
+          limit: Math.max(1, Math.min(limit, 20)),
+        });
+        const memories = Array.isArray(data?.memories) ? data.memories : [];
+        const results = memories.map((memory) => {
+          const memoryId = memory?.memoryId || memory?._id || memory?.id || "";
+          return {
+            id: memoryId,
+            path: buildMemoryPath(memoryId),
+            title: memory?.title || "Untitled memory",
+            snippet: trimSnippet(memory?.content || "", 220),
+            store: memory?.store || null,
+            category: memory?.category || null,
+            score: typeof memory?.score === "number" ? memory.score : null,
+          };
+        });
+        const summary = {
+          query,
+          resultCount: results.length,
+          results,
+        };
+        return toToolResult(summary, summary);
+      } catch (err) {
+        return toToolError(err);
+      }
+    },
+  });
+
+  api.registerTool({
+    name: "memory_get",
+    label: "Memory Get",
+    description:
+      "Read a full Memory Crystal item returned by memory_search. Accepts either memoryId or a synthetic crystal/<id>.md path.",
+    parameters: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        memoryId: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      try {
+        const memoryId =
+          (typeof params?.memoryId === "string" && params.memoryId.trim()) || parseMemoryPath(params?.path);
+        if (!memoryId) {
+          throw new Error("memoryId or path is required (expected crystal/<id>.md)");
+        }
+
+        const data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/memory", { memoryId });
+        const memory = data?.memory;
+        if (!memory?.id) {
+          throw new Error("Memory not found");
+        }
+
+        const payload = {
+          id: memory.id,
+          path: buildMemoryPath(memory.id),
+          title: memory.title,
+          content: memory.content,
+          store: memory.store,
+          category: memory.category,
+          tags: Array.isArray(memory.tags) ? memory.tags : [],
+          createdAt: memory.createdAt,
+          lastAccessedAt: memory.lastAccessedAt,
+          accessCount: memory.accessCount,
+          confidence: memory.confidence,
+          strength: memory.strength,
+          source: memory.source,
+          channel: memory.channel,
+          archived: memory.archived,
+        };
+
+        return toToolResult(payload, payload);
+      } catch (err) {
+        return toToolError(err);
+      }
+    },
+  });
 
   api.registerTool({
     name: "crystal_recall",
@@ -472,6 +649,6 @@ module.exports = (api) => {
   });
 
   api.logger?.info?.(
-    "[crystal-memory] hooks registered: message_received + llm_output + message_sent + command:new + command:reset; tools registered: crystal_recall, crystal_remember, crystal_what_do_i_know, crystal_why_did_we, crystal_checkpoint"
+    "[crystal-memory] hooks registered: before_agent_start + message_received + llm_output + message_sent + command:new + command:reset; tools registered: memory_search, memory_get, crystal_recall, crystal_remember, crystal_what_do_i_know, crystal_why_did_we, crystal_checkpoint"
   );
 };

@@ -3,6 +3,7 @@ import { auth } from "./auth";
 import {
   mcpAuth,
   mcpCapture,
+  mcpGetMemory,
   mcpLog,
   mcpCheckpoint,
   mcpRecall,
@@ -18,6 +19,7 @@ const http = httpRouter();
 auth.addHttpRoutes(http);
 
 http.route({ path: "/api/mcp/capture", method: "POST", handler: mcpCapture });
+http.route({ path: "/api/mcp/memory", method: "POST", handler: mcpGetMemory });
 http.route({ path: "/api/mcp/recall", method: "POST", handler: mcpRecall });
 http.route({ path: "/api/mcp/checkpoint", method: "POST", handler: mcpCheckpoint });
 http.route({ path: "/api/mcp/wake", method: "GET", handler: mcpWakeGet });

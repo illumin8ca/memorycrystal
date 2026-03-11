@@ -50,6 +50,46 @@ fetch_plugin_file() {
   fi
 }
 
+verify_openclaw_install() {
+  local config_file="$1"
+  local memory_slot
+  local context_slot
+  local plugin_info_file
+
+  memory_slot="$(node -e "const fs=require('fs');let cfg={};try{cfg=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));}catch{};process.stdout.write(String(cfg?.plugins?.slots?.memory ?? ''));" "$config_file")"
+  context_slot="$(node -e "const fs=require('fs');let cfg={};try{cfg=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));}catch{};process.stdout.write(String(cfg?.plugins?.slots?.contextEngine ?? ''));" "$config_file")"
+
+  if [ "$memory_slot" != "crystal-memory" ]; then
+    echo "  ✗ Verification failed: plugins.slots.memory is '$memory_slot' (expected crystal-memory)"
+    return 1
+  fi
+
+  if [ "$context_slot" = "crystal-memory" ]; then
+    echo "  ✗ Verification failed: stale plugins.slots.contextEngine is still set to crystal-memory"
+    return 1
+  fi
+
+  plugin_info_file="$(mktemp)"
+  if ! openclaw plugins info crystal-memory >"$plugin_info_file" 2>&1; then
+    echo "  ✗ Verification failed: openclaw plugins info crystal-memory returned an error"
+    sed -n '1,40p' "$plugin_info_file"
+    rm -f "$plugin_info_file"
+    return 1
+  fi
+
+  if ! grep -q "Status: loaded" "$plugin_info_file"; then
+    echo "  ✗ Verification failed: crystal-memory is not loaded after restart"
+    sed -n '1,40p' "$plugin_info_file"
+    rm -f "$plugin_info_file"
+    return 1
+  fi
+
+  rm -f "$plugin_info_file"
+  echo "  ✓ Verified plugins.slots.memory = crystal-memory"
+  echo "  ✓ Verified crystal-memory plugin is loaded"
+  return 0
+}
+
 echo ""
 echo "  ◈ Memory Crystal Installer"
 echo "  Persistent memory for your AI agents"
@@ -319,12 +359,25 @@ cfg.plugins.entries['crystal-memory'] = {
 };
 
 cfg.plugins.installs ??= {};
+const existingInstall = (cfg.plugins.installs['crystal-memory'] && typeof cfg.plugins.installs['crystal-memory'] === 'object')
+  ? cfg.plugins.installs['crystal-memory']
+  : {};
+const installChanged =
+  existingInstall.source !== 'path' ||
+  existingInstall.sourcePath !== activePath ||
+  existingInstall.installPath !== activePath ||
+  existingInstall.version !== '0.2.0';
+
 cfg.plugins.installs['crystal-memory'] = {
   source: 'path',
   sourcePath: activePath,
   installPath: activePath,
   version: '0.2.0',
-  installedAt: new Date().toISOString(),
+  installedAt: installChanged
+    ? new Date().toISOString()
+    : (typeof existingInstall.installedAt === 'string' && existingInstall.installedAt
+      ? existingInstall.installedAt
+      : new Date().toISOString()),
 };
 
 fs.mkdirSync(nodePath.dirname(path), { recursive: true });
@@ -345,14 +398,26 @@ case "$RESTART_CHOICE" in
     echo "  → Restarting OpenClaw gateway..."
     if openclaw gateway restart; then
       echo "  ✓ OpenClaw gateway restarted"
+      echo "  → Verifying Memory Crystal activation..."
+      if ! verify_openclaw_install "$OPENCLAW_CONFIG"; then
+        echo ""
+        echo "  ✗ Memory Crystal installed, but verification failed."
+        echo "    Check:"
+        echo "    openclaw config get plugins.slots"
+        echo "    openclaw plugins info crystal-memory"
+        exit 1
+      fi
     else
       echo "  ✗ Failed to restart gateway automatically."
       echo "    Run manually: openclaw gateway restart"
+      exit 1
     fi
     ;;
   *)
     echo "  → Skipped restart. Run manually when ready:"
     echo "    openclaw gateway restart"
+    echo "    openclaw config get plugins.slots"
+    echo "    openclaw plugins info crystal-memory"
     ;;
 esac
 
