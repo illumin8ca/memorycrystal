@@ -17,8 +17,15 @@ const MEMORY_CATEGORIES = [
   "conversation",
 ];
 
-function getConfig(ctx, api) {
-  return ctx?.config || api?.config || {};
+function getPluginConfig(api, ctx) {
+  const direct = api?.pluginConfig;
+  if (direct && typeof direct === "object") return direct;
+
+  const root = ctx?.config || api?.config || {};
+  const entry = root?.plugins?.entries?.[api?.id || ""]?.config;
+  if (entry && typeof entry === "object") return entry;
+
+  return {};
 }
 
 /**
@@ -143,7 +150,7 @@ async function injectWakeBriefing(api, event, ctx) {
   const sessionKey = ctx?.sessionKey || event?.conversationId;
   if (!sessionKey || wakeInjectedSessions.has(sessionKey)) return;
 
-  const wake = await request(getConfig(ctx, api), "POST", "/api/mcp/wake", {
+  const wake = await request(getPluginConfig(api, ctx), "POST", "/api/mcp/wake", {
     channel: ctx?.messageProvider || "openclaw",
   });
 
@@ -155,18 +162,18 @@ async function injectWakeBriefing(api, event, ctx) {
   wakeInjectedSessions.add(sessionKey);
 }
 
-async function logMessage(ctx, payload) {
-  await request(getConfig(ctx, api), "POST", "/api/mcp/log", payload);
+async function logMessage(api, ctx, payload) {
+  await request(getPluginConfig(api, ctx), "POST", "/api/mcp/log", payload);
 }
 
-async function captureTurn(ctx, userMessage, assistantText) {
+async function captureTurn(api, ctx, userMessage, assistantText) {
   if (!shouldCapture(userMessage, assistantText)) return;
 
   const content = [userMessage ? `User: ${userMessage}` : null, `Assistant: ${assistantText}`]
     .filter(Boolean)
     .join("\n\n");
 
-  await request(getConfig(ctx, api), "POST", "/api/mcp/capture", {
+  await request(getPluginConfig(api, ctx), "POST", "/api/mcp/capture", {
     title: `OpenClaw — ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
     content,
     store: "sensory",
@@ -183,13 +190,14 @@ module.exports = (api) => {
     async (event, ctx) => {
       const text = event?.content || event?.text || "";
       const sessionKey = ctx?.sessionKey || event?.conversationId || "";
-      const defaultMode = ctx?.config?.defaultRecallMode || "general";
-      const defaultLimit = ctx?.config?.defaultRecallLimit || 8;
+      const pluginConfig = getPluginConfig(api, ctx);
+      const defaultMode = pluginConfig?.defaultRecallMode || "general";
+      const defaultLimit = pluginConfig?.defaultRecallLimit || 8;
 
       if (text && sessionKey) {
         const normalized = String(text);
         pendingUserMessages.set(sessionKey, normalized);
-        await logMessage(ctx, {
+        await logMessage(api, ctx, {
           role: "user",
           content: normalized,
           channel: ctx?.messageProvider || "openclaw",
@@ -225,7 +233,7 @@ module.exports = (api) => {
       // sessionDefaults is currently reserved for future recall-hook wiring (e.g., mode/limit defaults).
       void sessionDefaults;
 
-      await logMessage(ctx, {
+      await logMessage(api, ctx, {
         role: "assistant",
         content: assistantText,
         channel: ctx?.messageProvider || "openclaw",
@@ -233,7 +241,7 @@ module.exports = (api) => {
       });
 
       if (sessionKey) pendingUserMessages.delete(sessionKey);
-      await captureTurn(ctx, userMessage, assistantText);
+      await captureTurn(api, ctx, userMessage, assistantText);
     },
     { name: "crystal-memory.llm-output", description: "Capture AI response to Memory Crystal" }
   );
@@ -251,7 +259,7 @@ module.exports = (api) => {
 
       const userMessage = pendingUserMessages.get(sessionKey) || "";
 
-      await logMessage(ctx, {
+      await logMessage(api, ctx, {
         role: "assistant",
         content: assistantText,
         channel: ctx?.messageProvider || "openclaw",
@@ -259,7 +267,7 @@ module.exports = (api) => {
       });
 
       pendingUserMessages.delete(sessionKey);
-      await captureTurn(ctx, userMessage, assistantText);
+      await captureTurn(api, ctx, userMessage, assistantText);
     },
     {
       name: "crystal-memory.message-sent-fallback",
@@ -271,7 +279,7 @@ module.exports = (api) => {
   api.registerHook(
     "command:new",
     async (event, ctx) => {
-      await triggerReflection(getConfig(ctx, api), ctx?.sessionKey);
+      await triggerReflection(getPluginConfig(api, ctx), ctx?.sessionKey);
     },
     { name: "crystal-memory.command-new", description: "Trigger memory reflection on /new" }
   );
@@ -279,7 +287,7 @@ module.exports = (api) => {
   api.registerHook(
     "command:reset",
     async (event, ctx) => {
-      await triggerReflection(getConfig(ctx, api), ctx?.sessionKey);
+      await triggerReflection(getPluginConfig(api, ctx), ctx?.sessionKey);
     },
     { name: "crystal-memory.command-reset", description: "Trigger memory reflection on /reset" }
   );
@@ -301,7 +309,7 @@ module.exports = (api) => {
       try {
         const query = ensureString(params?.query, "query", 2);
         const limit = Number.isFinite(Number(params?.limit)) ? Number(params.limit) : undefined;
-        const data = await crystalRequest(getConfig(ctx, api), "/api/mcp/recall", {
+        const data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/recall", {
           query,
           ...(limit ? { limit } : {}),
         });
@@ -342,7 +350,7 @@ module.exports = (api) => {
         const title = ensureString(params?.title, "title", 5);
         const content = ensureString(params?.content, "content", 1);
         const tags = Array.isArray(params?.tags) ? params.tags.map(String) : [];
-        const data = await crystalRequest(getConfig(ctx, api), "/api/mcp/capture", {
+        const data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/capture", {
           title,
           content,
           store,
@@ -380,7 +388,7 @@ module.exports = (api) => {
       try {
         const topic = ensureString(params?.topic, "topic", 3);
         const limit = Number.isFinite(Number(params?.limit)) ? Number(params.limit) : 8;
-        const data = await crystalRequest(getConfig(ctx, api), "/api/mcp/recall", {
+        const data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/recall", {
           query: topic,
           limit,
         });
@@ -415,7 +423,7 @@ module.exports = (api) => {
       try {
         const decision = ensureString(params?.decision, "decision", 3);
         const limit = Number.isFinite(Number(params?.limit)) ? Number(params.limit) : 8;
-        const data = await crystalRequest(getConfig(ctx, api), "/api/mcp/recall", {
+        const data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/recall", {
           query: decision,
           limit,
         });
@@ -452,7 +460,7 @@ module.exports = (api) => {
       try {
         const label = ensureString(params?.label, "label", 1);
         const description = typeof params?.description === "string" ? params.description : undefined;
-        const data = await crystalRequest(getConfig(ctx, api), "/api/mcp/checkpoint", {
+        const data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/checkpoint", {
           label,
           description,
         });
