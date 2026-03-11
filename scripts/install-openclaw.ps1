@@ -23,5 +23,6 @@ $apiKey = Read-Host "Enter your Memory Crystal API key"
 openclaw config set plugins.entries.crystal-memory.config.apiKey $apiKey
 openclaw config set plugins.entries.crystal-memory.enabled true
 openclaw config set plugins.slots.memory crystal-memory
+try { openclaw config unset plugins.slots.contextEngine | Out-Null } catch {}
 
 Write-Host "✓ Memory Crystal installed. Your AI will now remember everything."

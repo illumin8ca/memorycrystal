@@ -262,6 +262,9 @@ cfg.hooks.internal.enabled = true;
 cfg.plugins ??= {};
 cfg.plugins.slots = (cfg.plugins.slots && typeof cfg.plugins.slots === 'object') ? cfg.plugins.slots : {};
 cfg.plugins.slots.memory = 'crystal-memory';
+if (cfg.plugins.slots.contextEngine === 'crystal-memory') {
+  delete cfg.plugins.slots.contextEngine;
+}
 
 cfg.plugins.allow = Array.isArray(cfg.plugins.allow) ? cfg.plugins.allow : [];
 if (!cfg.plugins.allow.includes('crystal-memory')) cfg.plugins.allow.push('crystal-memory');

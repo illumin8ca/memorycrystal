@@ -12,4 +12,5 @@ read -rp "Enter your Memory Crystal API key: " API_KEY
 openclaw config set plugins.entries.crystal-memory.config.apiKey "$API_KEY"
 openclaw config set plugins.entries.crystal-memory.enabled true
 openclaw config set plugins.slots.memory crystal-memory
+openclaw config unset plugins.slots.contextEngine >/dev/null 2>&1 || true
 echo "✓ Memory Crystal installed. Your AI will now remember everything."

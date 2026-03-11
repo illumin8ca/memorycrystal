@@ -102,6 +102,8 @@ if isinstance(plugins, dict):
     plugin_slots = plugins.get("slots", {})
     if isinstance(plugin_slots, dict) and plugin_slots.get("memory") == "crystal-memory":
         plugin_slots["memory"] = "memory-core"
+    if isinstance(plugin_slots, dict) and plugin_slots.get("contextEngine") == "crystal-memory":
+        del plugin_slots["contextEngine"]
 
     plugin_installs = plugins.get("installs", {})
     if isinstance(plugin_installs, dict) and "crystal-memory" in plugin_installs:
