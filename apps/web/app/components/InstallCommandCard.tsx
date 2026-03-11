@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Check, Copy } from "lucide-react";
 
 const DEFAULT_INSTALL_COMMAND = "curl -fsSL https://memorycrystal.ai/install | bash";
 
@@ -44,18 +45,18 @@ export function InstallCommandCard({
       </div>
 
       <div className="mt-4 border border-white/[0.09] bg-white/[0.03] overflow-x-auto">
-        <div className="flex items-center justify-between gap-3 border-b border-white/[0.09] px-4 py-2 sm:px-5">
-          <span className="text-[11px] font-mono uppercase tracking-[0.18em] text-secondary">Install Command</span>
+        <div className="flex items-start justify-between gap-3 px-4 py-4 sm:px-5 sm:py-5">
+          <pre className="min-w-0 flex-1 pr-4 text-sm sm:text-base font-mono text-primary whitespace-pre-wrap break-all">{command}</pre>
           <button
             type="button"
             onClick={handleCopy}
-            className="inline-flex min-h-9 items-center justify-center border border-white/[0.12] px-3 py-2 text-[11px] font-mono uppercase tracking-[0.14em] text-primary transition hover:border-accent hover:text-accent"
+            aria-label={copied ? "Copied" : "Copy install command"}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center border border-white/[0.12] text-primary transition hover:border-accent hover:text-accent"
             style={{ borderRadius: 0 }}
           >
-            {copied ? "Copied" : "Copy"}
+            {copied ? <Check size={16} strokeWidth={2} /> : <Copy size={16} strokeWidth={2} />}
           </button>
         </div>
-        <pre className="p-4 sm:p-5 pr-6 text-sm sm:text-base font-mono text-primary whitespace-pre-wrap break-all">{command}</pre>
       </div>
     </section>
   );

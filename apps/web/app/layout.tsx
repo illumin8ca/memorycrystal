@@ -87,7 +87,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${oxanium.variable} ${audiowide.variable} ${inter.variable} bg-void text-primary antialiased`}>
+      <body suppressHydrationWarning className={`${oxanium.variable} ${audiowide.variable} ${inter.variable} bg-void text-primary antialiased`}>
         <ConvexAuthNextjsServerProvider>
           <ConvexClientProvider>
             {children}
