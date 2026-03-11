@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ImageIcon, PlayCircle } from "lucide-react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import CrystalIcon from "../components/CrystalIcon";
@@ -144,8 +145,8 @@ export default function HomeNewPage() {
               <p className="mt-3 text-secondary max-w-2xl">
                 Andy will add a walkthrough video here showing installation, recall, and graph enrichment in action.
               </p>
-              <div className="mt-6 h-48 md:h-64 border border-white/[0.09] bg-white/[0.02] flex items-center justify-center text-secondary text-sm font-mono tracking-[0.16em] uppercase">
-                Video Placeholder
+              <div className="mt-6 h-48 md:h-64 border border-white/[0.09] bg-white/[0.02] flex items-center justify-center">
+                <PlayCircle className="h-14 w-14 text-accent/90" strokeWidth={1.5} aria-hidden="true" />
               </div>
             </div>
           </div>
@@ -157,14 +158,14 @@ export default function HomeNewPage() {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="glass-card border border-dashed border-white/[0.18] p-6">
                 <h3 className="font-heading text-xl">Dashboard and graph views</h3>
-                <div className="mt-4 h-56 border border-white/[0.09] bg-white/[0.02] flex items-center justify-center text-secondary text-sm font-mono tracking-[0.14em] uppercase">
-                  Screenshot Placeholder A
+                <div className="mt-4 h-56 border border-white/[0.09] bg-white/[0.02] flex items-center justify-center">
+                  <ImageIcon className="h-12 w-12 text-accent/85" strokeWidth={1.5} aria-hidden="true" />
                 </div>
               </div>
               <div className="glass-card border border-dashed border-white/[0.18] p-6">
                 <h3 className="font-heading text-xl">Install + recall flow visuals</h3>
-                <div className="mt-4 h-56 border border-white/[0.09] bg-white/[0.02] flex items-center justify-center text-secondary text-sm font-mono tracking-[0.14em] uppercase">
-                  Screenshot Placeholder B
+                <div className="mt-4 h-56 border border-white/[0.09] bg-white/[0.02] flex items-center justify-center">
+                  <ImageIcon className="h-12 w-12 text-accent/85" strokeWidth={1.5} aria-hidden="true" />
                 </div>
               </div>
             </div>
