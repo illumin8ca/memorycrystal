@@ -32,18 +32,8 @@ import re
 import sys
 
 config_path, map_path, mcp_dist = sys.argv[1:4]
-required = [
-  "CONVEX_URL",
-  "OPENAI_API_KEY",
-  "OBSIDIAN_VAULT_PATH",
-  "CRYSTAL_MCP_MODE",
-  "CRYSTAL_MCP_HOST",
-  "CRYSTAL_MCP_PORT",
-]
 
 if not os.path.exists(config_path):
-    raise SystemExit(1)
-if not os.path.exists(map_path):
     raise SystemExit(1)
 
 
@@ -55,26 +45,30 @@ def load(path):
 
 
 config = load(config_path)
-entry = config.get("hooks", {}).get("internal", {}).get("entries", {}).get("crystal-memory")
-if not isinstance(entry, dict) or not entry.get("enabled"):
-    raise SystemExit(1)
-entry_env = entry.get("env", {})
-if not isinstance(entry_env, dict):
-    raise SystemExit(1)
-if any(not entry_env.get(key) for key in required):
+plugins = config.get("plugins", {})
+if not isinstance(plugins, dict):
     raise SystemExit(1)
 
-hooks = load(map_path)
-cmd = hooks.get("commands", {}).get("crystal-memory")
-if not isinstance(cmd, dict):
+entry = plugins.get("entries", {}).get("crystal-memory")
+if not isinstance(entry, dict) or not entry.get("enabled"):
     raise SystemExit(1)
-command = cmd.get("command")
-if not command:
+
+if plugins.get("slots", {}).get("memory") != "crystal-memory":
     raise SystemExit(1)
-args = cmd.get("args", [])
-if not isinstance(args, list) or not args:
+
+paths = plugins.get("load", {}).get("paths", [])
+if not isinstance(paths, list) or not any(isinstance(item, str) and item.endswith("/crystal-memory") for item in paths):
     raise SystemExit(1)
-if mcp_dist not in [command, *args]:
+
+plugin_dir = next(item for item in paths if isinstance(item, str) and item.endswith("/crystal-memory"))
+manifest_path = os.path.join(plugin_dir, "openclaw.plugin.json")
+if not os.path.exists(manifest_path):
+    raise SystemExit(1)
+
+manifest = load(manifest_path)
+if manifest.get("id") != "crystal-memory":
+    raise SystemExit(1)
+if manifest.get("kind") != "memory":
     raise SystemExit(1)
 PY
 }

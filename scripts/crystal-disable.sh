@@ -54,7 +54,7 @@ done
 
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "⚙️  Memory Crystal disable (dry-run)."
-  echo "Would remove/disable hooks.internal.entries.crystal-memory in:"
+  echo "Would remove/disable the crystal-memory plugin entry and reset the memory slot in:"
   echo "  $OPENCLAW_CONFIG"
   echo "Would remove crystal-memory command from:"
   echo "  $HOOK_MAP_PATH"
@@ -88,15 +88,29 @@ data = load_tolerant_json(path)
 hooks = data.get("hooks", {})
 internal = hooks.get("internal", {}) if isinstance(hooks, dict) else {}
 entries = internal.get("entries", {}) if isinstance(internal, dict) else {}
+plugins = data.get("plugins", {})
 
 if isinstance(entries, dict):
     if "crystal-memory" in entries:
         del entries["crystal-memory"]
 
+if isinstance(plugins, dict):
+    plugin_entries = plugins.get("entries", {})
+    if isinstance(plugin_entries, dict) and "crystal-memory" in plugin_entries:
+        del plugin_entries["crystal-memory"]
+
+    plugin_slots = plugins.get("slots", {})
+    if isinstance(plugin_slots, dict) and plugin_slots.get("memory") == "crystal-memory":
+        plugin_slots["memory"] = "memory-core"
+
+    plugin_installs = plugins.get("installs", {})
+    if isinstance(plugin_installs, dict) and "crystal-memory" in plugin_installs:
+        del plugin_installs["crystal-memory"]
+
 with open(path, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2)
 PY
-  echo "Updated $OPENCLAW_CONFIG to remove hooks.internal.entries.crystal-memory."
+  echo "Updated $OPENCLAW_CONFIG to remove crystal-memory plugin wiring."
 else
   echo "Missing OpenClaw config at $OPENCLAW_CONFIG."
 fi

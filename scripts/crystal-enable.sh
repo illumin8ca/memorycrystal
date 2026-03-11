@@ -112,6 +112,9 @@ def load_env(path):
         if "=" not in line:
             continue
         key, value = line.split("=", 1)
+        value = value.strip()
+        if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+            value = value[1:-1]
         values[key] = value
     return values
 
@@ -155,6 +158,63 @@ for key in required_keys:
 entry["enabled"] = True
 entry["env"] = entry_env
 entries["crystal-memory"] = entry
+
+plugins = data.setdefault("plugins", {})
+if not isinstance(plugins, dict):
+    plugins = {}
+    data["plugins"] = plugins
+
+plugin_load = plugins.setdefault("load", {})
+if not isinstance(plugin_load, dict):
+    plugin_load = {}
+    plugins["load"] = plugin_load
+
+existing_paths = plugin_load.get("paths", [])
+if not isinstance(existing_paths, list):
+    existing_paths = []
+normalized_paths = [p for p in existing_paths if isinstance(p, str)]
+if plugin_path not in normalized_paths:
+    normalized_paths.append(plugin_path)
+plugin_load["paths"] = normalized_paths
+
+plugin_entries = plugins.setdefault("entries", {})
+if not isinstance(plugin_entries, dict):
+    plugin_entries = {}
+    plugins["entries"] = plugin_entries
+
+plugin_entry = plugin_entries.get("crystal-memory", {})
+if not isinstance(plugin_entry, dict):
+    plugin_entry = {}
+
+plugin_config = plugin_entry.get("config", {})
+if not isinstance(plugin_config, dict):
+    plugin_config = {}
+
+if env_values.get("CRYSTAL_API_KEY"):
+    plugin_config["apiKey"] = env_values["CRYSTAL_API_KEY"]
+if env_values.get("CONVEX_URL"):
+    plugin_config["convexUrl"] = env_values["CONVEX_URL"]
+
+plugin_entry["enabled"] = True
+plugin_entry["config"] = plugin_config
+plugin_entries["crystal-memory"] = plugin_entry
+
+plugin_slots = plugins.setdefault("slots", {})
+if not isinstance(plugin_slots, dict):
+    plugin_slots = {}
+    plugins["slots"] = plugin_slots
+plugin_slots["memory"] = "crystal-memory"
+
+plugin_installs = plugins.setdefault("installs", {})
+if not isinstance(plugin_installs, dict):
+    plugin_installs = {}
+    plugins["installs"] = plugin_installs
+plugin_installs["crystal-memory"] = {
+    "source": "path",
+    "sourcePath": plugin_path,
+    "installPath": plugin_path,
+    "version": "0.2.0",
+}
 
 with open(config_path, "w", encoding="utf-8") as f:
     json.dump(data, f, indent=2)

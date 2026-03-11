@@ -1,8 +1,9 @@
 {
   "id": "crystal-memory",
+  "kind": "memory",
   "name": "Memory Crystal",
   "description": "Persistent memory for AI agents via Memory Crystal",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "entry": "index.js",
   "configSchema": {
     "type": "object",

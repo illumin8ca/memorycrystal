@@ -9,5 +9,7 @@ curl -fsSL "$PLUGIN_URL" -o "$TMP/plugin.tar.gz"
 tar -xzf "$TMP/plugin.tar.gz" -C "$TMP"
 openclaw plugins install "$TMP/crystal-memory"
 read -rp "Enter your Memory Crystal API key: " API_KEY
-openclaw config set plugins.crystal-memory.apiKey "$API_KEY"
+openclaw config set plugins.entries.crystal-memory.config.apiKey "$API_KEY"
+openclaw config set plugins.entries.crystal-memory.enabled true
+openclaw config set plugins.slots.memory crystal-memory
 echo "✓ Memory Crystal installed. Your AI will now remember everything."

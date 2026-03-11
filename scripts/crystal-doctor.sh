@@ -177,25 +177,29 @@ hook_map_path = sys.argv[2]
 required = sys.argv[3].split()
 
 openclaw = load_tolerant_json(config_path)
-hooks = openclaw.get("hooks", {})
-internal = hooks.get("internal", {}) if isinstance(hooks, dict) else {}
-entries = internal.get("entries", {}) if isinstance(internal, dict) else {}
+plugins = openclaw.get("plugins", {})
+if not isinstance(plugins, dict):
+    print("ERROR: plugins block missing from OpenClaw config.")
+    raise SystemExit(1)
+
+entries = plugins.get("entries", {})
 entry = entries.get("crystal-memory") if isinstance(entries, dict) else None
 if not isinstance(entry, dict):
-    print("ERROR: hooks.internal.entries.crystal-memory is missing.")
+    print("ERROR: plugins.entries.crystal-memory is missing.")
     raise SystemExit(1)
 if not entry.get("enabled"):
-    print("ERROR: hooks.internal.entries.crystal-memory is not enabled.")
+    print("ERROR: plugins.entries.crystal-memory is not enabled.")
     raise SystemExit(1)
 
-entry_env = entry.get("env", {})
-if not isinstance(entry_env, dict):
-    print("ERROR: hooks.internal.entries.crystal-memory.env is missing.")
+slots = plugins.get("slots", {})
+if not isinstance(slots, dict) or slots.get("memory") != "crystal-memory":
+    print("ERROR: plugins.slots.memory is not set to crystal-memory.")
     raise SystemExit(1)
 
-missing = [key for key in required if not entry_env.get(key)]
-if missing:
-    print("ERROR: hooks.internal.entries.crystal-memory.env missing: " + ", ".join(missing))
+load = plugins.get("load", {})
+paths = load.get("paths", []) if isinstance(load, dict) else []
+if not isinstance(paths, list) or not any(isinstance(item, str) and item.endswith("/crystal-memory") for item in paths):
+    print("ERROR: plugins.load.paths does not include the crystal-memory plugin directory.")
     raise SystemExit(1)
 
 hook_map = load_tolerant_json(hook_map_path)
@@ -228,7 +232,7 @@ else:
     print("PORT=8788")
 PY
   then
-    warn "OpenClaw integration is not fully configured. Run scripts/crystal-enable.sh to wire hooks."
+    warn "OpenClaw integration is not fully configured. Run scripts/crystal-enable.sh to wire the memory plugin."
   fi
 else
   warn "OpenClaw runtime wiring files not present yet. Run crystal-enable.sh when ready."

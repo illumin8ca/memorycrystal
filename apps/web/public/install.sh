@@ -260,7 +260,7 @@ cfg.hooks.internal.enabled = true;
 
 cfg.plugins ??= {};
 cfg.plugins.slots = (cfg.plugins.slots && typeof cfg.plugins.slots === 'object') ? cfg.plugins.slots : {};
-cfg.plugins.slots.contextEngine = 'crystal-memory';
+cfg.plugins.slots.memory = 'crystal-memory';
 
 cfg.plugins.allow = Array.isArray(cfg.plugins.allow) ? cfg.plugins.allow : [];
 if (!cfg.plugins.allow.includes('crystal-memory')) cfg.plugins.allow.push('crystal-memory');
@@ -319,7 +319,7 @@ cfg.plugins.installs['crystal-memory'] = {
   source: 'path',
   sourcePath: activePath,
   installPath: activePath,
-  version: '0.1.0',
+  version: '0.2.0',
   installedAt: new Date().toISOString(),
 };
 
