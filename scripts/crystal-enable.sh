@@ -67,11 +67,17 @@ if [ ! -d "$REPO_ROOT/plugin" ]; then
   exit 1
 fi
 
-mkdir -p "$PLUGIN_PATH"
-rm -rf "$PLUGIN_PATH"
-mkdir -p "$PLUGIN_PATH"
-cp -R "$REPO_ROOT/plugin/"* "$PLUGIN_PATH/"
-echo "Copied plugin bundle to $PLUGIN_PATH"
+ENABLE_CHANGED=0
+if [ -d "$PLUGIN_PATH" ] && diff -qr "$REPO_ROOT/plugin" "$PLUGIN_PATH" >/dev/null 2>&1; then
+  echo "Plugin bundle already up to date at $PLUGIN_PATH"
+else
+  mkdir -p "$PLUGIN_PATH"
+  rm -rf "$PLUGIN_PATH"
+  mkdir -p "$PLUGIN_PATH"
+  cp -R "$REPO_ROOT/plugin/"* "$PLUGIN_PATH/"
+  ENABLE_CHANGED=1
+  echo "Copied plugin bundle to $PLUGIN_PATH"
+fi
 
 if [ ! -f "$MCP_DIST" ]; then
   echo "ERROR: MCP server artifact missing at $MCP_DIST. Run: (cd mcp-server && npm run build)"
@@ -86,7 +92,7 @@ fi
 mkdir -p "$OPENCLAW_DIR"
 mkdir -p "$OPENCLAW_DIR/extensions/internal-hooks"
 
-python3 - "$OPENCLAW_CONFIG" "$REPO_ROOT/.env" "${OPENCLAW_DIR}" "${REPO_ROOT}" "$MCP_DIST" "$NODE_PATH" "$PLUGIN_PATH" "$MCP_ENV_FILE" "${REQUIRED_ENV_KEYS[*]}" "${REQUIRED_RUNTIME_ENV_KEYS[*]}" <<'PY'
+PYTHON_OUTPUT="$(python3 - "$OPENCLAW_CONFIG" "$REPO_ROOT/.env" "${OPENCLAW_DIR}" "${REPO_ROOT}" "$MCP_DIST" "$NODE_PATH" "$PLUGIN_PATH" "$MCP_ENV_FILE" "${REQUIRED_ENV_KEYS[*]}" "${REQUIRED_RUNTIME_ENV_KEYS[*]}" <<'PY'
 import json
 import os
 import re
@@ -128,6 +134,10 @@ if missing_runtime_keys:
     print("ERROR: missing required keys in .env: " + ", ".join(missing_runtime_keys))
     raise SystemExit(1)
 
+def dump_pretty(value):
+    return json.dumps(value, indent=2) + "\n"
+
+before_config_raw = open(config_path, "r", encoding="utf-8").read() if os.path.exists(config_path) else ""
 data = load_tolerant_json(config_path)
 hooks = data.setdefault("hooks", {})
 if not isinstance(hooks, dict):
@@ -215,14 +225,18 @@ plugin_installs["crystal-memory"] = {
     "source": "path",
     "sourcePath": plugin_path,
     "installPath": plugin_path,
-    "version": "0.2.2",
+    "version": "0.2.3",
 }
 
-with open(config_path, "w", encoding="utf-8") as f:
-    json.dump(data, f, indent=2)
+after_config_raw = dump_pretty(data)
+config_changed = before_config_raw != after_config_raw
+if config_changed:
+    with open(config_path, "w", encoding="utf-8") as f:
+        f.write(after_config_raw)
 
 hook_path = os.path.join(openclaw_dir, "extensions", "internal-hooks", "openclaw-hook.json")
 plugin_hook_path = os.path.join(plugin_path, "openclaw-hook.json")
+before_hook_raw = open(hook_path, "r", encoding="utf-8").read() if os.path.exists(hook_path) else ""
 hook_data = load_tolerant_json(hook_path)
 commands = hook_data.setdefault("commands", {})
 if not isinstance(commands, dict):
@@ -271,9 +285,13 @@ commands["crystal-recall"] = {
     },
 }
 
-with open(hook_path, "w", encoding="utf-8") as f:
-    json.dump(hook_data, f, indent=2)
+after_hook_raw = dump_pretty(hook_data)
+hook_changed = before_hook_raw != after_hook_raw
+if hook_changed:
+    with open(hook_path, "w", encoding="utf-8") as f:
+        f.write(after_hook_raw)
 
+before_plugin_hook_raw = open(plugin_hook_path, "r", encoding="utf-8").read() if os.path.exists(plugin_hook_path) else ""
 plugin_hook = load_tolerant_json(plugin_hook_path)
 plugin_capabilities = plugin_hook.setdefault("capabilities", {})
 plugin_commands = plugin_hook.setdefault("commands", {})
@@ -312,9 +330,43 @@ plugin_env["CRYSTAL_MCP_HOST"] = command_env["CRYSTAL_MCP_HOST"]
 plugin_env["CRYSTAL_MCP_PORT"] = command_env["CRYSTAL_MCP_PORT"]
 plugin_env["CRYSTAL_ENV_FILE"] = mcp_env_path
 
-with open(plugin_hook_path, "w", encoding="utf-8") as f:
-    json.dump(plugin_hook, f, indent=2)
+after_plugin_hook_raw = dump_pretty(plugin_hook)
+plugin_hook_changed = before_plugin_hook_raw != after_plugin_hook_raw
+if plugin_hook_changed:
+    with open(plugin_hook_path, "w", encoding="utf-8") as f:
+        f.write(after_plugin_hook_raw)
+
+print(f"CONFIG_CHANGED={1 if config_changed else 0}")
+print(f"HOOK_MAP_CHANGED={1 if hook_changed else 0}")
+print(f"PLUGIN_HOOK_CHANGED={1 if plugin_hook_changed else 0}")
 PY
+)"
+printf '%s\n' "$PYTHON_OUTPUT" | sed '/_CHANGED=/d'
+if printf '%s\n' "$PYTHON_OUTPUT" | grep -q '^CONFIG_CHANGED=1$'; then
+  ENABLE_CHANGED=1
+  echo "Updated $OPENCLAW_CONFIG"
+else
+  echo "$OPENCLAW_CONFIG already up to date"
+fi
+if printf '%s\n' "$PYTHON_OUTPUT" | grep -q '^HOOK_MAP_CHANGED=1$'; then
+  ENABLE_CHANGED=1
+  echo "Updated $HOOK_MAP_PATH"
+else
+  echo "$HOOK_MAP_PATH already up to date"
+fi
+if printf '%s\n' "$PYTHON_OUTPUT" | grep -q '^PLUGIN_HOOK_CHANGED=1$'; then
+  ENABLE_CHANGED=1
+  echo "$PLUGIN_PATH/openclaw-hook.json updated"
+else
+  echo "$PLUGIN_PATH/openclaw-hook.json already up to date"
+fi
+
+if [ "$ENABLE_CHANGED" != "1" ]; then
+  echo "No plugin or config changes detected."
+  echo "Skipping auto-restart — gateway restart is not required."
+  echo "Enabled Memory Crystal wiring for $OPENCLAW_DIR"
+  exit 0
+fi
 
 echo "Skipping auto-restart — caller is responsible for restarting the gateway."
 

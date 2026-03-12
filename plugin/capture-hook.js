@@ -84,6 +84,18 @@ function extractAssistantText(event) {
   return "";
 }
 
+function extractUserText(event) {
+  return firstString(
+    event?.context?.content,
+    event?.content,
+    event?.text,
+    event?.message?.content,
+    event?.message?.text,
+    event?.input,
+    event?.prompt
+  );
+}
+
 async function captureToMCP(apiKey, convexUrl, payload) {
   try {
     const res = await fetch(`${convexUrl}/api/mcp/capture`, {
@@ -116,7 +128,7 @@ module.exports = (api) => {
 
   // Capture user message before each turn
   api.on("message_received", (event, ctx) => {
-    const text = event?.text || event?.content || "";
+    const text = extractUserText(event);
     if (text && ctx?.sessionKey) {
       pendingUserMessages.set(ctx.sessionKey, String(text));
     }
@@ -139,10 +151,6 @@ module.exports = (api) => {
       userMessage ? `User: ${userMessage}` : null,
       `Assistant: ${assistantText}`,
     ].filter(Boolean).join("\n\n");
-
-    // TODO: Future attachment capture hook:
-    // If a message contains attachments/images/audio/video/PDFs,
-    // call POST /api/mcp/asset for each attachment with storageKey + metadata.
 
     await captureToMCP(apiKey, convexUrl, {
       title: `Conversation — ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,

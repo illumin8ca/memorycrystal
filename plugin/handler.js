@@ -101,8 +101,7 @@ const resolveChannelKey = (payload = {}) => {
   const channelId = firstString(
     payload.context?.channelId,
     payload.channelId,
-    payload.channel,
-    payload.conversationId
+    payload.channel
   );
   const threadId = firstString(payload.context?.threadId, payload.threadId);
   const parts = [provider, workspaceId, guildId, channelId, threadId].filter(Boolean);

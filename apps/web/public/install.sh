@@ -39,16 +39,28 @@ OPENCLAW_CONFIG="$OPENCLAW_DIR/openclaw.json"
 LEGACY_HOOK_DIR="$OPENCLAW_DIR/hooks/crystal-stm"
 LEGACY_CAPTURE_EXT_DIR="$OPENCLAW_DIR/extensions/crystal-capture"
 EXT_DIR="$OPENCLAW_DIR/extensions/crystal-memory"
+INSTALL_CHANGED=0
 
 fetch_plugin_file() {
   local file="$1"
   local target="$2"
   local url="$PLUGIN_REPO_BASE/$file"
+  local tmp_file
+  tmp_file="$(mktemp)"
 
-  if ! curl -fsSL "$url" -o "$target"; then
+  if ! curl -fsSL "$url" -o "$tmp_file"; then
+    rm -f "$tmp_file"
     echo "  ✗ Failed to download plugin file: $url"
     exit 1
   fi
+
+  if [ -f "$target" ] && cmp -s "$tmp_file" "$target"; then
+    rm -f "$tmp_file"
+    return
+  fi
+
+  mv "$tmp_file" "$target"
+  INSTALL_CHANGED=1
 }
 
 verify_openclaw_install() {
@@ -176,12 +188,14 @@ mkdir -p "$OPENCLAW_DIR"
 if [ -d "$LEGACY_HOOK_DIR" ]; then
   echo "  → Removing legacy crystal-stm hook from $LEGACY_HOOK_DIR..."
   rm -rf "$LEGACY_HOOK_DIR"
+  INSTALL_CHANGED=1
   echo "  ✓ Legacy hook removed"
 fi
 
 if [ -d "$LEGACY_CAPTURE_EXT_DIR" ]; then
   echo "  → Removing legacy crystal-capture extension from $LEGACY_CAPTURE_EXT_DIR..."
   rm -rf "$LEGACY_CAPTURE_EXT_DIR"
+  INSTALL_CHANGED=1
   echo "  ✓ Legacy crystal-capture extension removed"
 fi
 
@@ -201,7 +215,7 @@ echo "  ✓ Plugin files written"
 
 # ── Configure OpenClaw ────────────────────────────────────────────────────────
 echo "  → Updating OpenClaw config at $OPENCLAW_CONFIG..."
-node - "$OPENCLAW_CONFIG" "$API_KEY" "$CONVEX_URL" "$EXT_DIR" <<'NODE'
+CONFIG_OUTPUT="$(node - "$OPENCLAW_CONFIG" "$API_KEY" "$CONVEX_URL" "$EXT_DIR" <<'NODE'
 const fs = require('node:fs');
 const nodePath = require('node:path');
 const path = process.argv[2];
@@ -216,6 +230,8 @@ try {
 } catch {
   cfg = {};
 }
+const beforeRaw = fs.existsSync(path) ? fs.readFileSync(path, 'utf8') : '';
+const notes = [];
 
 cfg.hooks ??= {};
 cfg.hooks.internal ??= {};
@@ -256,11 +272,11 @@ let nextPaths = [...existingPaths];
 if (preferDevPath) {
   activePath = devPaths[0];
   nextPaths = nextPaths.filter((p) => normalize(p) !== extNorm);
-  console.log('  ℹ Preserving existing repo dev plugin path for crystal-memory (CRYSTAL_PRESERVE_DEV_PLUGIN_PATH=1).');
+  notes.push('  ℹ Preserving existing repo dev plugin path for crystal-memory (CRYSTAL_PRESERVE_DEV_PLUGIN_PATH=1).');
 } else {
   nextPaths = nextPaths.filter((p) => !isLikelyRepoDevPath(p) && !isLegacyCapturePath(p));
   if (hasDevPath) {
-    console.log('  ℹ Removed repo dev plugin path to avoid duplicate crystal-memory plugin loading.');
+    notes.push('  ℹ Removed repo dev plugin path to avoid duplicate crystal-memory plugin loading.');
   }
   if (!nextPaths.some((p) => normalize(p) === extNorm)) nextPaths.push(extDir);
 }
@@ -295,13 +311,13 @@ const installChanged =
   existingInstall.source !== 'path' ||
   existingInstall.sourcePath !== activePath ||
   existingInstall.installPath !== activePath ||
-  existingInstall.version !== '0.2.2';
+  existingInstall.version !== '0.2.3';
 
 cfg.plugins.installs['crystal-memory'] = {
   source: 'path',
   sourcePath: activePath,
   installPath: activePath,
-  version: '0.2.2',
+  version: '0.2.3',
   installedAt: installChanged
     ? new Date().toISOString()
     : (typeof existingInstall.installedAt === 'string' && existingInstall.installedAt
@@ -309,11 +325,36 @@ cfg.plugins.installs['crystal-memory'] = {
       : new Date().toISOString()),
 };
 
-fs.mkdirSync(nodePath.dirname(path), { recursive: true });
-fs.writeFileSync(path, JSON.stringify(cfg, null, 2));
+const afterRaw = `${JSON.stringify(cfg, null, 2)}\n`;
+const configChanged = beforeRaw !== afterRaw;
+if (configChanged) {
+  fs.mkdirSync(nodePath.dirname(path), { recursive: true });
+  fs.writeFileSync(path, afterRaw);
+}
+for (const note of notes) {
+  console.log(note);
+}
+console.log(`CONFIG_CHANGED=${configChanged ? 1 : 0}`);
 NODE
+)"
+printf '%s\n' "$CONFIG_OUTPUT" | sed '/^CONFIG_CHANGED=/d'
+CONFIG_CHANGED="$(printf '%s\n' "$CONFIG_OUTPUT" | awk -F= '/^CONFIG_CHANGED=/{print $2}' | tail -n1)"
+if [ "$CONFIG_CHANGED" = "1" ]; then
+  INSTALL_CHANGED=1
+fi
 
-echo "  ✓ OpenClaw config updated"
+if [ "$CONFIG_CHANGED" = "1" ]; then
+  echo "  ✓ OpenClaw config updated"
+else
+  echo "  ✓ OpenClaw config already up to date"
+fi
+
+if [ "$INSTALL_CHANGED" != "1" ]; then
+  echo ""
+  echo "  ✓ No plugin or config changes detected"
+  echo "  → Skipping gateway restart prompt"
+  exit 0
+fi
 
 echo ""
 echo "  → Restart OpenClaw gateway now? [Y/n]"

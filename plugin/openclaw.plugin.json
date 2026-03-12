@@ -3,7 +3,7 @@
   "kind": "memory",
   "name": "Memory Crystal",
   "description": "Persistent memory for AI agents via Memory Crystal",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "entry": "index.js",
   "configSchema": {
     "type": "object",

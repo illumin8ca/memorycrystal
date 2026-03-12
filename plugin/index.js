@@ -219,6 +219,18 @@ function extractAssistantText(event) {
   return "";
 }
 
+function extractUserText(event) {
+  return firstString(
+    event?.context?.content,
+    event?.content,
+    event?.text,
+    event?.message?.content,
+    event?.message?.text,
+    event?.input,
+    event?.prompt
+  );
+}
+
 function getSessionKey(ctx, event) {
   return (
     ctx?.sessionKey ||
@@ -243,9 +255,7 @@ function getChannelKey(ctx, event) {
   const channelId = firstString(
     event?.context?.channelId,
     event?.channelId,
-    ctx?.channelId,
-    event?.conversationId,
-    ctx?.conversationId
+    ctx?.channelId
   );
   const threadId = firstString(event?.context?.threadId, event?.threadId, ctx?.threadId);
   const parts = [provider, workspaceId, guildId, channelId, threadId].filter(Boolean);
@@ -421,21 +431,27 @@ module.exports = (api) => {
     "message_received",
     async (event, ctx) => {
       try {
-        const text = event?.content || event?.text || "";
+        const text = extractUserText(event);
         const sessionKey = getSessionKey(ctx, event);
         const pluginConfig = getPluginConfig(api, ctx);
         const defaultMode = pluginConfig?.defaultRecallMode || "general";
         const defaultLimit = pluginConfig?.defaultRecallLimit || 8;
 
-        if (text && sessionKey) {
+        if (text) {
           const normalized = String(text);
-          pendingUserMessages.set(sessionKey, normalized);
+          if (sessionKey) {
+            pendingUserMessages.set(sessionKey, normalized);
+          }
           await logMessage(api, ctx, {
             role: "user",
             content: normalized,
             channel: getChannelKey(ctx, event),
-            sessionKey,
+            sessionKey: sessionKey || undefined,
           });
+        } else if (!text) {
+          api.logger?.warn?.(
+            `[crystal-memory] message_received missing user text; keys=${Object.keys(event || {}).join(",") || "none"}`
+          );
         }
 
         // Store resolved recall defaults per-session for future recall-API wiring.
@@ -632,8 +648,6 @@ module.exports = (api) => {
         let messages = Array.isArray(data?.messages) ? data.messages : [];
         let searchScope = resolvedChannel ? "channel" : "global";
 
-        // Fallback: if channel-scoped search returns no hits and channel was auto-derived,
-        // retry globally. Some runtimes expose partial channel context in tool calls.
         if (messages.length === 0 && typeof params?.channel !== "string" && resolvedChannel) {
           data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/search-messages", {
             query,
@@ -641,7 +655,9 @@ module.exports = (api) => {
             sinceMs,
           });
           messages = Array.isArray(data?.messages) ? data.messages : [];
-          if (messages.length > 0) searchScope = "global-fallback";
+          if (messages.length > 0) {
+            searchScope = "global-fallback";
+          }
         }
 
         const summary = {

@@ -15,7 +15,8 @@
     "crystal:disable": "bash scripts/crystal-disable.sh",
     "crystal:e2e": "bash scripts/crystal-e2e.sh",
     "convex:deploy": "CONVEX_DEPLOYMENT=prod:rightful-mockingbird-389 npx convex deploy",
-    "test:smoke": "bash scripts/crystal-doctor.sh --smoke"
+    "test:smoke": "bash scripts/crystal-doctor.sh --smoke",
+    "test:capture-e2e": "node scripts/test-capture-e2e.cjs"
   },
   "devDependencies": {
     "convex": "^1.32.0",

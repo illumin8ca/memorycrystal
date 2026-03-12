@@ -13,6 +13,7 @@ import type * as crons from "../crons.js";
 import type * as crystal_admin from "../crystal/admin.js";
 import type * as crystal_adminSupport from "../crystal/adminSupport.js";
 import type * as crystal_apiKeys from "../crystal/apiKeys.js";
+import type * as crystal_assets from "../crystal/assets.js";
 import type * as crystal_associations from "../crystal/associations.js";
 import type * as crystal_auth from "../crystal/auth.js";
 import type * as crystal_authLookup from "../crystal/authLookup.js";
@@ -56,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   "crystal/admin": typeof crystal_admin;
   "crystal/adminSupport": typeof crystal_adminSupport;
   "crystal/apiKeys": typeof crystal_apiKeys;
+  "crystal/assets": typeof crystal_assets;
   "crystal/associations": typeof crystal_associations;
   "crystal/auth": typeof crystal_auth;
   "crystal/authLookup": typeof crystal_authLookup;
