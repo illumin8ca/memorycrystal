@@ -37,6 +37,7 @@ DETECT_OPENCLAW_DIR() {
 OPENCLAW_DIR="$(DETECT_OPENCLAW_DIR)"
 OPENCLAW_CONFIG="$OPENCLAW_DIR/openclaw.json"
 LEGACY_HOOK_DIR="$OPENCLAW_DIR/hooks/crystal-stm"
+LEGACY_CAPTURE_EXT_DIR="$OPENCLAW_DIR/extensions/crystal-capture"
 EXT_DIR="$OPENCLAW_DIR/extensions/crystal-memory"
 
 fetch_plugin_file() {
@@ -98,6 +99,13 @@ verify_openclaw_install() {
     return 1
   fi
 
+  if ! grep -q "crystal_search_messages" "$plugin_info_file"; then
+    echo "  ✗ Verification failed: crystal-memory does not expose crystal_search_messages"
+    sed -n '1,80p' "$plugin_info_file"
+    rm -f "$plugin_info_file"
+    return 1
+  fi
+
   if ! grep -q "before-agent-start\\|before_agent_start" "$plugin_info_file"; then
     echo "  ✗ Verification failed: crystal-memory startup hook is missing"
     sed -n '1,60p' "$plugin_info_file"
@@ -108,7 +116,7 @@ verify_openclaw_install() {
   rm -f "$plugin_info_file"
   echo "  ✓ Verified plugins.slots.memory = crystal-memory"
   echo "  ✓ Verified crystal-memory plugin is loaded"
-  echo "  ✓ Verified crystal-memory memory_search/memory_get + startup hook"
+  echo "  ✓ Verified crystal-memory memory_search/memory_get/crystal_search_messages + startup hook"
   return 0
 }
 
@@ -171,6 +179,12 @@ if [ -d "$LEGACY_HOOK_DIR" ]; then
   echo "  ✓ Legacy hook removed"
 fi
 
+if [ -d "$LEGACY_CAPTURE_EXT_DIR" ]; then
+  echo "  → Removing legacy crystal-capture extension from $LEGACY_CAPTURE_EXT_DIR..."
+  rm -rf "$LEGACY_CAPTURE_EXT_DIR"
+  echo "  ✓ Legacy crystal-capture extension removed"
+fi
+
 # ── Install crystal-memory extension (tools) ─────────────────────────────────
 echo "  → Installing crystal-memory plugin to $EXT_DIR..."
 mkdir -p "$EXT_DIR"
@@ -230,6 +244,7 @@ const isLikelyRepoDevPath = (p) => {
   const n = normalize(p);
   return n.endsWith('/memorycrystal/plugin') || n.includes('/projects/memorycrystal/plugin');
 };
+const isLegacyCapturePath = (p) => normalize(p).endsWith('/extensions/crystal-capture');
 
 const devPaths = existingPaths.filter(isLikelyRepoDevPath);
 const hasDevPath = devPaths.length > 0;
@@ -243,7 +258,7 @@ if (preferDevPath) {
   nextPaths = nextPaths.filter((p) => normalize(p) !== extNorm);
   console.log('  ℹ Preserving existing repo dev plugin path for crystal-memory (CRYSTAL_PRESERVE_DEV_PLUGIN_PATH=1).');
 } else {
-  nextPaths = nextPaths.filter((p) => !isLikelyRepoDevPath(p));
+  nextPaths = nextPaths.filter((p) => !isLikelyRepoDevPath(p) && !isLegacyCapturePath(p));
   if (hasDevPath) {
     console.log('  ℹ Removed repo dev plugin path to avoid duplicate crystal-memory plugin loading.');
   }
@@ -253,6 +268,7 @@ if (preferDevPath) {
 cfg.plugins.load.paths = Array.from(new Set(nextPaths));
 
 cfg.plugins.entries ??= {};
+delete cfg.plugins.entries['crystal-capture'];
 const existingEntry = (cfg.plugins.entries['crystal-memory'] && typeof cfg.plugins.entries['crystal-memory'] === 'object')
   ? cfg.plugins.entries['crystal-memory']
   : {};
@@ -271,6 +287,7 @@ cfg.plugins.entries['crystal-memory'] = {
 };
 
 cfg.plugins.installs ??= {};
+delete cfg.plugins.installs['crystal-capture'];
 const existingInstall = (cfg.plugins.installs['crystal-memory'] && typeof cfg.plugins.installs['crystal-memory'] === 'object')
   ? cfg.plugins.installs['crystal-memory']
   : {};
@@ -278,13 +295,13 @@ const installChanged =
   existingInstall.source !== 'path' ||
   existingInstall.sourcePath !== activePath ||
   existingInstall.installPath !== activePath ||
-  existingInstall.version !== '0.2.0';
+  existingInstall.version !== '0.2.1';
 
 cfg.plugins.installs['crystal-memory'] = {
   source: 'path',
   sourcePath: activePath,
   installPath: activePath,
-  version: '0.2.0',
+  version: '0.2.1',
   installedAt: installChanged
     ? new Date().toISOString()
     : (typeof existingInstall.installedAt === 'string' && existingInstall.installedAt

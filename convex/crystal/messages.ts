@@ -73,13 +73,13 @@ const getRecentMessagesForUserInternal = async (
           }
           return query;
         })
-      : ctx.db.query("crystalMessages").withIndex("by_timestamp", (q) =>
+      : ctx.db.query("crystalMessages").withIndex("by_timestamp", (q: any) =>
           q.gte("timestamp", sinceMs ?? 0)
         );
 
   const recent = await baseQuery
     .order("desc")
-    .filter((q) => q.eq(q.field("userId"), userId))
+    .filter((q: any) => q.eq(q.field("userId"), userId))
     .take(requestedLimit);
 
   return recent.reverse();
