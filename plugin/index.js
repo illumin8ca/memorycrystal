@@ -619,16 +619,36 @@ module.exports = (api) => {
         const query = ensureString(params?.query, "query", 2);
         const limit = Number.isFinite(Number(params?.limit)) ? Number(params.limit) : 5;
         const sinceMs = Number.isFinite(Number(params?.sinceMs)) ? Number(params.sinceMs) : undefined;
-        const data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/search-messages", {
+        const resolvedChannel = typeof params?.channel === "string" ? params.channel : getChannelKey(ctx);
+        const requestedLimit = Math.max(1, Math.min(limit, 20));
+
+        let data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/search-messages", {
           query,
-          limit: Math.max(1, Math.min(limit, 20)),
+          limit: requestedLimit,
           sinceMs,
-          channel: typeof params?.channel === "string" ? params.channel : getChannelKey(ctx),
+          channel: resolvedChannel,
         });
-        const messages = Array.isArray(data?.messages) ? data.messages : [];
+
+        let messages = Array.isArray(data?.messages) ? data.messages : [];
+        let searchScope = resolvedChannel ? "channel" : "global";
+
+        // Fallback: if channel-scoped search returns no hits and channel was auto-derived,
+        // retry globally. Some runtimes expose partial channel context in tool calls.
+        if (messages.length === 0 && typeof params?.channel !== "string" && resolvedChannel) {
+          data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/search-messages", {
+            query,
+            limit: requestedLimit,
+            sinceMs,
+          });
+          messages = Array.isArray(data?.messages) ? data.messages : [];
+          if (messages.length > 0) searchScope = "global-fallback";
+        }
+
         const summary = {
           query,
           messageCount: messages.length,
+          searchScope,
+          channel: resolvedChannel || null,
           topMessages: messages.slice(0, 10),
         };
         return toToolResult(summary, summary);
