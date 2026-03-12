@@ -15,6 +15,75 @@
 const DEFAULT_CONVEX_URL = "https://rightful-mockingbird-389.convex.site";
 const pendingUserMessages = new Map();
 
+function firstString(...values) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return "";
+}
+
+function joinStringArray(values) {
+  if (!Array.isArray(values)) return "";
+  return values
+    .filter((value) => typeof value === "string" && value.trim().length > 0)
+    .join("\n")
+    .trim();
+}
+
+function extractAssistantText(event) {
+  const direct = firstString(
+    joinStringArray(event?.assistantTexts),
+    joinStringArray(event?.texts),
+    joinStringArray(event?.outputs),
+    event?.lastAssistant,
+    event?.outputText,
+    event?.content,
+    event?.text,
+    event?.message?.content,
+    event?.message?.text,
+    event?.response?.content,
+    event?.response?.text,
+    event?.result?.content,
+    event?.result?.text
+  );
+
+  if (direct) {
+    return direct;
+  }
+
+  const candidates = [
+    event?.response?.messages,
+    event?.result?.messages,
+    event?.messages,
+    event?.response?.parts,
+    event?.result?.parts,
+    event?.parts,
+  ];
+
+  for (const candidate of candidates) {
+    if (!Array.isArray(candidate)) continue;
+    const text = candidate
+      .map((item) =>
+        firstString(
+          item?.content,
+          item?.text,
+          item?.message?.content,
+          item?.message?.text
+        )
+      )
+      .filter(Boolean)
+      .join("\n")
+      .trim();
+    if (text) {
+      return text;
+    }
+  }
+
+  return "";
+}
+
 async function captureToMCP(apiKey, convexUrl, payload) {
   try {
     const res = await fetch(`${convexUrl}/api/mcp/capture`, {
@@ -55,8 +124,7 @@ module.exports = (api) => {
 
   // Fire capture after each LLM response
   api.on("llm_output", async (event, ctx) => {
-    const assistantText = (event?.assistantTexts || []).join("\n").trim()
-      || String(event?.outputText || "").trim();
+    const assistantText = extractAssistantText(event);
     if (!assistantText) return;
 
     const { apiKey, convexUrl } = getConfig(ctx);

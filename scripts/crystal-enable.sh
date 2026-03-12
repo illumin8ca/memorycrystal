@@ -215,7 +215,7 @@ plugin_installs["crystal-memory"] = {
     "source": "path",
     "sourcePath": plugin_path,
     "installPath": plugin_path,
-    "version": "0.2.0",
+    "version": "0.2.2",
 }
 
 with open(config_path, "w", encoding="utf-8") as f:
