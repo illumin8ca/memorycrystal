@@ -195,6 +195,9 @@ slots = plugins.get("slots", {})
 if not isinstance(slots, dict) or slots.get("memory") != "crystal-memory":
     print("ERROR: plugins.slots.memory is not set to crystal-memory.")
     raise SystemExit(1)
+if isinstance(slots, dict) and slots.get("contextEngine"):
+    print(f"ERROR: plugins.slots.contextEngine is still set to {slots.get('contextEngine')!r}.")
+    raise SystemExit(1)
 
 load = plugins.get("load", {})
 paths = load.get("paths", []) if isinstance(load, dict) else []

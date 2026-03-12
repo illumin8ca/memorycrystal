@@ -65,8 +65,8 @@ verify_openclaw_install() {
     return 1
   fi
 
-  if [ "$context_slot" = "crystal-memory" ]; then
-    echo "  ✗ Verification failed: stale plugins.slots.contextEngine is still set to crystal-memory"
+  if [ -n "$context_slot" ]; then
+    echo "  ✗ Verification failed: plugins.slots.contextEngine is still set to '$context_slot' (expected unset)"
     return 1
   fi
 
@@ -228,7 +228,7 @@ if (cfg.hooks.internal.entries && typeof cfg.hooks.internal.entries === 'object'
 cfg.plugins ??= {};
 cfg.plugins.slots = (cfg.plugins.slots && typeof cfg.plugins.slots === 'object') ? cfg.plugins.slots : {};
 cfg.plugins.slots.memory = 'crystal-memory';
-if (cfg.plugins.slots.contextEngine === 'crystal-memory') {
+if (Object.prototype.hasOwnProperty.call(cfg.plugins.slots, 'contextEngine')) {
   delete cfg.plugins.slots.contextEngine;
 }
 

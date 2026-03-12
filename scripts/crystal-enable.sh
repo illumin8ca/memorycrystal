@@ -204,7 +204,7 @@ if not isinstance(plugin_slots, dict):
     plugin_slots = {}
     plugins["slots"] = plugin_slots
 plugin_slots["memory"] = "crystal-memory"
-if plugin_slots.get("contextEngine") == "crystal-memory":
+if "contextEngine" in plugin_slots:
     del plugin_slots["contextEngine"]
 
 plugin_installs = plugins.setdefault("installs", {})
