@@ -70,17 +70,22 @@ export const getLastSession = query({
     const userId = stableUserId(identity.subject);
     const channel = args.channel?.trim() || undefined;
 
-    const allSessions = await ctx.db
+    if (channel) {
+      const channelSessions = await ctx.db
+        .query("crystalSessions")
+        .withIndex("by_user_channel", (q) => q.eq("userId", userId).eq("channel", channel))
+        .order("desc")
+        .take(1);
+      return channelSessions[0] ?? null;
+    }
+
+    const sessions = await ctx.db
       .query("crystalSessions")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc")
-      .take(10);
+      .take(1);
 
-    const filtered = channel
-      ? allSessions.filter((s) => s.channel === channel)
-      : allSessions;
-
-    return filtered[0] ?? null;
+    return sessions[0] ?? null;
   },
 });
 

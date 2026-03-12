@@ -36,7 +36,7 @@ DETECT_OPENCLAW_DIR() {
 
 OPENCLAW_DIR="$(DETECT_OPENCLAW_DIR)"
 OPENCLAW_CONFIG="$OPENCLAW_DIR/openclaw.json"
-HOOK_DIR="$OPENCLAW_DIR/hooks/crystal-stm"
+LEGACY_HOOK_DIR="$OPENCLAW_DIR/hooks/crystal-stm"
 EXT_DIR="$OPENCLAW_DIR/extensions/crystal-memory"
 
 fetch_plugin_file() {
@@ -165,128 +165,14 @@ fi
 echo "  ✓ API key valid"
 
 mkdir -p "$OPENCLAW_DIR"
-
-# ── Install the crystal-stm hook (capture) ───────────────────────────────────
-echo "  → Installing crystal-stm hook to $HOOK_DIR..."
-mkdir -p "$HOOK_DIR"
-
-cat > "$HOOK_DIR/hook.json" << 'HOOKJSON'
-{
-  "openclaw": {
-    "emoji": "◈",
-    "description": "Capture conversations to Memory Crystal STM",
-    "events": ["message_received", "message_sent", "llm_output"]
-  }
-}
-HOOKJSON
-
-cat > "$HOOK_DIR/HOOK.md" << 'HOOKMD'
----
-name: crystal-stm
-description: "Capture conversation turns to Memory Crystal in real-time"
-metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "◈",
-        "events": ["message:received", "message:sent"],
-      },
-  }
----
-
-# Crystal STM Hook
-
-Captures every inbound message and outbound AI response to Memory Crystal
-short-term memory (Messages tab) and long-term sensory memory in real-time.
-
-- User messages → crystalMessages (role: user)
-- AI responses  → crystalMessages (role: assistant) + sensory memory capture
-HOOKMD
-
-cat > "$HOOK_DIR/handler.js" << 'HANDLEREOF'
-const { appendFileSync, readFileSync, writeFileSync } = require("node:fs");
-
-const log = (m) => appendFileSync("/tmp/crystal-hook-log.txt", `[${new Date().toISOString()}] ${m}\n`);
-const API_KEY = "__MC_API_KEY__";
-const BASE_URL = "https://rightful-mockingbird-389.convex.site";
-const PENDING_FILE = "/tmp/crystal-pending.json";
-
-function loadPending() {
-  try { return JSON.parse(readFileSync(PENDING_FILE, "utf8")); } catch { return {}; }
-}
-function savePending(p) {
-  try { writeFileSync(PENDING_FILE, JSON.stringify(p)); } catch (e) { log("savePending error: " + e.message); }
-}
-function getPending(key) { return loadPending()[key] || ""; }
-function setPending(key, val) { const p = loadPending(); p[key] = val; savePending(p); }
-function deletePending(key) { const p = loadPending(); delete p[key]; savePending(p); }
-function hasPending(key) { return !!loadPending()[key]; }
-
-async function post(path, body) {
-  return fetch(`${BASE_URL}${path}`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  }).catch(e => ({ ok: false, status: "error:" + e.message }));
-}
-
-async function captureAssistant(text, sessionKey, channel) {
-  const userMessage = getPending(sessionKey);
-  deletePending(sessionKey);
-  const r1 = await post("/api/mcp/log", { role: "assistant", content: text, channel, sessionKey });
-  log("log assistant: " + r1.status);
-  const content = [userMessage ? "User: " + userMessage : null, "Assistant: " + text].filter(Boolean).join("\n\n");
-  const r2 = await post("/api/mcp/capture", {
-    title: "Conversation — " + new Date().toISOString().slice(0, 16).replace("T", " "),
-    content, store: "sensory", category: "event",
-    tags: ["openclaw", "auto-capture", channel], channel,
-  });
-  log("capture: " + r2.status);
-}
-
-module.exports = async function handler(event, ctx) {
-  const action = event?.action;
-  const type = event?.type;
-  const sessionKey = event?.sessionKey || ctx?.sessionKey || "";
-  const channel = event?.context?.channelId || event?.channelId || "openclaw";
-
-  if (action === "received" || type === "message_received") {
-    const text = (event?.context?.content || event?.content || "").trim();
-    if (!text || !sessionKey) return;
-    setPending(sessionKey, text);
-    const r = await post("/api/mcp/log", { role: "user", content: text, channel, sessionKey });
-    log("log user: " + r.status);
-    return;
-  }
-
-  if (type === "llm_output" || action === "llm_output") {
-    const texts = event?.assistantTexts || event?.texts || [];
-    const text = (Array.isArray(texts) ? texts.join("\n") : event?.lastAssistant || event?.content || "").trim();
-    if (!text || !sessionKey) return;
-    await captureAssistant(text, sessionKey, channel);
-    return;
-  }
-
-  if (action === "sent" || type === "message_sent") {
-    const text = (event?.content || event?.context?.content || "").trim();
-    if (!text || event?.success === false) return;
-    if (!hasPending(sessionKey)) { log("sent: skipping (already captured)"); return; }
-    await captureAssistant(text, sessionKey, channel);
-  }
-};
-HANDLEREOF
-
-node -e '
-const fs = require("fs");
-const p = process.argv[1];
-const k = process.argv[2];
-fs.writeFileSync(p, fs.readFileSync(p, "utf8").replaceAll("__MC_API_KEY__", k));
-' "$HOOK_DIR/handler.js" "$API_KEY"
-
-echo "  ✓ Hook files written"
+if [ -d "$LEGACY_HOOK_DIR" ]; then
+  echo "  → Removing legacy crystal-stm hook from $LEGACY_HOOK_DIR..."
+  rm -rf "$LEGACY_HOOK_DIR"
+  echo "  ✓ Legacy hook removed"
+fi
 
 # ── Install crystal-memory extension (tools) ─────────────────────────────────
-echo "  → Installing crystal-memory extension to $EXT_DIR..."
+echo "  → Installing crystal-memory plugin to $EXT_DIR..."
 mkdir -p "$EXT_DIR"
 
 fetch_plugin_file "index.js" "$EXT_DIR/index.js"
@@ -297,7 +183,7 @@ fetch_plugin_file "capture-hook.js" "$EXT_DIR/capture-hook.js"
 fetch_plugin_file "handler.js" "$EXT_DIR/handler.js"
 fetch_plugin_file "openclaw-hook.json" "$EXT_DIR/openclaw-hook.json"
 
-echo "  ✓ Extension files written"
+echo "  ✓ Plugin files written"
 
 # ── Configure OpenClaw ────────────────────────────────────────────────────────
 echo "  → Updating OpenClaw config at $OPENCLAW_CONFIG..."
@@ -320,6 +206,10 @@ try {
 cfg.hooks ??= {};
 cfg.hooks.internal ??= {};
 cfg.hooks.internal.enabled = true;
+if (cfg.hooks.internal.entries && typeof cfg.hooks.internal.entries === 'object') {
+  delete cfg.hooks.internal.entries['crystal-memory'];
+  delete cfg.hooks.internal.entries['crystal-stm'];
+}
 
 cfg.plugins ??= {};
 cfg.plugins.slots = (cfg.plugins.slots && typeof cfg.plugins.slots === 'object') ? cfg.plugins.slots : {};
@@ -448,10 +338,8 @@ echo "  ┌───────────────────────
 echo "  │  ◈  Memory Crystal is active!                       │"
 echo "  │                                                     │"
 echo "  │  Installed paths:                                   │"
-echo "  │    • $HOOK_DIR                            │"
 echo "  │    • $EXT_DIR                    │"
 echo "  │                                                     │"
 echo "  │  View your memory:  https://memorycrystal.ai        │"
-echo "  │  Hook logs:         /tmp/crystal-hook-log.txt       │"
 echo "  └─────────────────────────────────────────────────────┘"
 echo ""

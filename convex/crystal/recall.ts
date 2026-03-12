@@ -269,20 +269,22 @@ export const searchMemoriesByText = internalQuery({
         .take(limit),
     ]);
 
-    // Dedupe by _id; title hits get a 15% score boost marker
+    // Dedupe by _id and attach a lexical relevance hint.
+    // Title hits are stronger than content hits because they often correspond
+    // to exact names, IDs, or labels users expect to recall verbatim.
     const seen = new Set<string>();
     const results: Array<{ _id: string; bm25Boost: number }> = [];
 
     for (const doc of titleResults) {
       if (!seen.has(doc._id as string)) {
         seen.add(doc._id as string);
-        results.push({ _id: doc._id as string, bm25Boost: 0.15 });
+        results.push({ _id: doc._id as string, bm25Boost: 1.0 });
       }
     }
     for (const doc of contentResults) {
       if (!seen.has(doc._id as string)) {
         seen.add(doc._id as string);
-        results.push({ _id: doc._id as string, bm25Boost: 0.0 });
+        results.push({ _id: doc._id as string, bm25Boost: 0.75 });
       }
     }
 
@@ -307,7 +309,7 @@ export const recallMemories = action({
       recencyWeight: preset.recencyWeight ?? 0.2,
       vectorWeight: preset.vectorWeight ?? 0.35,
       accessWeight: 0.1,
-      bm25Weight: 0.05,
+      bm25Weight: 0.15,
     };
 
     // Task 1: Default includeAssociations to true
@@ -339,19 +341,31 @@ export const recallMemories = action({
         : Promise.resolve([] as Array<{ _id: string; bm25Boost: number }>),
     ]);
 
-    // Build BM25 boost map keyed by memory _id
+    // Build lexical relevance map keyed by memory _id
     const bm25BoostMap = new Map<string, number>();
     for (const entry of textSearchResults as Array<{ _id: string; bm25Boost: number }>) {
       bm25BoostMap.set(entry._id, entry.bm25Boost);
     }
 
-    // Fetch full documents for each vector result (vectorSearch only returns _id + _score)
+    const vectorScoreMap = new Map<string, number>();
+    for (const result of vectorResults) {
+      vectorScoreMap.set(String(result._id), result._score ?? 0);
+    }
+
+    const candidateIds = Array.from(
+      new Set<string>([
+        ...vectorResults.map((result) => String(result._id)),
+        ...textSearchResults.map((entry) => String(entry._id)),
+      ])
+    );
+
+    // Fetch full documents for both semantic and lexical candidates.
     const rawResults = (
       await Promise.all(
-        vectorResults.map(async (vr) => {
-          const doc = await ctx.runQuery(internal.crystal.memories.getMemoryInternal, { memoryId: vr._id as any });
+        candidateIds.map(async (memoryId) => {
+          const doc = await ctx.runQuery(internal.crystal.memories.getMemoryInternal, { memoryId: memoryId as any });
           if (!doc) return null;
-          return { ...doc, _id: vr._id, _score: vr._score };
+          return { ...doc, _id: memoryId, _score: vectorScoreMap.get(memoryId) ?? 0 };
         })
       )
     ).filter((d) => d !== null) as Array<RecallCandidateDocument & { _id: string; _score: number; userId: string }>;
@@ -402,7 +416,8 @@ export const recallMemories = action({
         // - strength (0.30): user/system assigned memory importance
         // - recency (0.20): exponential decay based on last access
         // - accessScore (0.10): normalized access frequency (cap 20 accesses)
-        // - bm25Boost (0.05): keyword match bonus from FTS (if hybrid search enabled)
+        // - bm25Boost (0.15): keyword/title match bonus from FTS, which also
+        //   keeps lexical-only hits viable when ANN misses an exact token.
         // - nodeBoost (0.05): knowledge graph node linkage bonus
         // Weights for strength/recency/vector can be overridden by recall mode presets.
         const bm25Boost = bm25BoostMap.get(candidate._id) ?? 0;

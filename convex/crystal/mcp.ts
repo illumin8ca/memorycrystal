@@ -259,15 +259,22 @@ export const listRecentCheckpoints = internalQuery({
 export const getLastSessionByUser = internalQuery({
   args: { userId: v.string(), channel: v.optional(v.string()) },
   handler: async (ctx, { userId, channel }) => {
-    const allSessions = await ctx.db
+    if (channel) {
+      const channelSessions = await ctx.db
+        .query("crystalSessions")
+        .withIndex("by_user_channel", (q) => q.eq("userId", userId).eq("channel", channel))
+        .order("desc")
+        .take(1);
+      return channelSessions[0] ?? null;
+    }
+
+    const sessions = await ctx.db
       .query("crystalSessions")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc")
-      .take(10);
-    const filtered = channel
-      ? allSessions.filter((s) => s.channel === channel)
-      : allSessions;
-    return filtered[0] ?? null;
+      .take(1);
+
+    return sessions[0] ?? null;
   },
 });
 
@@ -1044,7 +1051,6 @@ export const auditDataIntegrity = internalQuery({
     };
   },
 });
-
 
 
 

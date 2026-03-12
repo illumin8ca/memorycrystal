@@ -80,17 +80,21 @@ async function request(config, method, path, body) {
   if (!apiKey) return null;
 
   const convexUrl = (config?.convexUrl || DEFAULT_CONVEX_URL).replace(/\/+$/, "");
-  const res = await fetch(`${convexUrl}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      ...(body ? { "content-type": "application/json" } : {}),
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
+  try {
+    const res = await fetch(`${convexUrl}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        ...(body ? { "content-type": "application/json" } : {}),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
 
-  if (!res.ok) return null;
-  return res.json().catch(() => null);
+    if (!res.ok) return null;
+    return res.json().catch(() => null);
+  } catch {
+    return null;
+  }
 }
 
 async function crystalRequest(config, path, body) {
@@ -230,7 +234,12 @@ async function buildBeforeAgentContext(api, event, ctx) {
 }
 
 async function logMessage(api, ctx, payload) {
-  await request(getPluginConfig(api, ctx), "POST", "/api/mcp/log", payload);
+  const result = await request(getPluginConfig(api, ctx), "POST", "/api/mcp/log", payload);
+  if (result === null) {
+    api.logger?.warn?.(
+      `[crystal-memory] log request failed for role=${payload?.role || "unknown"} channel=${payload?.channel || "unknown"}`
+    );
+  }
 }
 
 async function captureTurn(api, ctx, userMessage, assistantText) {
@@ -240,7 +249,7 @@ async function captureTurn(api, ctx, userMessage, assistantText) {
     .filter(Boolean)
     .join("\n\n");
 
-  await request(getPluginConfig(api, ctx), "POST", "/api/mcp/capture", {
+  const result = await request(getPluginConfig(api, ctx), "POST", "/api/mcp/capture", {
     title: `OpenClaw — ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
     content,
     store: "sensory",
@@ -248,6 +257,10 @@ async function captureTurn(api, ctx, userMessage, assistantText) {
     tags: ["openclaw", "auto-capture"],
     channel: ctx?.messageProvider || "openclaw",
   });
+
+  if (result === null) {
+    api.logger?.warn?.("[crystal-memory] capture request failed for completed turn");
+  }
 }
 
 module.exports = (api) => {
@@ -272,30 +285,34 @@ module.exports = (api) => {
   api.registerHook(
     "message_received",
     async (event, ctx) => {
-      const text = event?.content || event?.text || "";
-      const sessionKey = getSessionKey(ctx, event);
-      const pluginConfig = getPluginConfig(api, ctx);
-      const defaultMode = pluginConfig?.defaultRecallMode || "general";
-      const defaultLimit = pluginConfig?.defaultRecallLimit || 8;
+      try {
+        const text = event?.content || event?.text || "";
+        const sessionKey = getSessionKey(ctx, event);
+        const pluginConfig = getPluginConfig(api, ctx);
+        const defaultMode = pluginConfig?.defaultRecallMode || "general";
+        const defaultLimit = pluginConfig?.defaultRecallLimit || 8;
 
-      if (text && sessionKey) {
-        const normalized = String(text);
-        pendingUserMessages.set(sessionKey, normalized);
-        await logMessage(api, ctx, {
-          role: "user",
-          content: normalized,
-          channel: ctx?.messageProvider || "openclaw",
-          sessionKey,
-        });
-      }
+        if (text && sessionKey) {
+          const normalized = String(text);
+          pendingUserMessages.set(sessionKey, normalized);
+          await logMessage(api, ctx, {
+            role: "user",
+            content: normalized,
+            channel: ctx?.messageProvider || "openclaw",
+            sessionKey,
+          });
+        }
 
-      // Store resolved recall defaults per-session for future recall-API wiring.
-      // Recall occurs in recall-hook.js, but these defaults are captured here for consistency.
-      if (sessionKey) {
-        sessionConfigs.set(sessionKey, {
-          mode: defaultMode,
-          limit: defaultLimit,
-        });
+        // Store resolved recall defaults per-session for future recall-API wiring.
+        // Recall occurs in recall-hook.js, but these defaults are captured here for consistency.
+        if (sessionKey) {
+          sessionConfigs.set(sessionKey, {
+            mode: defaultMode,
+            limit: defaultLimit,
+          });
+        }
+      } catch (err) {
+        api.logger?.warn?.(`[crystal-memory] message_received failed: ${err?.message || String(err)}`);
       }
     },
     { name: "crystal-memory.message-received", description: "Buffer messages + persist user-side turn context" }
@@ -305,25 +322,29 @@ module.exports = (api) => {
   api.registerHook(
     "llm_output",
     async (event, ctx) => {
-      const assistantText =
-        (event?.assistantTexts || []).join("\n").trim() || String(event?.lastAssistant || "").trim();
-      if (!assistantText) return;
+      try {
+        const assistantText =
+          (event?.assistantTexts || []).join("\n").trim() || String(event?.lastAssistant || "").trim();
+        if (!assistantText) return;
 
-      const sessionKey = getSessionKey(ctx, event);
-      const userMessage = sessionKey ? pendingUserMessages.get(sessionKey) || "" : "";
-      const sessionDefaults = sessionKey ? sessionConfigs.get(sessionKey) : null;
-      // sessionDefaults is currently reserved for future recall-hook wiring (e.g., mode/limit defaults).
-      void sessionDefaults;
+        const sessionKey = getSessionKey(ctx, event);
+        const userMessage = sessionKey ? pendingUserMessages.get(sessionKey) || "" : "";
+        const sessionDefaults = sessionKey ? sessionConfigs.get(sessionKey) : null;
+        // sessionDefaults is currently reserved for future recall-hook wiring (e.g., mode/limit defaults).
+        void sessionDefaults;
 
-      await logMessage(api, ctx, {
-        role: "assistant",
-        content: assistantText,
-        channel: ctx?.messageProvider || "openclaw",
-        sessionKey: sessionKey || undefined,
-      });
+        await logMessage(api, ctx, {
+          role: "assistant",
+          content: assistantText,
+          channel: ctx?.messageProvider || "openclaw",
+          sessionKey: sessionKey || undefined,
+        });
 
-      if (sessionKey) pendingUserMessages.delete(sessionKey);
-      await captureTurn(api, ctx, userMessage, assistantText);
+        if (sessionKey) pendingUserMessages.delete(sessionKey);
+        await captureTurn(api, ctx, userMessage, assistantText);
+      } catch (err) {
+        api.logger?.warn?.(`[crystal-memory] llm_output failed: ${err?.message || String(err)}`);
+      }
     },
     { name: "crystal-memory.llm-output", description: "Capture AI response to Memory Crystal" }
   );
@@ -333,23 +354,27 @@ module.exports = (api) => {
   api.registerHook(
     "message_sent",
     async (event, ctx) => {
-      const sessionKey = getSessionKey(ctx, event);
-      if (!sessionKey || !pendingUserMessages.has(sessionKey)) return;
+      try {
+        const sessionKey = getSessionKey(ctx, event);
+        if (!sessionKey || !pendingUserMessages.has(sessionKey)) return;
 
-      const assistantText = String(event?.content || event?.text || "").trim();
-      if (!assistantText) return;
+        const assistantText = String(event?.content || event?.text || "").trim();
+        if (!assistantText) return;
 
-      const userMessage = pendingUserMessages.get(sessionKey) || "";
+        const userMessage = pendingUserMessages.get(sessionKey) || "";
 
-      await logMessage(api, ctx, {
-        role: "assistant",
-        content: assistantText,
-        channel: ctx?.messageProvider || "openclaw",
-        sessionKey,
-      });
+        await logMessage(api, ctx, {
+          role: "assistant",
+          content: assistantText,
+          channel: ctx?.messageProvider || "openclaw",
+          sessionKey,
+        });
 
-      pendingUserMessages.delete(sessionKey);
-      await captureTurn(api, ctx, userMessage, assistantText);
+        pendingUserMessages.delete(sessionKey);
+        await captureTurn(api, ctx, userMessage, assistantText);
+      } catch (err) {
+        api.logger?.warn?.(`[crystal-memory] message_sent fallback failed: ${err?.message || String(err)}`);
+      }
     },
     {
       name: "crystal-memory.message-sent-fallback",
@@ -361,7 +386,11 @@ module.exports = (api) => {
   api.registerHook(
     "command:new",
     async (event, ctx) => {
-      await triggerReflection(getPluginConfig(api, ctx), ctx?.sessionKey);
+      try {
+        await triggerReflection(getPluginConfig(api, ctx), ctx?.sessionKey);
+      } catch (err) {
+        api.logger?.warn?.(`[crystal-memory] command:new reflection failed: ${err?.message || String(err)}`);
+      }
     },
     { name: "crystal-memory.command-new", description: "Trigger memory reflection on /new" }
   );
@@ -369,7 +398,11 @@ module.exports = (api) => {
   api.registerHook(
     "command:reset",
     async (event, ctx) => {
-      await triggerReflection(getPluginConfig(api, ctx), ctx?.sessionKey);
+      try {
+        await triggerReflection(getPluginConfig(api, ctx), ctx?.sessionKey);
+      } catch (err) {
+        api.logger?.warn?.(`[crystal-memory] command:reset reflection failed: ${err?.message || String(err)}`);
+      }
     },
     { name: "crystal-memory.command-reset", description: "Trigger memory reflection on /reset" }
   );

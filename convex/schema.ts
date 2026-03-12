@@ -96,6 +96,7 @@ export default defineSchema({
     .index("by_user", ["userId", "archived"])
     .index("by_store_category", ["store", "category", "archived"])
     .index("by_strength", ["strength", "archived"])
+    .index("by_user_strength", ["userId", "archived", "strength"])
     .index("by_last_accessed", ["lastAccessedAt"])
     .index("by_session", ["sessionId"])
     .index("by_graph_enriched", ["graphEnriched", "userId"])
@@ -205,6 +206,7 @@ export default defineSchema({
     checkpointId: v.optional(v.id("crystalCheckpoints")),
   })
     .index("by_user", ["userId", "lastActiveAt"])
+    .index("by_user_channel", ["userId", "channel", "lastActiveAt"])
     .index("by_channel", ["channel", "lastActiveAt"]),
 
   crystalCheckpoints: defineTable({
@@ -259,7 +261,7 @@ export default defineSchema({
     .vectorIndex("by_embedding", {
       vectorField: "embedding",
       dimensions: 1536,
-      filterFields: ["channel", "role"],
+      filterFields: ["userId", "channel", "role"],
     })
     .searchIndex("search_content", {
       searchField: "content",

@@ -320,23 +320,21 @@ export const searchMessages = action({
 
     const channel = normalizeText(args.channel);
     const limit = toClampedLimit(args.limit, 1, 100, 10);
-    // Only channel and role are valid filterFields in the vectorIndex definition
-    const filter = channel !== undefined
-      ? (q: any) => q.eq("channel", channel)
-      : undefined;
+    const searchLimit = Math.min(limit * (channel !== undefined || args.sinceMs !== undefined ? 4 : 1), 100);
 
     const vectorResults = (await ctx.vectorSearch("crystalMessages", "by_embedding", {
       vector: args.embedding,
-      limit,
-      ...(filter ? { filter } : {}),
+      limit: searchLimit,
+      filter: (q: any) => q.eq("userId", userId),
     })) as Array<{ _id: string; _score: number }>;
 
     const messages: Array<SearchMessageResult | null> = await Promise.all(
       vectorResults.map(async (result) => {
         const message = await ctx.runQuery(internal.crystal.messages.getMessageInternal, { messageId: result._id as any });
         if (!message) return null;
-        // Enforce userId ownership post-fetch
+        // Keep the ownership check as a defensive guard against stale indexes.
         if (message.userId !== userId) return null;
+        if (channel !== undefined && message.channel !== channel) return null;
         // Apply sinceMs filter post-fetch (not a valid vector filterField)
         if (args.sinceMs !== undefined && message.timestamp < args.sinceMs) return null;
         return {
@@ -351,6 +349,8 @@ export const searchMessages = action({
       })
     );
 
-    return messages.filter((entry): entry is SearchMessageResult => entry !== null);
+    return messages
+      .filter((entry): entry is SearchMessageResult => entry !== null)
+      .slice(0, limit);
   },
 });

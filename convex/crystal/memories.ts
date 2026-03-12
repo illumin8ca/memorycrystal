@@ -271,15 +271,16 @@ export const listMemories = query({
     let baseQuery;
 
     if (hasStrengthBounds) {
+      const archived = args.archived ?? false;
       baseQuery = ctx.db
         .query("crystalMemories")
-        .withIndex("by_strength", (q) => {
+        .withIndex("by_user_strength", (q) => {
           let qb = q as any;
+          qb = qb.eq("userId", userId).eq("archived", archived);
           if (args.minStrength !== undefined) qb = qb.gte("strength", args.minStrength);
           if (args.maxStrength !== undefined) qb = qb.lte("strength", args.maxStrength);
           return qb;
-        })
-        .filter((q) => q.eq(q.field("userId"), userId));
+        });
     } else {
       baseQuery = ctx.db
         .query("crystalMemories")
