@@ -135,7 +135,7 @@ const getEmbedding = async (query, env) => {
     return null;
   }
 
-  const provider = String(env.EMBEDDING_PROVIDER || "openai").toLowerCase();
+  const provider = String(env.EMBEDDING_PROVIDER || "gemini").toLowerCase();
 
   if (provider === "gemini") {
     const geminiKey = env.GEMINI_API_KEY;

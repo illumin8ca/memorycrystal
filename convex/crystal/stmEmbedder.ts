@@ -10,7 +10,7 @@ const GEMINI_EMBEDDING_MODEL = "gemini-embedding-2-preview";
 type EmbeddingProvider = "openai" | "gemini";
 
 const getProvider = (): EmbeddingProvider => {
-  const provider = (process.env.EMBEDDING_PROVIDER ?? "openai").toLowerCase();
+  const provider = (process.env.EMBEDDING_PROVIDER ?? "gemini").toLowerCase();
   return provider === "gemini" ? "gemini" : "openai";
 };
 

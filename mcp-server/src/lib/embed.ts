@@ -144,7 +144,7 @@ export class GeminiEmbedAdapter implements EmbedAdapter {
 }
 
 export const getEmbedAdapter = (): EmbedAdapter => {
-  const provider = (process.env.EMBEDDING_PROVIDER ?? "openai").toLowerCase();
+  const provider = (process.env.EMBEDDING_PROVIDER ?? "gemini").toLowerCase();
 
   switch (provider) {
     case "openai":
