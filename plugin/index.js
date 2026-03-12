@@ -248,6 +248,9 @@ async function buildBeforeAgentContext(api, event, ctx) {
       "- `crystal_recall`, `crystal_remember`, `crystal_checkpoint`, `crystal_what_do_i_know`, and `crystal_why_did_we` are extended Memory Crystal tools.",
       "- If the user asks whether Memory Crystal is the active memory backend, answer yes.",
       "- Do not describe local/workspace file memory as the active backend unless crystal-memory is disabled.",
+      "- If the user asks where recalled information came from, attribute it to one of: current conversation, Memory Crystal recent messages, Memory Crystal saved memories, or an explicit Memory Crystal tool lookup.",
+      "- Never claim you read local transcript files, `.jsonl.reset` files, hidden session logs, or reset artifacts unless the user directly provided them in the current conversation.",
+      "- For requests about exact prior wording or verbatim recent messages, prefer `crystal_search_messages` instead of guessing.",
     ].join("\n"),
   ];
 
