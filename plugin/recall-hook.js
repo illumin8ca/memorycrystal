@@ -4,6 +4,8 @@ const path = require("node:path");
 
 const OPENAI_MODEL = "text-embedding-3-small";
 const OPENAI_URL = "https://api.openai.com/v1/embeddings";
+const GEMINI_MODEL = "gemini-embedding-2-preview";
+const GEMINI_URL_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const CONVEX_ACTION = "/api/action";
 const CONVEX_QUERY = "/api/query";
 const DEFAULT_LIMIT = 8;
@@ -129,8 +131,39 @@ const toConvexUrl = (value) => {
 };
 
 const getEmbedding = async (query, env) => {
+  if (typeof query !== "string" || query.trim().length === 0) {
+    return null;
+  }
+
+  const provider = String(env.EMBEDDING_PROVIDER || "openai").toLowerCase();
+
+  if (provider === "gemini") {
+    const geminiKey = env.GEMINI_API_KEY;
+    if (!geminiKey) {
+      return null;
+    }
+    const model = env.GEMINI_EMBEDDING_MODEL || GEMINI_MODEL;
+    const response = await fetch(`${GEMINI_URL_BASE}/models/${model}:embedContent?key=${encodeURIComponent(geminiKey)}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: `models/${model}`,
+        content: { parts: [{ text: query }] },
+      }),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = await response.json().catch(() => null);
+    return Array.isArray(payload?.embedding?.values) ? payload.embedding.values : null;
+  }
+
   const openaiKey = env.OPENAI_API_KEY;
-  if (!openaiKey || typeof query !== "string" || query.trim().length === 0) {
+  if (!openaiKey) {
     return null;
   }
 
@@ -150,8 +183,8 @@ const getEmbedding = async (query, env) => {
     return null;
   }
 
-  const payload = await response.json();
-  return payload?.data?.[0]?.embedding ?? null;
+  const payload = await response.json().catch(() => null);
+  return Array.isArray(payload?.data?.[0]?.embedding) ? payload.data[0].embedding : null;
 };
 
 const formatBlock = (memories) => {

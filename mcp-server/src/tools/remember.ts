@@ -142,7 +142,7 @@ export const handleRememberTool = async (args: unknown): Promise<CallToolResult>
         content: [
           {
             type: "text",
-            text: "⚠️ Memory Crystal remember failed: embedding service unavailable or returned no vector. Check OPENAI_API_KEY and retry.",
+            text: "⚠️ Memory Crystal remember failed: embedding service unavailable or returned no vector. Check embedding provider env vars (OPENAI_API_KEY or GEMINI_API_KEY) and retry.",
           },
         ],
       };

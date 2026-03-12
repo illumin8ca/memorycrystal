@@ -90,7 +90,7 @@ export default defineSchema({
   })
     .vectorIndex("by_embedding", {
       vectorField: "embedding",
-      dimensions: 1536,
+      dimensions: 3072,
       filterFields: ["userId", "archived"],
     })
     .index("by_user", ["userId", "archived"])
@@ -260,7 +260,7 @@ export default defineSchema({
     .index("by_expires", ["expiresAt"])
     .vectorIndex("by_embedding", {
       vectorField: "embedding",
-      dimensions: 1536,
+      dimensions: 3072,
       filterFields: ["userId", "channel", "role"],
     })
     .searchIndex("search_content", {

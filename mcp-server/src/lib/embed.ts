@@ -89,12 +89,68 @@ export class OpenAIEmbedAdapter implements EmbedAdapter {
   }
 }
 
+export class GeminiEmbedAdapter implements EmbedAdapter {
+  private readonly apiKey: string;
+  private readonly model: string;
+
+  constructor(config: { apiKey?: string; model?: string } = {}) {
+    const resolvedApiKey = config.apiKey ?? process.env.GEMINI_API_KEY;
+    if (!resolvedApiKey) {
+      throw new Error("GEMINI_API_KEY is required for GeminiEmbedAdapter");
+    }
+    this.apiKey = resolvedApiKey;
+    this.model = config.model ?? process.env.GEMINI_EMBEDDING_MODEL ?? "gemini-embedding-2-preview";
+  }
+
+  async embed(text: string): Promise<number[] | null> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:embedContent?key=${encodeURIComponent(this.apiKey)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: `models/${this.model}`,
+            content: {
+              parts: [{ text }],
+            },
+          }),
+          signal: controller.signal,
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Gemini embeddings failed: ${response.status} ${response.statusText}`);
+      }
+
+      const payload = (await response.json()) as { embedding?: { values?: number[] } };
+      const values = payload.embedding?.values;
+      if (!values || values.length === 0) {
+        throw new Error("Gemini embedding response missing vector");
+      }
+
+      return values;
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+}
+
 export const getEmbedAdapter = (): EmbedAdapter => {
   const provider = (process.env.EMBEDDING_PROVIDER ?? "openai").toLowerCase();
 
   switch (provider) {
     case "openai":
       return new OpenAIEmbedAdapter();
+    case "gemini":
+      return new GeminiEmbedAdapter();
     case "ollama":
       return new OllamaEmbedAdapter();
     default:

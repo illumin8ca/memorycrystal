@@ -178,6 +178,66 @@ const formatRecentConversation = (messages: MessageMatch[]) => {
   });
 };
 
+
+const OPENAI_EMBEDDING_ENDPOINT = "https://api.openai.com/v1/embeddings";
+const OPENAI_EMBEDDING_MODEL = "text-embedding-3-small";
+const GEMINI_EMBEDDING_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta";
+const GEMINI_EMBEDDING_MODEL = "gemini-embedding-2-preview";
+
+type EmbeddingProvider = "openai" | "gemini";
+
+function getEmbeddingProvider(): EmbeddingProvider {
+  return (process.env.EMBEDDING_PROVIDER ?? "openai").toLowerCase() === "gemini" ? "gemini" : "openai";
+}
+
+function hasEmbeddingProviderCredentials(provider: EmbeddingProvider): boolean {
+  return provider === "gemini" ? Boolean(process.env.GEMINI_API_KEY) : Boolean(process.env.OPENAI_API_KEY);
+}
+
+async function embedText(text: string): Promise<number[] | null> {
+  const provider = getEmbeddingProvider();
+
+  if (provider === "gemini") {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return null;
+    const model = process.env.GEMINI_EMBEDDING_MODEL || GEMINI_EMBEDDING_MODEL;
+
+    const response = await fetch(
+      `${GEMINI_EMBEDDING_ENDPOINT}/models/${model}:embedContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          model: `models/${model}`,
+          content: { parts: [{ text }] },
+        }),
+      }
+    );
+
+    const payload = await response.json().catch(() => null);
+    const vector = payload?.embedding?.values;
+    return response.ok && Array.isArray(vector) ? vector : null;
+  }
+
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  const response = await fetch(OPENAI_EMBEDDING_ENDPOINT, {
+    method: "POST",
+    headers: { "content-type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: OPENAI_EMBEDDING_MODEL,
+      input: text,
+      encoding_format: "float",
+    }),
+  });
+
+  const payload = await response.json().catch(() => null);
+  const vector = payload?.data?.[0]?.embedding;
+  return response.ok && Array.isArray(vector) ? vector : null;
+}
+
+
 async function searchMessageMatches(
   ctx: ActionCtx,
   userId: string,
@@ -191,34 +251,21 @@ async function searchMessageMatches(
   const words = tokenizeQuery(query);
   const recentSinceMs = sinceMs ?? Date.now() - 14 * 24 * 60 * 60 * 1000;
 
-  const apiKey = process.env.OPENAI_API_KEY;
   let semanticMatches: MessageMatch[] = [];
 
-  if (apiKey) {
-    try {
-      const response = await fetch(OPENAI_EMBEDDING_ENDPOINT, {
-        method: "POST",
-        headers: { "content-type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: OPENAI_EMBEDDING_MODEL,
-          input: query,
-          encoding_format: "float",
-        }),
-      });
-      const payload = await response.json().catch(() => null);
-      const embedding = payload?.data?.[0]?.embedding;
-      if (Array.isArray(embedding)) {
-        semanticMatches = await ctx.runAction(internal.crystal.messages.searchMessagesForUser, {
-          userId,
-          embedding,
-          limit: requestedLimit,
-          channel: normalizedChannel,
-          sinceMs,
-        }) as MessageMatch[];
-      }
-    } catch {
-      semanticMatches = [];
+  try {
+    const embedding = await embedText(query);
+    if (Array.isArray(embedding)) {
+      semanticMatches = await ctx.runAction(internal.crystal.messages.searchMessagesForUser, {
+        userId,
+        embedding,
+        limit: requestedLimit,
+        channel: normalizedChannel,
+        sinceMs,
+      }) as MessageMatch[];
     }
+  } catch {
+    semanticMatches = [];
   }
 
   const recentMessages = await ctx.runQuery(internal.crystal.messages.getRecentMessagesForUser, {
@@ -485,9 +532,8 @@ export const getMemoryStoreStats = internalQuery({
   },
 });
 
-// Safe ceiling for a single scan pass. Each crystalMemories row is ~14KB
-// (mainly the 1536-dim float64 embedding). 1000 rows × 14KB ≈ 14MB which is
-// just under the 16MB Convex per-function read limit. We use 900 for headroom.
+// Safe ceiling for count reads; totals are served from crystalDashboardTotals,
+// so we avoid scanning large embedding payloads in crystalMemories.
 export const getMemoryCount = internalQuery({
   args: { userId: v.string(), maxCount: v.optional(v.number()) },
   handler: async (ctx, { userId, maxCount }) => {
@@ -693,32 +739,19 @@ export const mcpRecall = httpAction(async (ctx, request) => {
   const channel = normalizeChannel(body?.channel);
   if (!query) return json({ error: "query is required" }, 400);
 
-  const apiKey = process.env.OPENAI_API_KEY;
   let memories: any[] = [];
 
-  if (apiKey) {
-    try {
-      const res = await fetch(OPENAI_EMBEDDING_ENDPOINT, {
-        method: "POST",
-        headers: { "content-type": "application/json", Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: OPENAI_EMBEDDING_MODEL,
-          input: query,
-          encoding_format: "float",
-        }),
+  try {
+    const vec = await embedText(query);
+    if (Array.isArray(vec)) {
+      memories = await ctx.runAction(internal.crystal.mcp.semanticSearch, {
+        userId: auth.userId,
+        queryEmbedding: vec,
+        limit,
+        channel,
       });
-      const data = await res.json().catch(() => null);
-      const vec = data?.data?.[0]?.embedding;
-      if (Array.isArray(vec)) {
-        memories = await ctx.runAction(internal.crystal.mcp.semanticSearch, {
-          userId: auth.userId,
-          queryEmbedding: vec,
-          limit,
-          channel,
-        });
-      }
-    } catch {}
-  }
+    }
+  } catch {}
 
   // Lexical fallback
   if (memories.length === 0) {
@@ -1125,35 +1158,13 @@ export const mcpAuth = httpAction(async (ctx, request) => {
 
 // ── Embedding pipeline ──────────────────────────────────────────────
 
-const OPENAI_EMBEDDING_ENDPOINT = "https://api.openai.com/v1/embeddings";
-const OPENAI_EMBEDDING_MODEL = "text-embedding-3-small";
-
 export const embedMemory = internalAction({
   args: { memoryId: v.id("crystalMemories") },
   handler: async (ctx, { memoryId }) => {
     const memory = await ctx.runQuery(internal.crystal.mcp.getMemoryById, { memoryId });
     if (!memory || !memory.content?.trim()) return;
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) return;
-
-    const response = await fetch(OPENAI_EMBEDDING_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: OPENAI_EMBEDDING_MODEL,
-        input: memory.content,
-        encoding_format: "float",
-      }),
-    });
-
-    const payload = await response.json().catch(() => null);
-    if (!response.ok || !payload) return;
-
-    const vector = payload.data?.[0]?.embedding;
+    const vector = await embedText(memory.content);
     if (!Array.isArray(vector)) return;
 
     await ctx.runMutation(internal.crystal.mcp.patchMemoryEmbedding, {
@@ -1197,19 +1208,13 @@ export const backfillEmbeddings = internalAction({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit }): Promise<{ processed: number; succeeded: number }> => {
     const memories = await ctx.runQuery(internal.crystal.mcp.listEmptyEmbeddingMemories, { limit: limit ?? 50 });
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) return { processed: 0, succeeded: 0 };
+    const provider = getEmbeddingProvider();
+    if (!hasEmbeddingProviderCredentials(provider)) return { processed: 0, succeeded: 0 };
     let succeeded = 0;
     for (const mem of memories) {
       if (!mem.content?.trim()) continue;
       try {
-        const res = await fetch(OPENAI_EMBEDDING_ENDPOINT, {
-          method: "POST",
-          headers: { "content-type": "application/json", Authorization: `Bearer ${apiKey}` },
-          body: JSON.stringify({ model: OPENAI_EMBEDDING_MODEL, input: mem.content, encoding_format: "float" }),
-        });
-        const data = await res.json().catch(() => null);
-        const vec = data?.data?.[0]?.embedding;
+        const vec = await embedText(mem.content);
         if (Array.isArray(vec)) {
           await ctx.runMutation(internal.crystal.mcp.patchMemoryEmbedding, { memoryId: mem._id, embedding: vec });
           succeeded++;
