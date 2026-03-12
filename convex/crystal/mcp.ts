@@ -32,6 +32,7 @@ const memoryCategory = v.union(
 
 type MemoryStore = "sensory" | "episodic" | "semantic" | "procedural" | "prospective";
 type MemoryCategory = "decision" | "lesson" | "person" | "rule" | "event" | "fact" | "goal" | "workflow" | "conversation";
+type AssetKind = "image" | "audio" | "video" | "pdf" | "text";
 
 const DEFAULT_STORE: MemoryStore = "episodic";
 const DEFAULT_CATEGORY: MemoryCategory = "conversation";
@@ -47,6 +48,7 @@ const CATEGORY_VALUES: MemoryCategory[] = [
   "workflow",
   "conversation",
 ];
+const ASSET_KIND_VALUES: AssetKind[] = ["image", "audio", "video", "pdf", "text"];
 
 const STORAGE_LIMITS: Record<UserTier, number | null> = {
   free: TIER_LIMITS.free.memories,
@@ -109,6 +111,11 @@ function normalizeStore(value: unknown): MemoryStore {
 function normalizeCategory(value: unknown): MemoryCategory {
   const category = String(value ?? DEFAULT_CATEGORY) as MemoryCategory;
   return CATEGORY_VALUES.includes(category) ? category : DEFAULT_CATEGORY;
+}
+
+function normalizeAssetKind(value: unknown): AssetKind | null {
+  const kind = String(value ?? "").toLowerCase() as AssetKind;
+  return ASSET_KIND_VALUES.includes(kind) ? kind : null;
 }
 
 function normalizeChannel(value: unknown): string | undefined {
@@ -1080,6 +1087,46 @@ export const mcpLog = httpAction(async (ctx, request) => {
     sessionKey: body?.sessionKey ? String(body.sessionKey) : undefined,
     ttlDays: MESSAGE_TTL_DAYS[tier],
   });
+
+  return json({ ok: true, id });
+});
+
+export const mcpAsset = httpAction(async (ctx, request) => {
+  const auth = await requireAuth(ctx, request);
+  if (!auth) return json({ error: "Unauthorized" }, 401);
+
+  const rateLimitResponse = await withRateLimit(ctx, auth.keyHash);
+  if (rateLimitResponse) return rateLimitResponse;
+
+  const body = await parseBody(request);
+  const storageKey = String(body?.storageKey ?? "").trim();
+  const mimeType = String(body?.mimeType ?? "").trim();
+  const kind = normalizeAssetKind(body?.kind);
+
+  if (!storageKey) return json({ error: "storageKey is required" }, 400);
+  if (!kind) return json({ error: "kind must be one of: image, audio, video, pdf, text" }, 400);
+  if (!mimeType) return json({ error: "mimeType is required" }, 400);
+
+  await auditLog(ctx, auth.userId, auth.keyHash, "asset", {
+    kind,
+    mimeType,
+    channel: normalizeChannel(body?.channel),
+  });
+
+  const id = await ctx.runMutation(internal.crystal.assets.storeAsset, {
+    userId: auth.userId,
+    storageKey,
+    kind,
+    mimeType,
+    title: body?.title ? String(body.title) : undefined,
+    transcript: body?.transcript ? String(body.transcript) : undefined,
+    summary: body?.summary ? String(body.summary) : undefined,
+    tags: Array.isArray(body?.tags) ? body.tags.map(String) : undefined,
+    channel: normalizeChannel(body?.channel),
+    sessionKey: body?.sessionKey ? String(body.sessionKey) : undefined,
+  });
+
+  await ctx.scheduler.runAfter(0, internal.crystal.assets.embedAsset, { assetId: id });
 
   return json({ ok: true, id });
 });

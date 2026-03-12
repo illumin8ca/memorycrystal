@@ -140,6 +140,10 @@ module.exports = (api) => {
       `Assistant: ${assistantText}`,
     ].filter(Boolean).join("\n\n");
 
+    // TODO: Future attachment capture hook:
+    // If a message contains attachments/images/audio/video/PDFs,
+    // call POST /api/mcp/asset for each attachment with storageKey + metadata.
+
     await captureToMCP(apiKey, convexUrl, {
       title: `Conversation — ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
       content,

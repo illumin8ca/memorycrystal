@@ -268,6 +268,36 @@ export default defineSchema({
       filterFields: ["userId", "role"],
     }),
 
+  crystalAssets: defineTable({
+    userId: v.string(),
+    kind: v.union(v.literal("image"), v.literal("audio"), v.literal("video"), v.literal("pdf"), v.literal("text")),
+    storageKey: v.string(),
+    mimeType: v.string(),
+    title: v.optional(v.string()),
+    transcript: v.optional(v.string()),
+    summary: v.optional(v.string()),
+    embedding: v.optional(v.array(v.float64())),
+    embedded: v.boolean(),
+    channel: v.optional(v.string()),
+    sessionKey: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    createdAt: v.number(),
+    expiresAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_kind", ["userId", "kind"])
+    .index("by_user_channel", ["userId", "channel"])
+    .index("by_embedded", ["embedded", "createdAt"])
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 3072,
+      filterFields: ["userId", "kind"],
+    })
+    .searchIndex("search_transcript", {
+      searchField: "transcript",
+      filterFields: ["userId", "kind"],
+    }),
+
   crystalDashboardTotals: defineTable({
     userId: v.string(),
     totalMemories: v.number(),

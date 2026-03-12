@@ -8,6 +8,7 @@ crons.interval("crystal-consolidate", { hours: 12 }, api.crystal.consolidate.run
 crons.interval("crystal-cleanup", { hours: 24 }, api.crystal.cleanup.runCleanup, {});
 crons.interval("crystal-associate", { hours: 6 }, api.crystal.associations.buildAssociations, {});
 crons.interval("stmEmbedder", { minutes: 5 }, api.crystal.stmEmbedder.embedUnprocessedMessages, {});
+crons.interval("assetEmbedder", { minutes: 5 }, internal.crystal.assets.assetEmbedder, {});
 crons.daily("stm-expire", { hourUTC: 4, minuteUTC: 0 }, internal.crystal.messages.expireOldMessages, {});
 // Daily reflection: runs after stm-expire, distils recent memories via LLM for all users
 crons.daily("crystal-reflect", { hourUTC: 4, minuteUTC: 30 }, api.crystal.reflection.runReflection, {});
