@@ -1,5 +1,6 @@
 import type { CallToolResult, Tool } from "@modelcontextprotocol/sdk/types.js";
 import { getConvexClient } from "../lib/convex-client.js";
+import { ConvexClient } from "../lib/convexClient.js";
 
 export type CrystalWakeInput = {
   channel?: string;
@@ -50,18 +51,37 @@ export const handleWakeTool = async (args: unknown): Promise<CallToolResult> => 
   try {
     const parsed = ensureInput(args);
 
-    const response = (await getConvexClient().action("crystal/wake:getWakePrompt" as any, {
-      channel: parsed.channel,
-    })) as {
-      briefing: string;
-      openGoals: unknown[];
-      recentDecisions: unknown[];
-    };
+    let response:
+      | {
+          briefing: string;
+          openGoals?: unknown[];
+          recentDecisions?: unknown[];
+        }
+      | undefined;
+
+    if (process.env.CRYSTAL_API_KEY) {
+      const client = new ConvexClient();
+      response = (await client.post("/api/mcp/wake", {
+        channel: parsed.channel,
+      })) as {
+        briefing: string;
+        openGoals?: unknown[];
+        recentDecisions?: unknown[];
+      };
+    } else {
+      response = (await getConvexClient().action("crystal/wake:getWakePrompt" as any, {
+        channel: parsed.channel,
+      })) as {
+        briefing: string;
+        openGoals?: unknown[];
+        recentDecisions?: unknown[];
+      };
+    }
 
     const payload = {
       briefing: response.briefing,
-      openGoals: response.openGoals,
-      recentDecisions: response.recentDecisions,
+      openGoals: Array.isArray(response.openGoals) ? response.openGoals : [],
+      recentDecisions: Array.isArray(response.recentDecisions) ? response.recentDecisions : [],
     };
 
     const textBlock = buildBlock(payload.briefing, payload.openGoals, payload.recentDecisions);

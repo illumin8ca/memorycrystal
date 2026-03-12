@@ -80,11 +80,40 @@ const captureHooks = new Set([
 
 const recallHooks = new Set(["pre-response", "before_model_resolve", "beforeModelResolve"]);
 
+const firstString = (...values) => {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return "";
+};
+
+const resolveChannelKey = (payload = {}) => {
+  const provider = firstString(
+    payload.messageProvider,
+    payload.provider,
+    payload.context?.provider,
+    "openclaw"
+  );
+  const workspaceId = firstString(payload.context?.workspaceId, payload.workspaceId);
+  const guildId = firstString(payload.context?.guildId, payload.guildId);
+  const channelId = firstString(
+    payload.context?.channelId,
+    payload.channelId,
+    payload.channel,
+    payload.conversationId
+  );
+  const threadId = firstString(payload.context?.threadId, payload.threadId);
+  const parts = [provider, workspaceId, guildId, channelId, threadId].filter(Boolean);
+  return parts.length > 1 ? parts.join(":") : provider;
+};
+
 const runCaptureHook = (payload = {}) => {
   const input = JSON.stringify({
     userMessage: payload.userMessage ?? "",
     agentResponse: payload.agentResponse ?? payload.response ?? "",
-    channel: payload.channel ?? "",
+    channel: resolveChannelKey(payload),
     sessionId: payload.sessionId ?? "",
   });
   const result = childProcess.spawnSync(process.execPath, [CAPTURE_HOOK], {
@@ -126,7 +155,7 @@ const runRecallHook = (payload = {}) => {
     encoding: "utf8",
     input: JSON.stringify({
       query,
-      channel: payload.channel ?? "",
+      channel: resolveChannelKey(payload),
       sessionId: payload.sessionId ?? "",
     }),
   });

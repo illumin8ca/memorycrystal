@@ -6,7 +6,9 @@ import {
   mcpGetMemory,
   mcpLog,
   mcpCheckpoint,
+  mcpRecentMessages,
   mcpRecall,
+  mcpSearchMessages,
   mcpReflect,
   mcpStats,
   mcpWakeGet,
@@ -21,6 +23,8 @@ auth.addHttpRoutes(http);
 http.route({ path: "/api/mcp/capture", method: "POST", handler: mcpCapture });
 http.route({ path: "/api/mcp/memory", method: "POST", handler: mcpGetMemory });
 http.route({ path: "/api/mcp/recall", method: "POST", handler: mcpRecall });
+http.route({ path: "/api/mcp/search-messages", method: "POST", handler: mcpSearchMessages });
+http.route({ path: "/api/mcp/recent-messages", method: "POST", handler: mcpRecentMessages });
 http.route({ path: "/api/mcp/checkpoint", method: "POST", handler: mcpCheckpoint });
 http.route({ path: "/api/mcp/wake", method: "GET", handler: mcpWakeGet });
 http.route({ path: "/api/mcp/wake", method: "POST", handler: mcpWakePost });

@@ -1,6 +1,6 @@
 import { stableUserId } from "./auth";
 import { v } from "convex/values";
-import { action, internalMutation, internalQuery, mutation, query } from "../_generated/server";
+import { action, internalAction, internalMutation, internalQuery, mutation, query } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { type UserTier, TIER_LIMITS } from "../../shared/tierLimits";
 import {
@@ -40,6 +40,49 @@ const normalizeText = (value?: string): string | undefined => {
 const toClampedLimit = (value: number | undefined, min: number, max: number, fallback: number): number => {
   const requested = Number.isFinite(value ?? NaN) ? (value as number) : fallback;
   return Math.min(Math.max(Math.floor(requested), min), max);
+};
+
+const getRecentMessagesForUserInternal = async (
+  ctx: any,
+  userId: string,
+  args: {
+    limit?: number;
+    channel?: string;
+    sessionKey?: string;
+    sinceMs?: number;
+  }
+) => {
+  const requestedLimit = toClampedLimit(args.limit, 1, 200, 20);
+  const channel = normalizeText(args.channel);
+  const sessionKey = normalizeText(args.sessionKey);
+  const sinceMs = args.sinceMs;
+
+  const baseQuery = channel
+    ? ctx.db.query("crystalMessages").withIndex("by_channel_time", (q: any) => {
+        let query = q.eq("channel", channel as never);
+        if (sinceMs !== undefined) {
+          query = query.gte("timestamp", sinceMs);
+        }
+        return query;
+      })
+    : sessionKey
+      ? ctx.db.query("crystalMessages").withIndex("by_session_time", (q: any) => {
+          let query = q.eq("sessionKey", sessionKey as never);
+          if (sinceMs !== undefined) {
+            query = query.gte("timestamp", sinceMs);
+          }
+          return query;
+        })
+      : ctx.db.query("crystalMessages").withIndex("by_timestamp", (q) =>
+          q.gte("timestamp", sinceMs ?? 0)
+        );
+
+  const recent = await baseQuery
+    .order("desc")
+    .filter((q) => q.eq(q.field("userId"), userId))
+    .take(requestedLimit);
+
+  return recent.reverse();
 };
 
 type SearchMessageResult = {
@@ -184,38 +227,21 @@ export const getRecentMessages = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Unauthenticated");
     const userId = stableUserId(identity.subject);
+    return getRecentMessagesForUserInternal(ctx, userId, args);
+  },
+});
 
-    const requestedLimit = toClampedLimit(args.limit, 1, 100, 20);
-    const channel = normalizeText(args.channel);
-    const sessionKey = normalizeText(args.sessionKey);
-    const sinceMs = args.sinceMs;
-
-    const baseQuery = channel
-      ? ctx.db.query("crystalMessages").withIndex("by_channel_time", (q: any) => {
-          let query = q.eq("channel", channel as never);
-          if (sinceMs !== undefined) {
-            query = query.gte("timestamp", sinceMs);
-          }
-          return query;
-        })
-      : sessionKey
-        ? ctx.db.query("crystalMessages").withIndex("by_session_time", (q: any) => {
-            let query = q.eq("sessionKey", sessionKey as never);
-            if (sinceMs !== undefined) {
-              query = query.gte("timestamp", sinceMs);
-            }
-            return query;
-          })
-        : ctx.db.query("crystalMessages").withIndex("by_timestamp", (q) =>
-            q.gte("timestamp", sinceMs ?? 0)
-          );
-
-    const recent = await baseQuery
-      .order("desc")
-      .filter((q) => q.eq(q.field("userId"), userId))
-      .take(requestedLimit);
-
-    return recent.reverse();
+export const getRecentMessagesForUser = internalQuery({
+  args: {
+    userId: v.string(),
+    limit: v.optional(v.number()),
+    channel: v.optional(v.string()),
+    sessionKey: v.optional(v.string()),
+    sinceMs: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, ...rest } = args;
+    return getRecentMessagesForUserInternal(ctx, userId, rest);
   },
 });
 
@@ -337,6 +363,51 @@ export const searchMessages = action({
         if (channel !== undefined && message.channel !== channel) return null;
         // Apply sinceMs filter post-fetch (not a valid vector filterField)
         if (args.sinceMs !== undefined && message.timestamp < args.sinceMs) return null;
+        return {
+          messageId: result._id,
+          role: message.role,
+          content: message.content,
+          channel: message.channel,
+          sessionKey: message.sessionKey,
+          timestamp: message.timestamp,
+          score: result._score ?? 0,
+        };
+      })
+    );
+
+    return messages
+      .filter((entry): entry is SearchMessageResult => entry !== null)
+      .slice(0, limit);
+  },
+});
+
+export const searchMessagesForUser = internalAction({
+  args: {
+    userId: v.string(),
+    embedding: v.array(v.float64()),
+    limit: v.optional(v.number()),
+    channel: v.optional(v.string()),
+    sinceMs: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<SearchMessageResult[]> => {
+    const channel = normalizeText(args.channel);
+    const limit = toClampedLimit(args.limit, 1, 100, 10);
+    const searchLimit = Math.min(limit * (channel !== undefined || args.sinceMs !== undefined ? 4 : 1), 100);
+
+    const vectorResults = (await ctx.vectorSearch("crystalMessages", "by_embedding", {
+      vector: args.embedding,
+      limit: searchLimit,
+      filter: (q: any) => q.eq("userId", args.userId),
+    })) as Array<{ _id: string; _score: number }>;
+
+    const messages: Array<SearchMessageResult | null> = await Promise.all(
+      vectorResults.map(async (result) => {
+        const message = await ctx.runQuery(internal.crystal.messages.getMessageInternal, { messageId: result._id as any });
+        if (!message) return null;
+        if (message.userId !== args.userId) return null;
+        if (channel !== undefined && message.channel !== channel) return null;
+        if (args.sinceMs !== undefined && message.timestamp < args.sinceMs) return null;
+
         return {
           messageId: result._id,
           role: message.role,

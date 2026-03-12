@@ -274,6 +274,33 @@ const searchMemories = async ({ embedding, query, mode, sessionKey, env }) => {
 };
 
 const fetchRecentMessages = async (channel, sessionKey, limit = 20, env) => {
+  const crystalSite = (env.CRYSTAL_SITE || "").replace(/\/+$/, "");
+  const crystalApiKey = env.CRYSTAL_API_KEY || "";
+
+  if (crystalSite && crystalApiKey) {
+    try {
+      const response = await fetch(`${crystalSite}/api/mcp/recent-messages`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          Authorization: `Bearer ${crystalApiKey}`,
+        },
+        body: JSON.stringify({
+          limit,
+          channel,
+          sessionKey,
+        }),
+      });
+      if (response.ok) {
+        const payload = await response.json().catch(() => null);
+        const messages = Array.isArray(payload?.messages) ? payload.messages : [];
+        return messages.filter((message) => message && typeof message === "object");
+      }
+    } catch (_) {
+      // fall through to raw Convex query
+    }
+  }
+
   const convexUrl = toConvexUrl(env.CONVEX_URL);
   if (!convexUrl) {
     return [];

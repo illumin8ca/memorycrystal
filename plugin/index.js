@@ -150,8 +150,46 @@ function ensureEnum(value, validValues, name) {
   return value;
 }
 
+function firstString(...values) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return "";
+}
+
 function getSessionKey(ctx, event) {
-  return ctx?.sessionKey || ctx?.sessionId || event?.conversationId || event?.sessionId || "";
+  return (
+    ctx?.sessionKey ||
+    ctx?.sessionId ||
+    event?.sessionKey ||
+    event?.conversationId ||
+    event?.sessionId ||
+    ""
+  );
+}
+
+function getChannelKey(ctx, event) {
+  const provider = firstString(
+    event?.messageProvider,
+    ctx?.messageProvider,
+    event?.provider,
+    ctx?.provider,
+    "openclaw"
+  );
+  const workspaceId = firstString(event?.context?.workspaceId, event?.workspaceId, ctx?.workspaceId);
+  const guildId = firstString(event?.context?.guildId, event?.guildId, ctx?.guildId);
+  const channelId = firstString(
+    event?.context?.channelId,
+    event?.channelId,
+    ctx?.channelId,
+    event?.conversationId,
+    ctx?.conversationId
+  );
+  const threadId = firstString(event?.context?.threadId, event?.threadId, ctx?.threadId);
+  const parts = [provider, workspaceId, guildId, channelId, threadId].filter(Boolean);
+  return parts.length > 1 ? parts.join(":") : provider;
 }
 
 function buildMemoryPath(memoryId) {
@@ -180,9 +218,26 @@ function formatRecallMemory(memory) {
   return `- [${store}/${category}] ${title}${snippet ? ` — ${snippet}` : ""} (path: ${path})`;
 }
 
+function formatMessageMatch(message) {
+  const role = typeof message?.role === "string" ? message.role : "unknown";
+  const content = trimSnippet(message?.content || "", 220);
+  const timestamp =
+    typeof message?.timestamp === "number"
+      ? new Date(message.timestamp).toLocaleString([], {
+          hour12: false,
+          hour: "2-digit",
+          minute: "2-digit",
+          month: "short",
+          day: "numeric",
+        })
+      : "unknown time";
+  return `- [${role}] ${content} (${timestamp})`;
+}
+
 async function buildBeforeAgentContext(api, event, ctx) {
   const config = getPluginConfig(api, ctx);
   if (!config?.apiKey) return "";
+  const channel = getChannelKey(ctx, event);
 
   const sections = [
     [
@@ -199,7 +254,7 @@ async function buildBeforeAgentContext(api, event, ctx) {
   const sessionKey = getSessionKey(ctx, event);
   if (sessionKey && !wakeInjectedSessions.has(sessionKey)) {
     const wake = await request(config, "POST", "/api/mcp/wake", {
-      channel: ctx?.messageProvider || "openclaw",
+      channel,
     });
     const briefing = wake?.briefing || wake?.summary || wake?.text;
     if (briefing) {
@@ -214,6 +269,7 @@ async function buildBeforeAgentContext(api, event, ctx) {
     const recall = await request(config, "POST", "/api/mcp/recall", {
       query: prompt,
       limit: Math.max(1, Math.min(limit, 8)),
+      channel,
       mode: typeof config?.defaultRecallMode === "string" ? config.defaultRecallMode : "general",
     });
     const memories = Array.isArray(recall?.memories) ? recall.memories.slice(0, 5) : [];
@@ -225,6 +281,22 @@ async function buildBeforeAgentContext(api, event, ctx) {
           ...memories.map(formatRecallMemory),
           "",
           "Use memory_search for broader lookup and memory_get on the returned crystal/<id>.md path for full detail.",
+        ].join("\n")
+      );
+    }
+
+    const messageSearch = await request(config, "POST", "/api/mcp/search-messages", {
+      query: prompt,
+      limit: 5,
+      channel,
+    });
+    const messages = Array.isArray(messageSearch?.messages) ? messageSearch.messages.slice(0, 5) : [];
+    if (messages.length > 0) {
+      sections.push(
+        [
+          "## Memory Crystal Recent Message Matches",
+          `Prompt: ${trimSnippet(prompt, 180)}`,
+          ...messages.map(formatMessageMatch),
         ].join("\n")
       );
     }
@@ -242,7 +314,7 @@ async function logMessage(api, ctx, payload) {
   }
 }
 
-async function captureTurn(api, ctx, userMessage, assistantText) {
+async function captureTurn(api, event, ctx, userMessage, assistantText) {
   if (!shouldCapture(userMessage, assistantText)) return;
 
   const content = [userMessage ? `User: ${userMessage}` : null, `Assistant: ${assistantText}`]
@@ -255,7 +327,7 @@ async function captureTurn(api, ctx, userMessage, assistantText) {
     store: "sensory",
     category: "conversation",
     tags: ["openclaw", "auto-capture"],
-    channel: ctx?.messageProvider || "openclaw",
+    channel: getChannelKey(ctx, event),
   });
 
   if (result === null) {
@@ -298,7 +370,7 @@ module.exports = (api) => {
           await logMessage(api, ctx, {
             role: "user",
             content: normalized,
-            channel: ctx?.messageProvider || "openclaw",
+            channel: getChannelKey(ctx, event),
             sessionKey,
           });
         }
@@ -336,12 +408,12 @@ module.exports = (api) => {
         await logMessage(api, ctx, {
           role: "assistant",
           content: assistantText,
-          channel: ctx?.messageProvider || "openclaw",
+          channel: getChannelKey(ctx, event),
           sessionKey: sessionKey || undefined,
         });
 
         if (sessionKey) pendingUserMessages.delete(sessionKey);
-        await captureTurn(api, ctx, userMessage, assistantText);
+        await captureTurn(api, event, ctx, userMessage, assistantText);
       } catch (err) {
         api.logger?.warn?.(`[crystal-memory] llm_output failed: ${err?.message || String(err)}`);
       }
@@ -366,12 +438,12 @@ module.exports = (api) => {
         await logMessage(api, ctx, {
           role: "assistant",
           content: assistantText,
-          channel: ctx?.messageProvider || "openclaw",
+          channel: getChannelKey(ctx, event),
           sessionKey,
         });
 
         pendingUserMessages.delete(sessionKey);
-        await captureTurn(api, ctx, userMessage, assistantText);
+        await captureTurn(api, event, ctx, userMessage, assistantText);
       } catch (err) {
         api.logger?.warn?.(`[crystal-memory] message_sent fallback failed: ${err?.message || String(err)}`);
       }
@@ -428,6 +500,7 @@ module.exports = (api) => {
         const data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/recall", {
           query,
           limit: Math.max(1, Math.min(limit, 20)),
+          channel: getChannelKey(ctx),
         });
         const memories = Array.isArray(data?.memories) ? data.memories : [];
         const results = memories.map((memory) => {
@@ -446,6 +519,45 @@ module.exports = (api) => {
           query,
           resultCount: results.length,
           results,
+        };
+        return toToolResult(summary, summary);
+      } catch (err) {
+        return toToolError(err);
+      }
+    },
+  });
+
+  api.registerTool({
+    name: "crystal_search_messages",
+    label: "Crystal Search Messages",
+    description: "Search short-term conversation logs in Memory Crystal.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: { type: "string", minLength: 2 },
+        limit: { type: "number", minimum: 1, maximum: 20 },
+        sinceMs: { type: "number", minimum: 0 },
+        channel: { type: "string" },
+      },
+      required: ["query"],
+      additionalProperties: false,
+    },
+    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+      try {
+        const query = ensureString(params?.query, "query", 2);
+        const limit = Number.isFinite(Number(params?.limit)) ? Number(params.limit) : 5;
+        const sinceMs = Number.isFinite(Number(params?.sinceMs)) ? Number(params.sinceMs) : undefined;
+        const data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/search-messages", {
+          query,
+          limit: Math.max(1, Math.min(limit, 20)),
+          sinceMs,
+          channel: typeof params?.channel === "string" ? params.channel : getChannelKey(ctx),
+        });
+        const messages = Array.isArray(data?.messages) ? data.messages : [];
+        const summary = {
+          query,
+          messageCount: messages.length,
+          topMessages: messages.slice(0, 10),
         };
         return toToolResult(summary, summary);
       } catch (err) {
@@ -525,6 +637,7 @@ module.exports = (api) => {
         const limit = Number.isFinite(Number(params?.limit)) ? Number(params.limit) : undefined;
         const data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/recall", {
           query,
+          channel: getChannelKey(ctx),
           ...(limit ? { limit } : {}),
         });
         const memories = Array.isArray(data?.memories) ? data.memories : [];
@@ -570,7 +683,7 @@ module.exports = (api) => {
           store,
           category,
           tags,
-          channel: typeof params?.channel === "string" ? params.channel : ctx?.messageProvider || "openclaw",
+          channel: typeof params?.channel === "string" ? params.channel : getChannelKey(ctx),
         });
         return toToolResult({
           ok: Boolean(data?.ok),
@@ -605,6 +718,7 @@ module.exports = (api) => {
         const data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/recall", {
           query: topic,
           limit,
+          channel: getChannelKey(ctx),
         });
         const memories = Array.isArray(data?.memories) ? data.memories : [];
         const summary = {
@@ -640,6 +754,7 @@ module.exports = (api) => {
         const data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/recall", {
           query: decision,
           limit,
+          channel: getChannelKey(ctx),
         });
         const memories = Array.isArray(data?.memories) ? data.memories : [];
         const decisionMemories = memories.filter((m) => m?.category === "decision");
@@ -686,6 +801,6 @@ module.exports = (api) => {
   });
 
   api.logger?.info?.(
-    "[crystal-memory] hooks registered: before_agent_start + message_received + llm_output + message_sent + command:new + command:reset; tools registered: memory_search, memory_get, crystal_recall, crystal_remember, crystal_what_do_i_know, crystal_why_did_we, crystal_checkpoint"
+    "[crystal-memory] hooks registered: before_agent_start + message_received + llm_output + message_sent + command:new + command:reset; tools registered: memory_search, crystal_search_messages, memory_get, crystal_recall, crystal_remember, crystal_what_do_i_know, crystal_why_did_we, crystal_checkpoint"
   );
 };

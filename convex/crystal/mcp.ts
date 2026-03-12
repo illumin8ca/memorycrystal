@@ -111,6 +111,148 @@ function normalizeCategory(value: unknown): MemoryCategory {
   return CATEGORY_VALUES.includes(category) ? category : DEFAULT_CATEGORY;
 }
 
+function normalizeChannel(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+type MessageMatch = {
+  messageId: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  channel?: string;
+  sessionKey?: string;
+  timestamp: number;
+  score: number;
+};
+
+const tokenizeQuery = (query: string) =>
+  query
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) => word.trim())
+    .filter((word) => word.length >= 2);
+
+const lexicalMessageScore = (query: string, words: string[], content: string) => {
+  const haystack = content.toLowerCase();
+  const fullQuery = query.toLowerCase();
+  const exactMatchBonus = haystack.includes(fullQuery) ? 2 : 0;
+  const wordMatches = words.reduce((count, word) => count + (haystack.includes(word) ? 1 : 0), 0);
+  if (exactMatchBonus === 0 && wordMatches === 0) {
+    return 0;
+  }
+  return exactMatchBonus + wordMatches / Math.max(words.length, 1);
+};
+
+const dedupeMessageMatches = (messages: MessageMatch[]) => {
+  const seen = new Set<string>();
+  const deduped: MessageMatch[] = [];
+
+  for (const message of messages) {
+    if (seen.has(message.messageId)) {
+      continue;
+    }
+    seen.add(message.messageId);
+    deduped.push(message);
+  }
+
+  return deduped;
+};
+
+const formatRecentConversation = (messages: MessageMatch[]) => {
+  if (messages.length === 0) {
+    return [];
+  }
+
+  return messages.map((message) => {
+    const at = new Date(message.timestamp).toLocaleTimeString([], {
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const text = message.content.length > 140 ? `${message.content.slice(0, 140)}...` : message.content;
+    return `[${at}] ${message.role}: ${text}`;
+  });
+};
+
+async function searchMessageMatches(
+  ctx: ActionCtx,
+  userId: string,
+  query: string,
+  limit: number,
+  channel?: string,
+  sinceMs?: number,
+): Promise<MessageMatch[]> {
+  const requestedLimit = Math.min(Math.max(limit, 1), 20);
+  const normalizedChannel = normalizeChannel(channel);
+  const words = tokenizeQuery(query);
+  const recentSinceMs = sinceMs ?? Date.now() - 14 * 24 * 60 * 60 * 1000;
+
+  const apiKey = process.env.OPENAI_API_KEY;
+  let semanticMatches: MessageMatch[] = [];
+
+  if (apiKey) {
+    try {
+      const response = await fetch(OPENAI_EMBEDDING_ENDPOINT, {
+        method: "POST",
+        headers: { "content-type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: OPENAI_EMBEDDING_MODEL,
+          input: query,
+          encoding_format: "float",
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      const embedding = payload?.data?.[0]?.embedding;
+      if (Array.isArray(embedding)) {
+        semanticMatches = await ctx.runAction(internal.crystal.messages.searchMessagesForUser, {
+          userId,
+          embedding,
+          limit: requestedLimit,
+          channel: normalizedChannel,
+          sinceMs,
+        }) as MessageMatch[];
+      }
+    } catch {
+      semanticMatches = [];
+    }
+  }
+
+  const recentMessages = await ctx.runQuery(internal.crystal.messages.getRecentMessagesForUser, {
+    userId,
+    limit: Math.min(Math.max(requestedLimit * 8, 50), 200),
+    channel: normalizedChannel,
+    sinceMs: recentSinceMs,
+  }) as Array<{
+    _id: string;
+    role: "user" | "assistant" | "system";
+    content: string;
+    channel?: string;
+    sessionKey?: string;
+    timestamp: number;
+  }>;
+
+  const lexicalMatches = recentMessages
+    .map((message) => ({
+      messageId: String(message._id),
+      role: message.role,
+      content: message.content,
+      channel: message.channel,
+      sessionKey: message.sessionKey,
+      timestamp: message.timestamp,
+      score: lexicalMessageScore(query, words, message.content),
+    }))
+    .filter((message) => message.score > 0)
+    .sort((a, b) => b.score - a.score || b.timestamp - a.timestamp);
+
+  return dedupeMessageMatches(
+    [...semanticMatches, ...lexicalMatches].sort((a, b) => b.score - a.score || b.timestamp - a.timestamp)
+  ).slice(0, requestedLimit);
+}
+
 export const getApiKeyRecord = internalQuery({
   args: { keyHash: v.string() },
   handler: async (ctx, { keyHash }) => {
@@ -233,15 +375,19 @@ export const createCheckpointExternal = internalMutation({
 });
 
 export const listRecentMemories = internalQuery({
-  args: { userId: v.string(), limit: v.number() },
-  handler: async (ctx, { userId, limit }) => {
+  args: { userId: v.string(), limit: v.number(), channel: v.optional(v.string()) },
+  handler: async (ctx, { userId, limit, channel }) => {
     const fetch = Math.min(Math.max(limit, 1), 50);
+    const effectiveChannel = normalizeChannel(channel);
     const memories = await ctx.db
       .query("crystalMemories")
       .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
-      .take(Math.max(fetch * 5, 50));
+      .take(Math.min(Math.max(fetch * (effectiveChannel ? 8 : 5), 50), 200));
 
-    return memories.sort((a, b) => b.lastAccessedAt - a.lastAccessedAt).slice(0, fetch);
+    return memories
+      .filter((memory) => effectiveChannel === undefined || memory.channel === effectiveChannel)
+      .sort((a, b) => b.lastAccessedAt - a.lastAccessedAt)
+      .slice(0, fetch);
   },
 });
 
@@ -283,8 +429,9 @@ export const semanticSearch = internalAction({
     userId: v.string(),
     queryEmbedding: v.array(v.float64()),
     limit: v.number(),
+    channel: v.optional(v.string()),
   },
-  handler: async (ctx, { userId, queryEmbedding, limit }): Promise<
+  handler: async (ctx, { userId, queryEmbedding, limit, channel }): Promise<
     Array<{
       _id: string;
       title: string;
@@ -296,6 +443,7 @@ export const semanticSearch = internalAction({
       score: number;
     }>
   > => {
+    const effectiveChannel = normalizeChannel(channel);
     const results = (await ctx.vectorSearch("crystalMemories", "by_embedding", {
       vector: queryEmbedding,
       limit: Math.min(Math.max(limit, 1), 20),
@@ -306,6 +454,7 @@ export const semanticSearch = internalAction({
       results.map(async (r) => {
         const doc = await ctx.runQuery(internal.crystal.mcp.getMemoryById, { memoryId: r._id as any });
         if (!doc || doc.archived) return null;
+        if (effectiveChannel !== undefined && doc.channel !== effectiveChannel) return null;
         return {
           _id: String(r._id),
           title: doc.title,
@@ -541,6 +690,7 @@ export const mcpRecall = httpAction(async (ctx, request) => {
   const limit = Number.isFinite(requestedLimit)
     ? Math.min(Math.max(Math.trunc(requestedLimit), 1), 50)
     : 10;
+  const channel = normalizeChannel(body?.channel);
   if (!query) return json({ error: "query is required" }, 400);
 
   const apiKey = process.env.OPENAI_API_KEY;
@@ -564,6 +714,7 @@ export const mcpRecall = httpAction(async (ctx, request) => {
           userId: auth.userId,
           queryEmbedding: vec,
           limit,
+          channel,
         });
       }
     } catch {}
@@ -574,6 +725,7 @@ export const mcpRecall = httpAction(async (ctx, request) => {
     const all = await ctx.runQuery(internal.crystal.mcp.listRecentMemories, {
       userId: auth.userId,
       limit: 100,
+      channel,
     });
     const words = query.toLowerCase().split(/\s+/).filter(Boolean);
     memories = all
@@ -584,7 +736,69 @@ export const mcpRecall = httpAction(async (ctx, request) => {
       .map((m) => ({ ...m, score: 0 }));
   }
 
-  return json({ memories });
+  const messageMatches = await searchMessageMatches(ctx, auth.userId, query, Math.min(limit, 10), channel);
+
+  return json({ memories, messageMatches });
+});
+
+export const mcpSearchMessages = httpAction(async (ctx, request) => {
+  const auth = await requireAuth(ctx, request);
+  if (!auth) return json({ error: "Unauthorized" }, 401);
+
+  const rateLimitResponse = await withRateLimit(ctx, auth.keyHash);
+  if (rateLimitResponse) return rateLimitResponse;
+
+  const body = await parseBody(request);
+  const query = String(body?.query ?? "").trim();
+  const requestedLimit = Number(body?.limit ?? 10);
+  const limit = Number.isFinite(requestedLimit)
+    ? Math.min(Math.max(Math.trunc(requestedLimit), 1), 50)
+    : 10;
+  const channel = normalizeChannel(body?.channel);
+  const sinceMs = Number.isFinite(Number(body?.sinceMs)) ? Number(body.sinceMs) : undefined;
+
+  if (!query) return json({ error: "query is required" }, 400);
+
+  await auditLog(ctx, auth.userId, auth.keyHash, "search_messages", {
+    query: query.slice(0, 100),
+    channel,
+  });
+
+  const messages = await searchMessageMatches(ctx, auth.userId, query, limit, channel, sinceMs);
+  return json({ messages });
+});
+
+export const mcpRecentMessages = httpAction(async (ctx, request) => {
+  const auth = await requireAuth(ctx, request);
+  if (!auth) return json({ error: "Unauthorized" }, 401);
+
+  const rateLimitResponse = await withRateLimit(ctx, auth.keyHash);
+  if (rateLimitResponse) return rateLimitResponse;
+
+  const body = await parseBody(request);
+  const requestedLimit = Number(body?.limit ?? 20);
+  const limit = Number.isFinite(requestedLimit)
+    ? Math.min(Math.max(Math.trunc(requestedLimit), 1), 100)
+    : 20;
+  const channel = normalizeChannel(body?.channel);
+  const sessionKey = normalizeChannel(body?.sessionKey);
+  const sinceMs = Number.isFinite(Number(body?.sinceMs)) ? Number(body.sinceMs) : undefined;
+
+  await auditLog(ctx, auth.userId, auth.keyHash, "recent_messages", {
+    channel,
+    sessionKey,
+    limit,
+  });
+
+  const messages = await ctx.runQuery(internal.crystal.messages.getRecentMessagesForUser, {
+    userId: auth.userId,
+    limit,
+    channel,
+    sessionKey,
+    sinceMs,
+  });
+
+  return json({ messages });
 });
 
 export const mcpCheckpoint = httpAction(async (ctx, request) => {
@@ -668,18 +882,6 @@ const wakeHandler = httpAction(async (ctx, request) => {
 
   await auditLog(ctx, auth.userId, auth.keyHash, "wake");
 
-  const recentMemories = await ctx.runQuery(internal.crystal.mcp.listRecentMemories, {
-    userId: auth.userId,
-    limit: 5,
-  });
-  const checkpoints = await ctx.runQuery(internal.crystal.mcp.listRecentCheckpoints, {
-    userId: auth.userId,
-    limit: 1,
-  });
-  const stats = await ctx.runQuery(internal.crystal.mcp.getMemoryStoreStats, { userId: auth.userId });
-  const lastCheckpoint = checkpoints[0] ?? null;
-  const topTitle = recentMemories[0]?.title ?? "none";
-
   // Parse channel from request body if POST
   let channel: string | undefined;
   try {
@@ -689,14 +891,33 @@ const wakeHandler = httpAction(async (ctx, request) => {
     }
   } catch { /* ignore */ }
 
+  const recentMemories = await ctx.runQuery(internal.crystal.mcp.listRecentMemories, {
+    userId: auth.userId,
+    limit: 5,
+    channel,
+  });
+  const checkpoints = await ctx.runQuery(internal.crystal.mcp.listRecentCheckpoints, {
+    userId: auth.userId,
+    limit: 1,
+  });
+  const stats = await ctx.runQuery(internal.crystal.mcp.getMemoryStoreStats, { userId: auth.userId });
+  const lastCheckpoint = checkpoints[0] ?? null;
+
   // Fetch last session for continuity
   const lastSession = await ctx.runQuery(internal.crystal.mcp.getLastSessionByUser, {
     userId: auth.userId,
     channel,
   });
+  const recentMessages = await ctx.runQuery(internal.crystal.messages.getRecentMessagesForUser, {
+    userId: auth.userId,
+    channel,
+    limit: 12,
+    sinceMs: Date.now() - 72 * 60 * 60 * 1000,
+  }) as MessageMatch[];
 
   const goals = recentMemories.filter((m: any) => m.store === "prospective" || m.category === "goal");
   const decisions = recentMemories.filter((m: any) => m.category === "decision");
+  const recentConversationLines = formatRecentConversation(recentMessages);
 
   // Build last session block
   const lastSessionLines: string[] = [];
@@ -736,6 +957,9 @@ const wakeHandler = httpAction(async (ctx, request) => {
     "Recent decisions:",
     ...(decisions.length ? decisions.map((m: any) => `- [${m.store}] ${m.title}`) : ["- none"]),
     "",
+    ...(recentConversationLines.length > 0
+      ? ["Recent conversation:", ...recentConversationLines, ""]
+      : []),
     `${goals.length + decisions.length} memories surfaced | Use crystal_recall to search all memories.`,
   ];
 
@@ -756,6 +980,7 @@ const wakeHandler = httpAction(async (ctx, request) => {
 
   return json({
     briefing,
+    recentMessages,
     recentMemories: recentMemories.map((m: any) => ({
       id: m._id,
       title: m.title,
@@ -1051,7 +1276,3 @@ export const auditDataIntegrity = internalQuery({
     };
   },
 });
-
-
-
-
