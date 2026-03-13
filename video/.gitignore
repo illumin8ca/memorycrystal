@@ -1,0 +1,12 @@
+# Rendered video output
+out/
+*.mp4
+*.webm
+*.mov
+
+# Dependencies
+node_modules/
+
+# Build artifacts
+dist/
+.remotion/
