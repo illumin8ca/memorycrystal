@@ -13,7 +13,7 @@ export default function Footer() {
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-start sm:items-center gap-x-5 gap-y-2 text-xs font-mono text-secondary w-full md:w-auto">
             <Link href="/docs">Docs</Link>
             <Link href="/pricing">Pricing</Link>
-            <Link href="/changelog">Changelog</Link>
+            <Link href="/whats-new">What&apos;s New</Link>
             <a href="https://github.com" target="_blank" rel="noreferrer">
               GitHub
             </a>
