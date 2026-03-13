@@ -1,5 +1,5 @@
+import Image from "next/image";
 import Link from "next/link";
-import { ImageIcon, PlayCircle } from "lucide-react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import CrystalIcon from "./components/CrystalIcon";
@@ -139,33 +139,51 @@ export default function HomePage() {
 
         <section className="border-b border-white/[0.07] py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <BracketHeading>DEMO VIDEO</BracketHeading>
-            <div className="glass-card border border-dashed border-accent/40 p-8 md:p-10">
-              <h3 className="font-heading text-2xl md:text-3xl">Live product demo coming soon</h3>
-              <p className="mt-3 text-secondary max-w-2xl">
-                Andy will add a walkthrough video here showing installation, recall, and graph enrichment in action.
-              </p>
-              <div className="mt-6 h-48 md:h-64 border border-white/[0.09] bg-white/[0.02] flex items-center justify-center">
-                <PlayCircle className="h-14 w-14 text-accent/90" strokeWidth={1.5} aria-hidden="true" />
-              </div>
+            <BracketHeading>SEE IT IN ACTION</BracketHeading>
+            <h2 className="mt-2 font-heading text-3xl md:text-5xl">Memory that works across every session.</h2>
+            <div className="mt-8 glass-card border border-white/[0.08] overflow-hidden">
+              <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                poster="/images/crystal-demo-poster.webp"
+                className="w-full aspect-video object-cover"
+              >
+                <source src="/images/demo-loop.mp4" type="video/mp4" />
+              </video>
             </div>
           </div>
         </section>
 
         <section className="border-b border-white/[0.07] py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <BracketHeading>SCREENSHOTS / WALKTHROUGH</BracketHeading>
+            <BracketHeading>INSIDE THE PRODUCT</BracketHeading>
             <div className="grid md:grid-cols-2 gap-4">
-              <div className="glass-card border border-dashed border-white/[0.18] p-6">
-                <h3 className="font-heading text-xl">Dashboard and graph views</h3>
-                <div className="mt-4 h-56 border border-white/[0.09] bg-white/[0.02] flex items-center justify-center">
-                  <ImageIcon className="h-12 w-12 text-accent/85" strokeWidth={1.5} aria-hidden="true" />
+              <div className="glass-card border border-white/[0.08] overflow-hidden">
+                <Image
+                  src="/images/dashboard-preview.webp"
+                  alt="Memory Crystal dashboard showing memories, stats, and recall accuracy"
+                  width={768}
+                  height={512}
+                  className="w-full h-auto"
+                />
+                <div className="p-5">
+                  <h3 className="font-heading text-xl">Memory dashboard</h3>
+                  <p className="mt-2 text-secondary text-sm">Track memories, confidence scores, and recall health at a glance.</p>
                 </div>
               </div>
-              <div className="glass-card border border-dashed border-white/[0.18] p-6">
-                <h3 className="font-heading text-xl">Install + recall flow visuals</h3>
-                <div className="mt-4 h-56 border border-white/[0.09] bg-white/[0.02] flex items-center justify-center">
-                  <ImageIcon className="h-12 w-12 text-accent/85" strokeWidth={1.5} aria-hidden="true" />
+              <div className="glass-card border border-white/[0.08] overflow-hidden">
+                <Image
+                  src="/images/install-recall-preview.webp"
+                  alt="Terminal showing Memory Crystal install flow and agent recall"
+                  width={768}
+                  height={512}
+                  className="w-full h-auto"
+                />
+                <div className="p-5">
+                  <h3 className="font-heading text-xl">Install + recall in action</h3>
+                  <p className="mt-2 text-secondary text-sm">One command to install. Context flows into every session automatically.</p>
                 </div>
               </div>
             </div>
