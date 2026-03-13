@@ -3,6 +3,24 @@ import Footer from "../components/Footer";
 
 const releaseEntries = [
   {
+    version: "v0.2.3",
+    date: "March 12, 2026",
+    items: [
+      "Switched to Gemini Embedding 2 (3072-dimensional vectors) — richer, faster semantic recall",
+      "Multimodal asset support: images, audio, video, PDF, and text can now be embedded and searched",
+      "New API endpoint: /api/mcp/asset for storing and embedding media with automatic background processing",
+      "Short-term message search: /api/mcp/search-messages and /api/mcp/recent-messages for conversation-level recall",
+      "crystal_search_messages tool — search exact past conversation turns, not just long-term memories",
+      "Wake briefing now injects relevant memories and recent message matches at session start",
+      "OpenClaw plugin upgraded to v0.2.3 — more reliable hook registration, better assistant text extraction",
+      "Installer is now idempotent — safe to re-run, skips restart if nothing changed",
+      "API key validation added to installer before any changes are made",
+      "Dashboard: split settings into API Keys and Billing tabs",
+      "Dashboard: new Get Started onboarding tab with install docs",
+      "Contact form for sales and enterprise inquiries",
+    ],
+  },
+  {
     version: "v0.1.0",
     date: "March 3, 2026",
     items: [
