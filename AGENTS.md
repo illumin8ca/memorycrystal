@@ -176,6 +176,19 @@ openclaw gateway restart
 
 ---
 
+## Release Workflow (MANDATORY)
+
+Every version bump **must** include these updates before pushing:
+
+1. **`apps/web/app/whats-new/page.tsx`** — Add a new entry to `releaseEntries` at the top of the array with the version, date, and a plain-language list of what shipped. No dev jargon — write it for users.
+2. **`plugin/package.json`** — Bump the `version` field to match.
+3. **`convex/crystal/mcp.ts`** — If the install script records a version (currently in the Node config writer), update the `version: "x.x.x"` string there too.
+4. **Docs** — If the change adds/removes an API endpoint, tool, or config key, update `docs/` accordingly.
+
+Skip this and Andy will find out. Don't skip this.
+
+---
+
 ## What Not to Do
 
 - Do not run `openclaw gateway restart` from inside an exec session — it kills the session
