@@ -3,6 +3,7 @@ const DEFAULT_CONVEX_URL = "https://rightful-mockingbird-389.convex.site";
 const pendingUserMessages = new Map();
 const sessionConfigs = new Map(); // sessionKey → { mode, limit }
 const wakeInjectedSessions = new Set();
+const seenCaptureSessions = new Set();
 
 const MEMORY_STORES = ["sensory", "episodic", "semantic", "procedural", "prospective"];
 const MEMORY_CATEGORIES = [
@@ -75,9 +76,12 @@ async function triggerReflection(config, sessionKey) {
   }
 }
 
-async function request(config, method, path, body) {
+async function request(config, method, path, body, logger) {
   const apiKey = config?.apiKey;
-  if (!apiKey) return null;
+  if (!apiKey) {
+    logger?.warn?.(`[crystal-memory] request skipped (missing apiKey): ${method} ${path}`);
+    return null;
+  }
 
   const convexUrl = (config?.convexUrl || DEFAULT_CONVEX_URL).replace(/\/+$/, "");
   try {
@@ -90,9 +94,17 @@ async function request(config, method, path, body) {
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const responseText = await res.text().catch(() => "");
+      logger?.warn?.(
+        `[crystal-memory] request failed: ${method} ${path} -> ${res.status} ${res.statusText}${responseText ? ` | ${responseText.slice(0, 300)}` : ""}`
+      );
+      return null;
+    }
+
     return res.json().catch(() => null);
-  } catch {
+  } catch (err) {
+    logger?.warn?.(`[crystal-memory] request error: ${method} ${path} -> ${err?.message || String(err)}`);
     return null;
   }
 }
@@ -167,6 +179,58 @@ function joinStringArray(values) {
     .trim();
 }
 
+function extractTextFromUnknown(value, depth = 0) {
+  if (depth > 4 || value == null) return "";
+
+  if (typeof value === "string") {
+    return value.trim();
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => extractTextFromUnknown(item, depth + 1))
+      .filter(Boolean)
+      .join("\n")
+      .trim();
+  }
+
+  if (typeof value === "object") {
+    const direct = firstString(
+      value.text,
+      value.content,
+      value.outputText,
+      value.inputText,
+      value.prompt,
+      value.completion,
+      value.responseText,
+      value.message,
+      value.delta
+    );
+    if (direct) return direct;
+
+    const nestedKeys = [
+      "message",
+      "messages",
+      "parts",
+      "content",
+      "input",
+      "output",
+      "response",
+      "result",
+      "data",
+      "choices",
+      "delta",
+    ];
+
+    for (const key of nestedKeys) {
+      const text = extractTextFromUnknown(value[key], depth + 1);
+      if (text) return text;
+    }
+  }
+
+  return "";
+}
+
 function extractAssistantText(event) {
   const direct = firstString(
     joinStringArray(event?.assistantTexts),
@@ -189,38 +253,26 @@ function extractAssistantText(event) {
   }
 
   const candidates = [
-    event?.response?.messages,
-    event?.result?.messages,
+    event?.response,
+    event?.result,
+    event?.output,
+    event?.assistant,
+    event?.message,
     event?.messages,
-    event?.response?.parts,
-    event?.result?.parts,
     event?.parts,
+    event,
   ];
 
   for (const candidate of candidates) {
-    if (!Array.isArray(candidate)) continue;
-    const text = candidate
-      .map((item) =>
-        firstString(
-          item?.content,
-          item?.text,
-          item?.message?.content,
-          item?.message?.text
-        )
-      )
-      .filter(Boolean)
-      .join("\n")
-      .trim();
-    if (text) {
-      return text;
-    }
+    const text = extractTextFromUnknown(candidate);
+    if (text) return text;
   }
 
   return "";
 }
 
 function extractUserText(event) {
-  return firstString(
+  const direct = firstString(
     event?.context?.content,
     event?.content,
     event?.text,
@@ -229,12 +281,32 @@ function extractUserText(event) {
     event?.input,
     event?.prompt
   );
+
+  if (direct) return direct;
+
+  const candidates = [
+    event?.context,
+    event?.message,
+    event?.input,
+    event?.prompt,
+    event?.payload,
+    event?.data,
+    event,
+  ];
+
+  for (const candidate of candidates) {
+    const text = extractTextFromUnknown(candidate);
+    if (text) return text;
+  }
+
+  return "";
 }
 
 function getSessionKey(ctx, event) {
   return (
     ctx?.sessionKey ||
     ctx?.sessionId ||
+    ctx?.conversationId ||
     event?.sessionKey ||
     event?.conversationId ||
     event?.sessionId ||
@@ -242,24 +314,83 @@ function getSessionKey(ctx, event) {
   );
 }
 
+function parseSessionDescriptor(sessionKey) {
+  const raw = typeof sessionKey === "string" ? sessionKey : "";
+  const m = raw.match(/^agent:[^:]+:([^:]+):([^:]+):(.+)$/);
+  if (!m) return null;
+  return { provider: m[1], scope: m[2], target: m[3] };
+}
+
 function getChannelKey(ctx, event) {
+  const sessionInfo = parseSessionDescriptor(getSessionKey(ctx, event));
+
   const provider = firstString(
     event?.messageProvider,
     ctx?.messageProvider,
     event?.provider,
     ctx?.provider,
+    sessionInfo?.provider,
     "openclaw"
   );
-  const workspaceId = firstString(event?.context?.workspaceId, event?.workspaceId, ctx?.workspaceId);
-  const guildId = firstString(event?.context?.guildId, event?.guildId, ctx?.guildId);
+
+  // ctx shape from toPluginMessageContext: { channelId, accountId, conversationId }
+  // event shape from toPluginMessageReceivedEvent: { from, content, timestamp, metadata: { provider, guildId, channelName, threadId, ... } }
+  const meta = event?.metadata || {};
+
+  const chatId = firstString(
+    ctx?.conversationId,
+    ctx?.channelId,
+    event?.context?.chat_id,
+    event?.context?.chatId,
+    event?.chat_id,
+    event?.chatId,
+    event?.conversationId,
+    meta?.conversationId
+  );
+
+  const chatIdChannel = typeof chatId === "string" && chatId.startsWith("channel:") ? chatId.split(":")[1] : "";
+  const sessionChannel = sessionInfo?.scope === "channel" ? sessionInfo.target : "";
+
+  const workspaceId = firstString(
+    meta?.guildId,
+    event?.context?.workspaceId,
+    event?.workspaceId,
+    ctx?.workspaceId,
+    event?.context?.groupSpace,
+    event?.groupSpace
+  );
+
+  const guildId = firstString(
+    meta?.guildId,
+    event?.context?.guildId,
+    event?.guildId,
+    ctx?.guildId
+  );
+
   const channelId = firstString(
+    ctx?.channelId,
+    chatIdChannel,
+    sessionChannel,
     event?.context?.channelId,
     event?.channelId,
-    ctx?.channelId
+    meta?.channelId
   );
-  const threadId = firstString(event?.context?.threadId, event?.threadId, ctx?.threadId);
+
+  const threadId = firstString(
+    meta?.threadId,
+    event?.context?.threadId,
+    event?.threadId,
+    ctx?.threadId,
+    event?.context?.thread_id,
+    event?.thread_id
+  );
+
   const parts = [provider, workspaceId, guildId, channelId, threadId].filter(Boolean);
-  return parts.length > 1 ? parts.join(":") : provider;
+  if (parts.length > 1) return parts.join(":");
+
+  if (provider && chatId) return `${provider}:${chatId}`;
+  if (chatId) return chatId;
+  return provider;
 }
 
 function buildMemoryPath(memoryId) {
@@ -328,7 +459,7 @@ async function buildBeforeAgentContext(api, event, ctx) {
   if (sessionKey && !wakeInjectedSessions.has(sessionKey)) {
     const wake = await request(config, "POST", "/api/mcp/wake", {
       channel,
-    });
+    }, api?.logger);
     const briefing = wake?.briefing || wake?.summary || wake?.text;
     if (briefing) {
       sections.push(String(briefing));
@@ -344,7 +475,7 @@ async function buildBeforeAgentContext(api, event, ctx) {
       limit: Math.max(1, Math.min(limit, 8)),
       channel,
       mode: typeof config?.defaultRecallMode === "string" ? config.defaultRecallMode : "general",
-    });
+    }, api?.logger);
     const memories = Array.isArray(recall?.memories) ? recall.memories.slice(0, 5) : [];
     if (memories.length > 0) {
       sections.push(
@@ -362,7 +493,7 @@ async function buildBeforeAgentContext(api, event, ctx) {
       query: prompt,
       limit: 5,
       channel,
-    });
+    }, api?.logger);
     const messages = Array.isArray(messageSearch?.messages) ? messageSearch.messages.slice(0, 5) : [];
     if (messages.length > 0) {
       sections.push(
@@ -379,7 +510,7 @@ async function buildBeforeAgentContext(api, event, ctx) {
 }
 
 async function logMessage(api, ctx, payload) {
-  const result = await request(getPluginConfig(api, ctx), "POST", "/api/mcp/log", payload);
+  const result = await request(getPluginConfig(api, ctx), "POST", "/api/mcp/log", payload, api?.logger);
   if (result === null) {
     api.logger?.warn?.(
       `[crystal-memory] log request failed for role=${payload?.role || "unknown"} channel=${payload?.channel || "unknown"}`
@@ -401,7 +532,7 @@ async function captureTurn(api, event, ctx, userMessage, assistantText) {
     category: "conversation",
     tags: ["openclaw", "auto-capture"],
     channel: getChannelKey(ctx, event),
-  });
+  }, api?.logger);
 
   if (result === null) {
     api.logger?.warn?.("[crystal-memory] capture request failed for completed turn");
@@ -409,7 +540,11 @@ async function captureTurn(api, event, ctx, userMessage, assistantText) {
 }
 
 module.exports = (api) => {
-  api.registerHook(
+  // Use api.on() — the typed hook API (api.registerHook uses the legacy untyped path
+  // which does not populate registry.typedHooks and so hasHooks() returns false)
+  const hook = api.on ?? api.registerHook.bind(api);
+
+  hook(
     "before_agent_start",
     async (event, ctx) => {
       try {
@@ -427,15 +562,25 @@ module.exports = (api) => {
   );
 
   // Buffer inbound message and persist user-side turn context
-  api.registerHook(
+  hook(
     "message_received",
     async (event, ctx) => {
       try {
         const text = extractUserText(event);
         const sessionKey = getSessionKey(ctx, event);
+        const channelKey = getChannelKey(ctx, event);
         const pluginConfig = getPluginConfig(api, ctx);
         const defaultMode = pluginConfig?.defaultRecallMode || "general";
         const defaultLimit = pluginConfig?.defaultRecallLimit || 8;
+
+        // Warn-level so it always appears in logs regardless of log level setting
+        api.logger?.warn?.(
+          `[crystal-memory] message_received fired session=${sessionKey || "?"} channel=${channelKey || "?"} textLen=${String(text || "").length} eventKeys=${Object.keys(event || {}).join(",") || "none"} ctxKeys=${Object.keys(ctx || {}).join(",") || "none"}`
+        );
+
+        if (sessionKey && !seenCaptureSessions.has(`msg:${sessionKey}`)) {
+          seenCaptureSessions.add(`msg:${sessionKey}`);
+        }
 
         if (text) {
           const normalized = String(text);
@@ -445,12 +590,12 @@ module.exports = (api) => {
           await logMessage(api, ctx, {
             role: "user",
             content: normalized,
-            channel: getChannelKey(ctx, event),
+            channel: channelKey,
             sessionKey: sessionKey || undefined,
           });
         } else if (!text) {
           api.logger?.warn?.(
-            `[crystal-memory] message_received missing user text; keys=${Object.keys(event || {}).join(",") || "none"}`
+            `[crystal-memory] message_received missing user text; keys=${Object.keys(event || {}).join(",") || "none"}; ctxKeys=${Object.keys(ctx || {}).join(",") || "none"}`
           );
         }
 
@@ -470,19 +615,28 @@ module.exports = (api) => {
   );
 
   // Capture full turn after LLM responds
-  api.registerHook(
+  hook(
     "llm_output",
     async (event, ctx) => {
       try {
         const assistantText = extractAssistantText(event);
+        const sessionKey = getSessionKey(ctx, event);
+        const channelKey = getChannelKey(ctx, event);
+
+        if (sessionKey && !seenCaptureSessions.has(`out:${sessionKey}`)) {
+          seenCaptureSessions.add(`out:${sessionKey}`);
+          api.logger?.info?.(
+            `[crystal-memory] llm_output seen session=${sessionKey} channel=${channelKey || "unknown"}`
+          );
+        }
+
         if (!assistantText) {
           api.logger?.warn?.(
-            `[crystal-memory] llm_output missing assistant text; keys=${Object.keys(event || {}).join(",") || "none"}`
+            `[crystal-memory] llm_output missing assistant text; keys=${Object.keys(event || {}).join(",") || "none"}; ctxKeys=${Object.keys(ctx || {}).join(",") || "none"}`
           );
           return;
         }
 
-        const sessionKey = getSessionKey(ctx, event);
         const userMessage = sessionKey ? pendingUserMessages.get(sessionKey) || "" : "";
         const sessionDefaults = sessionKey ? sessionConfigs.get(sessionKey) : null;
         // sessionDefaults is currently reserved for future recall-hook wiring (e.g., mode/limit defaults).
@@ -491,7 +645,7 @@ module.exports = (api) => {
         await logMessage(api, ctx, {
           role: "assistant",
           content: assistantText,
-          channel: getChannelKey(ctx, event),
+          channel: channelKey,
           sessionKey: sessionKey || undefined,
         });
 
@@ -506,7 +660,7 @@ module.exports = (api) => {
 
   // Fallback when llm_output is not emitted by a provider/runtime.
   // If there's no pending user message, llm_output likely already handled this turn.
-  api.registerHook(
+  hook(
     "message_sent",
     async (event, ctx) => {
       try {
@@ -543,7 +697,7 @@ module.exports = (api) => {
   );
 
   // Trigger memory reflection on session boundary
-  api.registerHook(
+  hook(
     "command:new",
     async (event, ctx) => {
       try {
@@ -555,7 +709,7 @@ module.exports = (api) => {
     { name: "crystal-memory.command-new", description: "Trigger memory reflection on /new" }
   );
 
-  api.registerHook(
+  hook(
     "command:reset",
     async (event, ctx) => {
       try {
