@@ -20,6 +20,7 @@ export type DashboardTotalsSnapshot = {
   activeMemories: number;
   archivedMemories: number;
   totalMessages: number;
+  enrichedMemories: number;
   activeMemoriesByStore: DashboardTotalsByStore;
   activeStoreCount: number;
   lastCaptureMemoryId?: string;
@@ -34,6 +35,7 @@ type DashboardTotalsDelta = {
   activeMemoriesDelta?: number;
   archivedMemoriesDelta?: number;
   totalMessagesDelta?: number;
+  enrichedMemoriesDelta?: number;
   activeMemoriesByStoreDelta?: Partial<Record<MemoryStore, number>>;
   lastCaptureMemoryId?: string;
   lastCaptureStore?: MemoryStore;
@@ -90,6 +92,7 @@ function normalizeTotals(value: any): DashboardTotalsSnapshot {
   const activeMemories = clampCount(value?.activeMemories);
   const archivedMemories = clampCount(value?.archivedMemories);
   const totalMessages = clampCount(value?.totalMessages);
+  const enrichedMemories = clampCount(value?.enrichedMemories);
 
   return {
     _id: value?._id,
@@ -98,6 +101,7 @@ function normalizeTotals(value: any): DashboardTotalsSnapshot {
     activeMemories,
     archivedMemories,
     totalMessages,
+    enrichedMemories,
     activeMemoriesByStore,
     activeStoreCount,
     lastCaptureMemoryId: value?.lastCaptureMemoryId,
@@ -121,6 +125,7 @@ function newEmptyTotals(userId: string): DashboardTotalsSnapshot {
     activeMemories: 0,
     archivedMemories: 0,
     totalMessages: 0,
+    enrichedMemories: 0,
     activeMemoriesByStore: { ...ZERO_COUNTS },
     activeStoreCount: 0,
     updatedAt: Date.now(),
@@ -134,6 +139,7 @@ function applyDelta(current: DashboardTotalsSnapshot, delta: DashboardTotalsDelt
     activeMemories: clampCount(current.activeMemories + (delta.activeMemoriesDelta ?? 0)),
     archivedMemories: clampCount(current.archivedMemories + (delta.archivedMemoriesDelta ?? 0)),
     totalMessages: clampCount(current.totalMessages + (delta.totalMessagesDelta ?? 0)),
+    enrichedMemories: clampCount(current.enrichedMemories + (delta.enrichedMemoriesDelta ?? 0)),
     activeMemoriesByStore: { ...current.activeMemoriesByStore },
     updatedAt: Date.now(),
   };
@@ -167,6 +173,7 @@ function normalizeStorePayload(payload: DashboardTotalsSnapshot): Omit<Dashboard
     activeMemories: clampCount(payload.activeMemories),
     archivedMemories: clampCount(payload.archivedMemories),
     totalMessages: clampCount(payload.totalMessages),
+    enrichedMemories: clampCount(payload.enrichedMemories),
     activeMemoriesByStore: {
       ...ZERO_COUNTS,
       ...payload.activeMemoriesByStore,
@@ -299,6 +306,9 @@ export async function computeDashboardTotalsFromSource(ctx: any, userId: string)
     }
 
     totals.activeMemories += 1;
+    if (memory.graphEnriched === true) {
+      totals.enrichedMemories += 1;
+    }
     if (memory.store in totals.activeMemoriesByStore) {
       totals.activeMemoriesByStore[memory.store as MemoryStore] = clampCount(
         (totals.activeMemoriesByStore[memory.store as MemoryStore] || 0) + 1,
@@ -340,6 +350,9 @@ function hydrateTotalsFromMemory(totals: DashboardTotalsSnapshot, memory: any): 
   }
 
   totals.activeMemories += 1;
+  if (memory.graphEnriched === true) {
+    totals.enrichedMemories += 1;
+  }
   if (memory.store in totals.activeMemoriesByStore) {
     totals.activeMemoriesByStore[memory.store as MemoryStore] = clampCount(
       (totals.activeMemoriesByStore[memory.store as MemoryStore] || 0) + 1,
@@ -364,6 +377,7 @@ function getBackfillAccumulator(args: any, userId: string): DashboardTotalsSnaps
     activeMemories: clampCount(args.activeMemories ?? 0),
     archivedMemories: clampCount(args.archivedMemories ?? 0),
     totalMessages: clampCount(args.totalMessages ?? 0),
+    enrichedMemories: clampCount(args.enrichedMemories ?? 0),
     activeMemoriesByStore: {
       sensory: clampCount(args.activeSensory ?? 0),
       episodic: clampCount(args.activeEpisodic ?? 0),
@@ -391,6 +405,7 @@ export const adminRepairBackfillDashboardTotalsForUser = internalMutation({
     activeMemories: v.optional(v.number()),
     archivedMemories: v.optional(v.number()),
     totalMessages: v.optional(v.number()),
+    enrichedMemories: v.optional(v.number()),
     activeSensory: v.optional(v.number()),
     activeEpisodic: v.optional(v.number()),
     activeSemantic: v.optional(v.number()),
@@ -440,6 +455,7 @@ export const adminRepairBackfillDashboardTotalsForUser = internalMutation({
             activeMemories: totals.activeMemories,
             archivedMemories: totals.archivedMemories,
             totalMessages: totals.totalMessages,
+            enrichedMemories: totals.enrichedMemories,
             activeSensory: totals.activeMemoriesByStore.sensory,
             activeEpisodic: totals.activeMemoriesByStore.episodic,
             activeSemantic: totals.activeMemoriesByStore.semantic,
@@ -462,6 +478,7 @@ export const adminRepairBackfillDashboardTotalsForUser = internalMutation({
         activeMemories: totals.activeMemories,
         archivedMemories: totals.archivedMemories,
         totalMessages: totals.totalMessages,
+        enrichedMemories: totals.enrichedMemories,
         activeSensory: totals.activeMemoriesByStore.sensory,
         activeEpisodic: totals.activeMemoriesByStore.episodic,
         activeSemantic: totals.activeMemoriesByStore.semantic,
@@ -499,6 +516,7 @@ export const adminRepairBackfillDashboardTotalsForUser = internalMutation({
           activeMemories: totals.activeMemories,
           archivedMemories: totals.archivedMemories,
           totalMessages: totals.totalMessages,
+          enrichedMemories: totals.enrichedMemories,
           activeSensory: totals.activeMemoriesByStore.sensory,
           activeEpisodic: totals.activeMemoriesByStore.episodic,
           activeSemantic: totals.activeMemoriesByStore.semantic,
@@ -671,3 +689,4 @@ export const adminListDashboardTotals = query({
     return rows;
   },
 });
+;

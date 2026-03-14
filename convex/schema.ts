@@ -304,6 +304,7 @@ export default defineSchema({
     activeMemories: v.number(),
     archivedMemories: v.number(),
     totalMessages: v.number(),
+    enrichedMemories: v.optional(v.number()),
     activeMemoriesByStore: v.object({
       sensory: v.number(),
       episodic: v.number(),

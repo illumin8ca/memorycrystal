@@ -200,58 +200,40 @@ export const getKnowledgeGraphFoundationStatus = query({
   },
 });
 
-const GRAPH_STATUS_PAGE_SIZE = 100;
-const GRAPH_STATUS_MAX_BYTES = 4_000_000;
-
-async function countGraphEnrichedMemories(ctx: any, userId: string): Promise<number> {
-  let count = 0;
-  let cursor: string | null = null;
-
-  while (true) {
-    const page: any = await ctx.db
-      .query("crystalMemories")
-      .withIndex("by_graph_enriched", (q: any) => q.eq("graphEnriched", true).eq("userId", userId))
-      .paginate({
-        numItems: GRAPH_STATUS_PAGE_SIZE,
-        cursor,
-        maximumBytesRead: GRAPH_STATUS_MAX_BYTES,
-      });
-
-    count += page.page.length;
-
-    if (page.isDone || !page.continueCursor) {
-      break;
-    }
-
-    cursor = page.continueCursor;
-  }
-
-  return count;
-}
+// Count enriched memories using the by_graph_enriched index.
+// Uses .take() with a generous cap instead of .paginate() to avoid
+// Convex's "only one paginated query per function" constraint.
+// The index filters by graphEnriched+userId so we only scan matching rows.
+const ENRICHED_COUNT_CAP = 10_000;
 
 export const getUserGraphStatus = internalQuery({
   args: { userId: v.string() },
   handler: async (ctx, { userId }) => {
-    const [nodes, relations, totals, enrichedCount] = await Promise.all([
-      ctx.db
-        .query("crystalNodes")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect(),
-      ctx.db
-        .query("crystalRelations")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect(),
-      getDashboardTotals(ctx, userId),
-      countGraphEnrichedMemories(ctx, userId),
-    ]);
+    // Nodes and relations are small tables — collect is fine.
+    // For memories we avoid .collect() (embeddings make rows ~24KB each)
+    // and use the by_graph_enriched index with a bounded .take().
+    const nodes = await ctx.db
+      .query("crystalNodes")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
 
-    const totalNodes = nodes.length;
-    const totalRelations = relations.length;
-    const totalMemoryCount = totals.activeMemories;
+    const relations = await ctx.db
+      .query("crystalRelations")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    // Read enriched + total counts from the dashboard totals row.
+    // This is a single small document — no embedding vectors, no table scan.
+    const totalsRow = await ctx.db
+      .query("crystalDashboardTotals")
+      .withIndex("by_user", (q: any) => q.eq("userId", userId))
+      .first();
+    const totalMemoryCount = (totalsRow as any)?.activeMemories ?? 0;
+    const enrichedCount = (totalsRow as any)?.enrichedMemories ?? 0;
 
     return {
-      totalNodes,
-      totalRelations,
+      totalNodes: nodes.length,
+      totalRelations: relations.length,
       enrichedMemories: enrichedCount,
       totalMemories: totalMemoryCount,
       enrichmentPercent: totalMemoryCount > 0 ? Math.round((enrichedCount / totalMemoryCount) * 100) : 0,

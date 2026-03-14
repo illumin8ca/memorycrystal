@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { action, internalAction, internalMutation, internalQuery } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { type Id } from "../_generated/dataModel";
+import { applyDashboardTotalsDelta } from "./dashboardTotals";
 
 const GRAPH_TEMPERATURE = 0.1;
 
@@ -184,10 +185,17 @@ export const getMemoryForEnrichment = internalQuery({
 export const markMemoryEnriched = internalMutation({
   args: { memoryId: v.id("crystalMemories") },
   handler: async (ctx, { memoryId }) => {
+    const memory = await ctx.db.get(memoryId);
+    if (!memory) return;
+    // Only increment enriched counter if not already enriched
+    const wasEnriched = memory.graphEnriched === true;
     await ctx.db.patch(memoryId, {
       graphEnriched: true,
       graphEnrichedAt: Date.now(),
     });
+    if (!wasEnriched && memory.userId) {
+      await applyDashboardTotalsDelta(ctx, memory.userId, { enrichedMemoriesDelta: 1 });
+    }
   },
 });
 
