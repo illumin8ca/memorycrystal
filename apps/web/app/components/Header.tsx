@@ -11,7 +11,7 @@ const navItems = [
   { href: "/pricing", label: "Pricing" },
   { href: "/blog", label: "Blog" },
   { href: "/releases", label: "Releases" },
-  { href: "/roadmap", label: "Roadmap" },
+  { href: "/about", label: "About" },
 ];
 
 export default function Header() {

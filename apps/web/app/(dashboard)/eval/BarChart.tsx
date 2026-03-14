@@ -10,7 +10,7 @@ type BarChartProps = {
   height?: number;
 };
 
-const ACCENT = "#0066ff";
+const ACCENT = "#2180D6";
 const TEXT = "#f0f0f0";
 const GRID = "#2a2a2a";
 

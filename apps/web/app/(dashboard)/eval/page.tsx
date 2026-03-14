@@ -117,7 +117,7 @@ export default function EvalPage() {
           <p className="text-sm text-[#888888]">Loading...</p>
         ) : (
           <>
-            <p className="text-4xl sm:text-5xl font-bold tracking-tight mb-4 text-[#0066ff]">
+            <p className="text-4xl sm:text-5xl font-bold tracking-tight mb-4 text-accent">
               {healthStats.graphEnrichedPercent}% graph-enriched
             </p>
 
@@ -173,7 +173,7 @@ export default function EvalPage() {
                   </div>
                   <div className="h-2 border border-[#2a2a2a] rounded-none">
                     <div
-                      className="h-full bg-[#0066ff] transition-[width] duration-200"
+                      className="h-full bg-accent transition-[width] duration-200"
                       style={{
                         width: `${percent}%`,
                       }}

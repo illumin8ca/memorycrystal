@@ -29,7 +29,7 @@ export default async function BlogPage({
       : posts.filter((post) => post.category.toLowerCase() === activeCategory);
 
   return (
-    <div className="min-h-screen bg-[#090909] text-primary">
+    <div className="min-h-screen bg-void text-primary">
       <Header />
       <main className="max-w-6xl mx-auto px-6 lg:px-8 py-16">
         <BracketHeading>BLOG</BracketHeading>
@@ -43,8 +43,8 @@ export default async function BlogPage({
             href="/blog"
             className={`px-3 py-2 text-xs font-mono uppercase border ${
               activeCategory === "all"
-                ? "border-[#0066ff] text-[#0066ff]"
-                : "border-white/20 text-secondary hover:border-[#0066ff] hover:text-[#0066ff]"
+                ? "border-accent text-accent"
+                : "border-white/20 text-secondary hover:border-accent hover:text-accent"
             }`}
           >
             All
@@ -58,8 +58,8 @@ export default async function BlogPage({
                 href={`/blog?category=${encodeURIComponent(normalized)}`}
                 className={`px-3 py-2 text-xs font-mono uppercase border ${
                   isActive
-                    ? "border-[#0066ff] text-[#0066ff]"
-                    : "border-white/20 text-secondary hover:border-[#0066ff] hover:text-[#0066ff]"
+                    ? "border-accent text-accent"
+                    : "border-white/20 text-secondary hover:border-accent hover:text-accent"
                 }`}
               >
                 {category}
@@ -72,19 +72,19 @@ export default async function BlogPage({
           {filteredPosts.map((post) => (
             <article key={post.slug} className="border border-white/10 p-6 bg-black/20">
               <div className="flex flex-wrap items-center gap-3 text-xs font-mono uppercase tracking-wide">
-                <span className="text-[#0066ff] border border-[#0066ff]/50 px-2 py-1">{post.category}</span>
+                <span className="text-accent border border-accent/50 px-2 py-1">{post.category}</span>
                 <span className="text-secondary">{new Date(post.date).toLocaleDateString()}</span>
                 <span className="text-secondary">{post.readTime}</span>
               </div>
               <h2 className="mt-4 font-heading text-3xl leading-tight">
-                <Link href={`/blog/${post.slug}`} className="hover:text-[#0066ff] transition-colors">
+                <Link href={`/blog/${post.slug}`} className="hover:text-accent transition-colors">
                   {post.title}
                 </Link>
               </h2>
               <p className="mt-3 text-secondary leading-relaxed">{post.description}</p>
               <Link
                 href={`/blog/${post.slug}`}
-                className="mt-5 inline-block font-mono text-xs uppercase tracking-[0.2em] text-[#0066ff]"
+                className="mt-5 inline-block font-mono text-xs uppercase tracking-[0.2em] text-accent"
               >
                 Read Article →
               </Link>
