@@ -4,6 +4,7 @@ set -euo pipefail
 CONVEX_URL="https://rightful-mockingbird-389.convex.site"
 INSTALL_BASE="${CRYSTAL_INSTALL_BASE:-https://memorycrystal.ai}"
 PLUGIN_REPO_BASE="$INSTALL_BASE/install-assets/plugin"
+MIGRATE_URL="$INSTALL_BASE/migrate.sh"
 DEVICE_START_URL="$CONVEX_URL/api/device/start"
 DEVICE_STATUS_URL="$CONVEX_URL/api/device/status"
 API_KEY="${CRYSTAL_API_KEY:-}"
@@ -240,6 +241,44 @@ verify_openclaw_install() {
   echo "  ✓ Verified plugins.slots.memory = crystal-memory"
   echo "  ✓ Verified crystal-memory plugin is loaded"
   echo "  ✓ Verified crystal-memory memory_search/memory_get/crystal_search_messages + startup hook"
+  return 0
+}
+
+prompt_memory_import() {
+  local choice
+  local tmp_file
+
+  if [ ! -r /dev/tty ]; then
+    return 0
+  fi
+
+  echo ""
+  echo "  → Import existing OpenClaw memories? [Y/n]"
+  IFS= read -r choice < /dev/tty || true
+
+  case "$choice" in
+    ""|[Yy]|[Yy][Ee][Ss])
+      tmp_file="$(mktemp)"
+      if ! curl -fsSL "$MIGRATE_URL" -o "$tmp_file"; then
+        rm -f "$tmp_file"
+        echo "  ✗ Failed to download memory migration script: $MIGRATE_URL"
+        return 1
+      fi
+      chmod +x "$tmp_file"
+      if ! CRYSTAL_API_KEY="$API_KEY" "$tmp_file" --api-key "$API_KEY" --openclaw-dir "$OPENCLAW_DIR" --workspace-dir "$HOME"; then
+        rm -f "$tmp_file"
+        echo "  ✗ Memory import encountered errors. You can retry later with:"
+        echo "    curl -fsSL $MIGRATE_URL | bash -s -- --api-key <key>"
+        return 1
+      fi
+      rm -f "$tmp_file"
+      ;;
+    *)
+      echo "  → Skipped memory import. You can run it later with:"
+      echo "    curl -fsSL $MIGRATE_URL | bash -s -- --api-key <key>"
+      ;;
+  esac
+
   return 0
 }
 
@@ -498,6 +537,8 @@ case "$RESTART_CHOICE" in
     echo "    openclaw plugins info crystal-memory"
     ;;
 esac
+
+prompt_memory_import || true
 
 echo ""
 echo "  ┌─────────────────────────────────────────────────────┐"
