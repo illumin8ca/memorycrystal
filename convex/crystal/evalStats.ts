@@ -74,6 +74,7 @@ export const getMemoryHealthStats = query({
     let staleCount60d = 0;
     let staleCount90d = 0;
     let neverRecalledCount = 0;
+    let totalAccessCount = 0;
 
     for (const memory of memories) {
       if (memory.graphEnriched === true) graphEnrichedCount += 1;
@@ -82,6 +83,7 @@ export const getMemoryHealthStats = query({
       if (memory.lastAccessedAt <= stale90Cutoff) staleCount90d += 1;
       if (memory.accessCount === 0) neverRecalledCount += 1;
       totalStrength += memory.strength;
+      totalAccessCount += memory.accessCount;
     }
 
     const scanned = memories.length;
@@ -92,6 +94,12 @@ export const getMemoryHealthStats = query({
     const graphEnrichedPercent = scanned > 0
       ? Math.round((graphEnrichedCount / scanned) * 100)
       : 0;
+    const neverRecalledPercent = scanned > 0
+      ? Math.round((neverRecalledCount / scanned) * 100)
+      : 0;
+    const avgRecallsPerMemory = scanned > 0
+      ? totalAccessCount / scanned
+      : 0;
 
     return {
       totalMemories,
@@ -101,10 +109,46 @@ export const getMemoryHealthStats = query({
       staleCount60d: Math.round(staleCount60d * scale),
       staleCount90d: Math.round(staleCount90d * scale),
       neverRecalledCount: Math.round(neverRecalledCount * scale),
+      neverRecalledPercent,
       avgStrength,
+      totalAccessCount,
+      avgRecallsPerMemory,
       byStore,
       scannedSample: scanned,
     };
+  },
+});
+
+export const getCategoryBreakdown = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated");
+    const userId = stableUserId(identity.subject);
+    const safeLimit = clampLimit(limit, 8);
+
+    const memories = await ctx.db
+      .query("crystalMemories")
+      .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
+      .take(MAX_SCAN);
+
+    const counts = new Map<string, number>();
+
+    for (const memory of memories) {
+      const category = memory.category?.trim() || "uncategorized";
+      counts.set(category, (counts.get(category) ?? 0) + 1);
+    }
+
+    const total = memories.length;
+
+    return Array.from(counts.entries())
+      .map(([category, count]) => ({
+        category,
+        count,
+        percent: total > 0 ? Math.round((count / total) * 100) : 0,
+      }))
+      .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category))
+      .slice(0, safeLimit);
   },
 });
 
