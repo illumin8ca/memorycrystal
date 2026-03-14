@@ -225,7 +225,7 @@ plugin_installs["crystal-memory"] = {
     "source": "path",
     "sourcePath": plugin_path,
     "installPath": plugin_path,
-    "version": "0.2.3",
+    "version": "0.2.4",
 }
 
 after_config_raw = dump_pretty(data)

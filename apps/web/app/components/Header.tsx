@@ -10,7 +10,7 @@ const navItems = [
   { href: "/docs", label: "Docs" },
   { href: "/pricing", label: "Pricing" },
   { href: "/blog", label: "Blog" },
-  { href: "/whats-new", label: "What's New" },
+  { href: "/releases", label: "Releases" },
   { href: "/roadmap", label: "Roadmap" },
 ];
 

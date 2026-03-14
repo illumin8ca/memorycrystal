@@ -14,7 +14,7 @@ export default function Footer() {
             <Link href="/docs">Docs</Link>
             <Link href="/pricing">Pricing</Link>
             <Link href="/blog">Blog</Link>
-            <Link href="/whats-new">What&apos;s New</Link>
+            <Link href="/releases">Releases</Link>
             <a href="https://github.com" target="_blank" rel="noreferrer">
               GitHub
             </a>

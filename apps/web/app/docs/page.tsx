@@ -99,7 +99,7 @@ export default function DocsPage() {
                 <li>Signup auth flow fixed in production deployment</li>
                 <li>Homepage visuals, demo video, blog launch, and release workflow updates</li>
               </ul>
-              <p className="mt-4 text-secondary">For the full changelog, see <a href="/whats-new" className="text-accent hover:text-white">What&apos;s New</a>.</p>
+              <p className="mt-4 text-secondary">For the full changelog, see <a href="/releases" className="text-accent hover:text-white">Releases</a>.</p>
             </section>
 
             <section id="what-is-memory-crystal" className="glass-card border border-white/[0.08] p-6 sm:p-8">
