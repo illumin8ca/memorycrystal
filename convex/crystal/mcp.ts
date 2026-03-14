@@ -1267,32 +1267,79 @@ export const backfillUserIdOnMemories = internalMutation({
   },
 });
 
+const EMBEDDING_BACKFILL_PAGE_SIZE = 10;
+const EMBEDDING_BACKFILL_MAX_BYTES = 512 * 1024;
+
 export const backfillEmbeddings = internalAction({
   args: { limit: v.optional(v.number()) },
-  handler: async (ctx, { limit }): Promise<{ processed: number; succeeded: number }> => {
-    const memories = await ctx.runQuery(internal.crystal.mcp.listEmptyEmbeddingMemories, { limit: limit ?? 50 });
+  handler: async (ctx, { limit }): Promise<{ processed: number; succeeded: number; done: boolean }> => {
     const provider = getEmbeddingProvider();
-    if (!hasEmbeddingProviderCredentials(provider)) return { processed: 0, succeeded: 0 };
+    if (!hasEmbeddingProviderCredentials(provider)) return { processed: 0, succeeded: 0, done: true };
+
+    const target = Math.max(limit ?? 50, 1);
+    let cursor: string | null = null;
+    let processed = 0;
     let succeeded = 0;
-    for (const mem of memories) {
-      if (!mem.content?.trim()) continue;
-      try {
-        const vec = await embedText(mem.content);
-        if (Array.isArray(vec)) {
-          await ctx.runMutation(internal.crystal.mcp.patchMemoryEmbedding, { memoryId: mem._id, embedding: vec });
-          succeeded++;
+    let done = false;
+
+    while (succeeded < target) {
+      const page = await ctx.runQuery(internal.crystal.mcp.listMemoriesPageForEmbeddingBackfill, {
+        cursor: cursor ?? undefined,
+        pageSize: EMBEDDING_BACKFILL_PAGE_SIZE,
+      });
+
+      if (page.page.length === 0) {
+        done = true;
+        break;
+      }
+
+      for (const mem of page.page) {
+        processed++;
+        if (!mem.content?.trim() || (mem.embedding?.length ?? 0) > 0) {
+          continue;
         }
-      } catch {}
+        try {
+          const vec = await embedText(mem.content);
+          if (Array.isArray(vec)) {
+            await ctx.runMutation(internal.crystal.mcp.patchMemoryEmbedding, { memoryId: mem._id, embedding: vec });
+            succeeded++;
+            if (succeeded >= target) {
+              break;
+            }
+          }
+        } catch {}
+      }
+
+      if (page.isDone || !page.continueCursor) {
+        done = true;
+        break;
+      }
+
+      cursor = page.continueCursor;
     }
-    return { processed: memories.length, succeeded };
+
+    return { processed, succeeded, done };
   },
 });
 
-export const listEmptyEmbeddingMemories = internalQuery({
-  args: { limit: v.number() },
-  handler: async (ctx, { limit }) => {
-    const all = await ctx.db.query("crystalMemories").take(limit * 3);
-    return all.filter((m) => !m.embedding || m.embedding.length === 0).slice(0, limit);
+export const listMemoriesPageForEmbeddingBackfill = internalQuery({
+  args: { cursor: v.optional(v.string()), pageSize: v.number() },
+  handler: async (ctx, { cursor, pageSize }) => {
+    const page: any = await ctx.db.query("crystalMemories").order("desc").paginate({
+      numItems: Math.max(pageSize, 1),
+      cursor: cursor ?? null,
+      maximumBytesRead: EMBEDDING_BACKFILL_MAX_BYTES,
+    });
+
+    return {
+      page: (page.page as Array<any>).map((memory) => ({
+        _id: memory._id,
+        content: memory.content,
+        embedding: memory.embedding,
+      })),
+      isDone: page.isDone,
+      continueCursor: (page as any).continueCursor as string | undefined,
+    };
   },
 });
 
