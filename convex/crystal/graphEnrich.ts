@@ -376,6 +376,15 @@ export const findAssociationTargetMemory = internalQuery({
   },
 });
 
+const GRAPH_BACKFILL_PAGE_SIZE = 10;
+const GRAPH_BACKFILL_MAX_BYTES = 512 * 1024;
+
+type GraphBackfillPage = {
+  page: Array<{ _id: Id<"crystalMemories">; userId: string }>;
+  isDone: boolean;
+  continueCursor?: string;
+};
+
 export const listUnenrichedMemoriesForUser = internalQuery({
   args: {
     userId: v.string(),
@@ -395,6 +404,35 @@ export const listUnenrichedMemoriesForUser = internalQuery({
       .take(args.limit - falseRows.length);
 
     return [...falseRows, ...undefinedRows];
+  },
+});
+
+export const listUnenrichedMemoriesPageForUser = internalQuery({
+  args: {
+    userId: v.string(),
+    state: v.union(v.literal("false"), v.literal("undefined")),
+    cursor: v.optional(v.string()),
+    pageSize: v.number(),
+  },
+  handler: async (ctx, args): Promise<GraphBackfillPage> => {
+    const graphEnrichedValue = args.state === "false" ? false : undefined;
+    const page: any = await ctx.db
+      .query("crystalMemories")
+      .withIndex("by_graph_enriched", (q) => q.eq("graphEnriched", graphEnrichedValue).eq("userId", args.userId))
+      .paginate({
+        numItems: Math.max(args.pageSize, 1),
+        cursor: args.cursor ?? null,
+        maximumBytesRead: GRAPH_BACKFILL_MAX_BYTES,
+      });
+
+    return {
+      page: (page.page as Array<any>).map((memory) => ({
+        _id: memory._id,
+        userId: memory.userId,
+      })),
+      isDone: page.isDone,
+      continueCursor: page.continueCursor as string | undefined,
+    };
   },
 });
 
@@ -517,36 +555,72 @@ export const enrichMemoryGraph: ReturnType<typeof internalAction> = internalActi
 
 export const backfillGraphEnrichment = action({
   args: { maxMemories: v.optional(v.number()), userId: v.optional(v.string()) },
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ processed: number; succeeded: number; done: boolean }> => {
     const requested = Math.trunc(args.maxMemories ?? 100);
-    const maxMemories = clamp(Number.isFinite(requested) ? requested : 100, 1, 500);
+    const target = clamp(Number.isFinite(requested) ? requested : 100, 1, 500);
 
     const userIds = args.userId ? [args.userId] : ((await ctx.runQuery(internal.crystal.userProfiles.listAllUserIds, {})) as string[]);
-    const scheduledMemories: Array<{ memoryId: Id<"crystalMemories">; userId: string }> = [];
+    let processed = 0;
+    let succeeded = 0;
+    let done = true;
 
     for (const userId of userIds) {
-      if (scheduledMemories.length >= maxMemories) break;
+      if (succeeded >= target) {
+        done = false;
+        break;
+      }
 
-      const remaining = maxMemories - scheduledMemories.length;
-      const memories = await ctx.runQuery(internal.crystal.graphEnrich.listUnenrichedMemoriesForUser, {
-        userId,
-        limit: remaining,
-      });
+      const states: Array<"false" | "undefined"> = ["false", "undefined"];
 
-      for (const memory of memories) {
-        if (scheduledMemories.length >= maxMemories) break;
-        scheduledMemories.push({ memoryId: memory._id, userId });
+      for (const state of states) {
+        if (succeeded >= target) {
+          done = false;
+          break;
+        }
+
+        let cursor: string | undefined = undefined;
+
+        while (succeeded < target) {
+          const page = (await ctx.runQuery(internal.crystal.graphEnrich.listUnenrichedMemoriesPageForUser, {
+            userId,
+            state,
+            cursor,
+            pageSize: GRAPH_BACKFILL_PAGE_SIZE,
+          })) as GraphBackfillPage;
+
+          if (page.page.length === 0) {
+            break;
+          }
+
+          for (const memory of page.page) {
+            processed += 1;
+            const result = await ctx.runAction(internal.crystal.graphEnrich.enrichMemoryGraph, {
+              memoryId: memory._id,
+              userId: memory.userId,
+            });
+
+            if (result?.enriched) {
+              succeeded += 1;
+              if (succeeded >= target) {
+                done = false;
+                break;
+              }
+            }
+          }
+
+          if (succeeded >= target) {
+            break;
+          }
+
+          if (page.isDone || !page.continueCursor) {
+            break;
+          }
+
+          cursor = page.continueCursor;
+        }
       }
     }
 
-    for (let i = 0; i < scheduledMemories.length; i++) {
-      const item = scheduledMemories[i];
-      await ctx.scheduler.runAfter(500 * i, internal.crystal.graphEnrich.enrichMemoryGraph, {
-        memoryId: item.memoryId,
-        userId: item.userId,
-      });
-    }
-
-    return { scheduled: scheduledMemories.length };
+    return { processed, succeeded, done };
   },
 });

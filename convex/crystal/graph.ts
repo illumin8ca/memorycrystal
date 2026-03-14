@@ -1,6 +1,7 @@
 import { stableUserId } from "./auth";
 import { v } from "convex/values";
 import { internalQuery, mutation, query } from "../_generated/server";
+import { getDashboardTotals } from "./dashboardTotals";
 
 const nowMs = () => Date.now();
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -199,10 +200,39 @@ export const getKnowledgeGraphFoundationStatus = query({
   },
 });
 
+const GRAPH_STATUS_PAGE_SIZE = 100;
+const GRAPH_STATUS_MAX_BYTES = 4_000_000;
+
+async function countGraphEnrichedMemories(ctx: any, userId: string): Promise<number> {
+  let count = 0;
+  let cursor: string | null = null;
+
+  while (true) {
+    const page: any = await ctx.db
+      .query("crystalMemories")
+      .withIndex("by_graph_enriched", (q: any) => q.eq("graphEnriched", true).eq("userId", userId))
+      .paginate({
+        numItems: GRAPH_STATUS_PAGE_SIZE,
+        cursor,
+        maximumBytesRead: GRAPH_STATUS_MAX_BYTES,
+      });
+
+    count += page.page.length;
+
+    if (page.isDone || !page.continueCursor) {
+      break;
+    }
+
+    cursor = page.continueCursor;
+  }
+
+  return count;
+}
+
 export const getUserGraphStatus = internalQuery({
   args: { userId: v.string() },
   handler: async (ctx, { userId }) => {
-    const [nodes, relations, enrichedMemories, totalMemories] = await Promise.all([
+    const [nodes, relations, totals, enrichedCount] = await Promise.all([
       ctx.db
         .query("crystalNodes")
         .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -211,20 +241,13 @@ export const getUserGraphStatus = internalQuery({
         .query("crystalRelations")
         .withIndex("by_user", (q) => q.eq("userId", userId))
         .collect(),
-      ctx.db
-        .query("crystalMemories")
-        .withIndex("by_graph_enriched", (q) => q.eq("graphEnriched", true).eq("userId", userId))
-        .collect(),
-      ctx.db
-        .query("crystalMemories")
-        .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
-        .collect(),
+      getDashboardTotals(ctx, userId),
+      countGraphEnrichedMemories(ctx, userId),
     ]);
 
     const totalNodes = nodes.length;
     const totalRelations = relations.length;
-    const enrichedCount = enrichedMemories.length;
-    const totalMemoryCount = totalMemories.length;
+    const totalMemoryCount = totals.activeMemories;
 
     return {
       totalNodes,
