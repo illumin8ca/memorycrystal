@@ -1,0 +1,94 @@
+---
+title: "How to Add Persistent Memory to Your OpenClaw Agent"
+description: "Detailed OpenClaw integration guide for Memory Crystal plugin hooks, wake briefings, and recall behavior under the hood."
+date: "2026-03-12"
+category: "guides"
+tags: ["openclaw", "plugins", "memory"]
+author: "Memory Crystal Team"
+---
+
+# OpenClaw integration, minus the hand-waving
+
+If you already use OpenClaw, Memory Crystal should behave like native infrastructure: invisible when healthy, obvious when broken.
+
+## Integration model
+
+Memory Crystal hooks into three phases:
+
+1. **Capture hook** after assistant/user messages settle
+2. **Wake hook** when a session starts
+3. **Recall hook** during relevant queries
+
+That means you don’t manually serialize context. The plugin does it continuously.
+
+## Install in workspace mode
+
+```bash
+cd /Users/gerald/projects/memorycrystal
+npm install @memorycrystal/openclaw-plugin
+```
+
+Then register plugin config:
+
+```json
+{
+  "plugins": {
+    "memory-crystal": {
+      "enabled": true,
+      "apiKeyEnv": "MEMORY_CRYSTAL_API_KEY",
+      "wakeBriefing": true,
+      "maxRecallItems": 8
+    }
+  }
+}
+```
+
+## Wake briefings explained
+
+Wake briefing is not just “recent chat.” It combines:
+
+- high-salience long-term memories
+- recent message matches
+- open goals/decisions if present
+
+This gives the model a compact operational snapshot before any user prompt.
+
+## Recall flow under the hood
+
+When you ask something memory-relevant, the plugin:
+
+1. builds a semantic query from current user intent
+2. searches vector memory + graph edges
+3. re-ranks by recency, salience, and relationship proximity
+4. injects top memories as context snippets
+
+The model never sees the entire database. It sees the top-ranked slice.
+
+## Hook reliability checklist
+
+- log hook registration at startup
+- fail closed on invalid key (don’t pretend memory works)
+- idempotent install scripts for upgrades
+- structured errors for 401/429/500
+
+## Debugging empty recall
+
+Run a controlled test:
+
+1. Save deterministic fact: “Project codename is Aurora-7.”
+2. Start new session.
+3. Ask: “What is project codename?”
+
+If empty, check API key, namespace, and whether capture events fire.
+
+## Production tuning
+
+- Keep `maxRecallItems` small (6–10)
+- Use category-aware recall modes (decision/project/people)
+- checkpoint after releases and incident retros
+
+OpenClaw performs best when memory context is sharp, not bloated.
+
+## Bottom line
+
+Integration is straightforward. The hard part is memory hygiene and retrieval quality. Get hooks stable first, then optimize ranking.

@@ -1,0 +1,95 @@
+---
+title: "Building AI Agents That Actually Remember: A Developer's Guide"
+description: "A technical guide to episodic and semantic memory, embedding choices, and retrieval strategies that avoid naive memory failure modes."
+date: "2026-03-11"
+category: "guides"
+tags: ["agents", "architecture", "embeddings"]
+author: "Memory Crystal Team"
+---
+
+# Most agent memory systems are toys
+
+A lot of “memory” implementations are glorified chat logs plus vector search. That fails in production because memory has to support **decision continuity**, not just fuzzy text matching.
+
+## Two memory types you must separate
+
+### Episodic memory
+Who did what, when, under what constraints.
+
+### Semantic memory
+Stable facts: architecture choices, owners, conventions.
+
+If you mix them in one flat namespace, retrieval quality degrades quickly.
+
+## Why naive approaches fail
+
+- no salience scoring
+- no temporal decay rules
+- no entity linking
+- no checkpoint boundaries
+- no write governance (everything gets stored)
+
+Result: noisy recalls, stale context, and hallucinated continuity.
+
+## Embeddings are table stakes, not strategy
+
+Use strong embeddings, yes. But the winning system combines:
+
+1. vector similarity
+2. metadata filters
+3. graph relationships
+4. scoring pipeline with intent-aware reranking
+
+```ts
+function rank(memory, queryIntent) {
+  return (
+    0.45 * memory.semanticScore +
+    0.25 * memory.recencyScore +
+    0.20 * memory.salienceScore +
+    0.10 * memory.graphProximity(queryIntent.entities)
+  );
+}
+```
+
+## Write path matters more than search path
+
+Garbage in, garbage forever. On capture, assign:
+
+- type (episodic/semantic)
+- entities (people, projects, tools)
+- confidence
+- TTL policy
+- source attribution
+
+## Retrieval budget
+
+Don’t inject 30 memories. Give the model 5–10 excellent ones.
+
+Use a token budget allocator:
+
+- decisions: high priority
+- active project context: medium
+- personal preference context: low/medium unless directly asked
+
+## Evaluation loop
+
+Track recall precision with deterministic probes:
+
+- “Who owns service X?”
+- “Why did we choose queue Y?”
+- “What constraint blocked release Z?”
+
+Measure hit rate, ranking quality, and stale-memory frequency.
+
+## Pattern that works
+
+- short-term stream for recent turns
+- long-term store for durable facts/events
+- periodic consolidation job
+- explicit checkpoints on major milestones
+
+This is how agents stop behaving like amnesiac interns.
+
+## Final take
+
+Memory is a product surface, not a side feature. Design capture quality, retrieval ranking, and lifecycle policies with the same rigor you apply to your API layer.

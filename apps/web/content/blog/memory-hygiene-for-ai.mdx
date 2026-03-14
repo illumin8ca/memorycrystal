@@ -1,0 +1,76 @@
+---
+title: "Memory Hygiene: Keeping Your AI's Memory Clean and Useful"
+description: "Best practices for preventing memory bloat with scoring, TTLs, pruning jobs, and checkpoint discipline."
+date: "2026-03-05"
+category: "best practices"
+tags: ["hygiene", "ttl", "quality"]
+author: "Memory Crystal Team"
+---
+
+# Memory hygiene is operational hygiene
+
+Persistent memory without governance turns into a landfill.
+
+## Symptoms of memory bloat
+
+- irrelevant recalls
+- stale advice resurfacing
+- higher latency as candidate sets grow
+
+## Hygiene fundamentals
+
+### 1) Importance scoring on write
+Not all messages deserve permanence.
+
+### 2) TTL for low-value items
+Temporary plans should expire automatically.
+
+### 3) Pruning jobs
+Regularly demote or archive low-signal memories.
+
+### 4) Checkpoints for milestones
+Snapshot meaningful states so retrieval can anchor around them.
+
+## Practical scoring model
+
+```ts
+const importance =
+  0.4 * novelty +
+  0.3 * decisionImpact +
+  0.2 * reusability +
+  0.1 * userExplicitSave;
+```
+
+Persist only above threshold.
+
+## Pruning policy example
+
+- low salience + old + never retrieved -> archive
+- contradicting memories -> mark superseded
+- duplicate summaries -> merge
+
+## Avoid silent drift
+
+Run weekly probe questions and compare expected answers. If precision drops, inspect recent write quality first.
+
+## Human-in-the-loop moments
+
+Give operators tools to:
+
+- pin critical memories
+- invalidate outdated facts
+- inspect why a recall was ranked highly
+
+## Security angle
+
+Hygiene also reduces exposure. Less unnecessary retention means smaller blast radius.
+
+## Checklist
+
+- capture filters enabled
+- TTL defaults configured
+- pruning scheduled
+- supersession logic active
+- recall probes monitored
+
+Memory quality compounds over time if you maintain it. It decays if you don’t.

@@ -1,0 +1,70 @@
+---
+title: "Why Your AI Coding Assistant Forgets Your Codebase (And How to Fix It)"
+description: "A practical fix for coding-assistant context loss across sessions in tools like Claude Code, Copilot, and Cursor."
+date: "2026-03-09"
+category: "use cases"
+tags: ["coding", "developer-tools", "context"]
+author: "Memory Crystal Team"
+---
+
+# The re-explanation tax is real
+
+You explain architecture on Monday. By Tuesday, your assistant forgot half of it. By Friday, you’re writing the same primer again.
+
+## Why this happens
+
+Coding assistants optimize for current window + short conversation history. They don’t preserve durable project context unless you build that layer.
+
+## What to store
+
+- repository topology
+- ownership map
+- non-obvious constraints
+- ADR summaries
+- coding conventions
+
+## Example memory entries
+
+```md
+- payments-service uses outbox pattern; never publish events inside request transaction
+- all external API calls go through /lib/http/client.ts wrapper
+- tenancy boundary is org_id, never workspace_id
+```
+
+## Retrieval pattern for coding tasks
+
+When prompt includes file paths, architecture terms, or migration words, fetch:
+
+1. relevant ADR memories
+2. prior bug postmortems on same subsystem
+3. team conventions for touched files
+
+## Why vector-only fails
+
+Similarity alone may return “sort of related” notes. Add metadata filters (repo, subsystem, env) and graph edges (dependsOn, ownedBy).
+
+## Practical OpenClaw flow
+
+- wake briefing injects current project context
+- on `implement/fix/refactor` intents, run targeted recall mode
+- cap memory injection to avoid prompt bloat
+
+## Developer UX win
+
+You stop writing this in every session:
+
+“Remember, we use event sourcing in billing and CQRS read models in analytics.”
+
+The system already knows.
+
+## Team impact
+
+New engineers ramp faster because the assistant carries institutional memory that usually lives in fragmented docs and tribal knowledge.
+
+## Short checklist
+
+- define memory schema per repo
+- add checkpoint on major merges
+- run recall probes weekly
+
+Do this and your coding assistant starts behaving like a teammate with continuity.

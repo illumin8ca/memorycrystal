@@ -9,6 +9,7 @@ import CrystalIcon from "./CrystalIcon";
 const navItems = [
   { href: "/docs", label: "Docs" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/blog", label: "Blog" },
   { href: "/whats-new", label: "What's New" },
   { href: "/roadmap", label: "Roadmap" },
 ];

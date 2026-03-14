@@ -1,0 +1,74 @@
+---
+title: "Customer Support Agents That Know Your History"
+description: "How persistent memory upgrades support bots by retaining ticket history, customer preferences, and cross-session context."
+date: "2026-03-10"
+category: "use cases"
+tags: ["support", "customer-success", "memory"]
+author: "Memory Crystal Team"
+---
+
+# Support gets better when context survives
+
+Most support bots treat every chat as day zero. Customers hate that.
+
+## The before state
+
+- repeated identity verification
+- repeated troubleshooting steps
+- no awareness of prior escalations
+
+## The memory-powered state
+
+A strong support agent should recall:
+
+- recent ticket summaries
+- user plan and environment constraints
+- known failed fixes
+- preference signals (email follow-up, timezone, urgency style)
+
+## Practical implementation
+
+Store compact support memories:
+
+```json
+{
+  "customerId": "cus_891",
+  "type": "episodic",
+  "category": "support-ticket",
+  "summary": "SAML login loops on Safari 17 after IdP metadata refresh",
+  "resolution": "pending",
+  "importance": 0.83
+}
+```
+
+On new conversations, retrieve last 3 tickets + unresolved blockers.
+
+## Why this matters
+
+- lower average handle time
+- fewer escalations
+- better CSAT because customers feel heard
+
+## Guardrails
+
+Memory should not expose secrets or internal notes that were never intended for customers. Use role-aware recall filters.
+
+## Team workflow impact
+
+Human agents benefit too. When they take over, they inherit a useful timeline instead of raw transcript noise.
+
+## Good memory prompt
+
+“Customer has failed DNS verification twice this week; avoid repeating basic propagation advice; check registrar-specific edge case first.”
+
+That one line can save 15 minutes.
+
+## KPI improvements to track
+
+- first-response resolution rate
+- repeat contact rate within 7 days
+- customer effort score
+
+## Bottom line
+
+Support memory isn’t gimmicky personalization. It’s operational leverage: less repetition, faster diagnosis, better trust.

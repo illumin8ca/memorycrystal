@@ -1,0 +1,70 @@
+---
+title: "Personal AI Assistants That Actually Know You"
+description: "A case-study style walkthrough of personal assistant memory: preferences, scheduling context, and proactive behavior."
+date: "2026-03-08"
+category: "use cases"
+tags: ["assistant", "productivity", "personalization"]
+author: "Memory Crystal Team"
+---
+
+# Personal assistants should feel personal
+
+A “personal AI assistant” that forgets your defaults is just a chatbot with branding.
+
+## What useful memory looks like
+
+- preferred meeting windows
+- writing style preferences
+- recurring commitments
+- travel constraints
+- decision history (“why we stopped doing X”)
+
+## Case style scenario
+
+A founder asks for weekly planning. The assistant recalls:
+
+- deep work blocked mornings Tue/Thu
+- no calls after 4:30 PM local
+- investor updates go out Fridays
+
+Instead of asking ten setup questions, it proposes a realistic plan in one pass.
+
+## Preference memory examples
+
+```json
+{
+  "type": "semantic",
+  "category": "user-preference",
+  "key": "status-update-style",
+  "value": "bullets first, then risks, then asks"
+}
+```
+
+## Proactive behavior requires trust
+
+The assistant should surface reminders when confidence is high, not spam every weak signal.
+
+Good: “You usually send launch recap before 3 PM; draft ready?”
+Bad: generic nudges that ignore context.
+
+## Privacy boundaries
+
+Personal memory must be scoped by user identity and account key. Shared workspaces need strict separation.
+
+## Retention strategy
+
+Not every message deserves permanence. Use salience + recency + confirmation loops.
+
+- temporary tasks: short TTL
+- long-lived preferences: durable
+- sensitive items: encrypted and minimised
+
+## Why this changes behavior
+
+When memory works, the user starts delegating more. That’s the signal.
+
+You get fewer setup prompts and more “just handle this.”
+
+## Final point
+
+A personal assistant becomes truly useful when it remembers responsibly, predicts carefully, and stays out of the way unless it can be genuinely helpful.

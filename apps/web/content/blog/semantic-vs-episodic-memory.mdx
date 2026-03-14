@@ -1,0 +1,79 @@
+---
+title: "Semantic vs Episodic Memory in AI: What's the Difference and Why It Matters"
+description: "Explains semantic and episodic memory in practical engineering terms with retrieval examples and implementation guidance."
+date: "2026-03-06"
+category: "architecture"
+tags: ["semantic-memory", "episodic-memory", "ai"]
+author: "Memory Crystal Team"
+---
+
+# This distinction is not academic
+
+If your AI system treats every memory the same, performance degrades fast.
+
+## Semantic memory
+
+Facts and stable knowledge:
+
+- “Primary DB is Postgres 16”
+- “Security reviews happen before release branch cut”
+
+These should persist, update when invalidated, and rank highly for policy/architecture questions.
+
+## Episodic memory
+
+Time-bound events:
+
+- “On Tuesday we rolled back deploy due to migration lock contention”
+- “Customer X escalated after webhook retries failed”
+
+These matter for retros, status, and local reasoning.
+
+## Retrieval differences
+
+Semantic queries prefer durable high-confidence entries.
+Episodic queries prefer temporally adjacent events and causal chains.
+
+## Schema guidance
+
+```ts
+type Memory = {
+  type: "semantic" | "episodic";
+  timestamp: string;
+  ttl?: number;
+  confidence: number;
+  entities: string[];
+};
+```
+
+## Common anti-pattern
+
+Storing meeting chatter as permanent semantic truth. That pollutes long-term recall.
+
+## Promotion rules
+
+A good system can promote recurring episodic signals into semantic facts after repeated confirmation.
+
+Example:
+
+- Episode 1: “Team used blue/green deploy for release A.”
+- Episode 2: “release B also blue/green.”
+- Episode 3: “release checklist references blue/green by default.”
+
+Now it’s probably a semantic convention.
+
+## Query intent routing
+
+Map user intent first:
+
+- “what happened” -> episodic mode
+- “what do we do” -> semantic mode
+- “why did we” -> mixed mode
+
+## Why this matters in production
+
+The right separation improves precision, lowers hallucinated continuity, and keeps token usage tighter because you inject fewer irrelevant memories.
+
+## Final recommendation
+
+Treat semantic and episodic memory as separate products sharing infrastructure. Same database, different lifecycle and ranking behavior.

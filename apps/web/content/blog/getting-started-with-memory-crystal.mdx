@@ -1,0 +1,101 @@
+---
+title: "Getting Started with Memory Crystal: Your First 5 Minutes"
+description: "Complete beginner setup guide to install Memory Crystal, connect your key, and verify persistent recall in one short session."
+date: "2026-03-13"
+category: "guides"
+tags: ["memory", "openclaw", "quickstart"]
+author: "Memory Crystal Team"
+---
+
+# Why this takes five minutes, not five hours
+
+Most AI memory setups fail for one reason: too many moving parts before you see any value. Memory Crystal is designed to do the opposite. You should be able to install it, connect one API key, run two prompts, and **see memory recall immediately**.
+
+## Step 1: Install
+
+From your project root, run:
+
+```bash
+curl -fsSL https://memorycrystal.ai/install | bash
+```
+
+The installer checks your environment, adds the plugin, and wires the hooks that capture conversational context.
+
+## Step 2: Add your API key
+
+Go to the dashboard, create a key, then set it in your environment.
+
+```bash
+export MEMORY_CRYSTAL_API_KEY="mc_live_xxx"
+```
+
+If you use OpenClaw, place it in your normal secret store so new sessions inherit it automatically.
+
+## Step 3: Restart and verify plugin load
+
+Restart the agent runtime. Then run a simple identity test:
+
+```text
+Remember that my preferred deployment region is us-west-2.
+```
+
+Then in a **new session** ask:
+
+```text
+What region do I prefer for deployments?
+```
+
+If configured correctly, your agent should recall *us-west-2* with a confidence score or memory reference.
+
+## Step 4: Confirm write + recall paths
+
+You want both directions working:
+
+- capture path (conversation -> memory store)
+- recall path (query -> ranked results)
+
+Use one operational memory and one personal preference memory. Example:
+
+1. “Our billing service repo is `services/billing-api`.”
+2. “I like release notes in bullet format.”
+
+Then ask for both in a new turn. If both are recalled, your core pipeline is healthy.
+
+## Step 5: Add a checkpoint habit
+
+When finishing meaningful work, create a checkpoint. This keeps your timeline clean and improves future retrieval around milestones.
+
+```text
+Create a checkpoint named 'finished stripe retry migration'.
+```
+
+## Common setup mistakes
+
+### Wrong key scope
+If recalls are empty, your key may be tied to the wrong project/workspace.
+
+### Hooks never ran
+If install succeeded but memory is blank, verify hooks were actually attached to your runtime event lifecycle.
+
+### Testing in one giant session
+Short-term context can mask real failures. Always test recall in a fresh session.
+
+## What “good” looks like
+
+A healthy setup gives you:
+
+- retrieval in <2 seconds for normal prompts
+- relevant memories near the top
+- no need to re-explain personal preferences
+
+Once this is stable, you can move to richer memory design: tags, categories, salience, and expiration policies.
+
+## Final checklist
+
+- [x] installer completed
+- [x] API key configured
+- [x] memory captured
+- [x] memory recalled in fresh session
+- [x] checkpoint created
+
+That’s it. You now have persistent memory. Everything else is optimization.

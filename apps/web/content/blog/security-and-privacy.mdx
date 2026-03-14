@@ -1,0 +1,77 @@
+---
+title: "Security and Privacy in AI Memory Systems"
+description: "Security design for AI memory including tenant isolation, key scoping, retention controls, and data minimization boundaries."
+date: "2026-03-04"
+category: "best practices"
+tags: ["security", "privacy", "compliance"]
+author: "Memory Crystal Team"
+---
+
+# Memory is valuable, so treat it like production data
+
+AI memory stores become sensitive quickly: project decisions, customer details, internal strategy. Security cannot be optional.
+
+## Core principles
+
+1. least privilege access
+2. tenant isolation by default
+3. data minimization
+4. auditable operations
+
+## API key scoping
+
+Each key should map to a strict namespace. A key for one workspace must never read another workspace memory.
+
+## What should be stored
+
+- actionable summaries
+- technical decisions
+- stable preferences
+
+## What should not be stored
+
+- raw secrets
+- unnecessary personal identifiers
+- full sensitive transcripts when summary is enough
+
+## Encryption and transport
+
+- TLS for all in-transit traffic
+- encrypted storage at rest
+- rotate credentials on a schedule
+
+## Access controls
+
+Build role-aware read paths:
+
+- operator tooling can inspect metadata
+- end-user-facing assistant only receives filtered recall snippets
+
+## Retention controls
+
+Support per-category TTL and deletion workflows. Compliance requires practical deletion, not “we’ll clean it eventually.”
+
+## Auditability
+
+Track:
+
+- who wrote memory
+- who retrieved memory
+- when deletion or supersession occurred
+
+This is critical for trust and incident response.
+
+## Incident containment
+
+If key leakage occurs:
+
+1. revoke key immediately
+2. rotate derived tokens
+3. review access logs
+4. notify affected tenant if required
+
+## Architecture stance
+
+Security in memory systems is mostly boundary discipline: strict scoping, minimal retention, and transparent operations.
+
+Do those three well and you avoid most catastrophic failure modes.

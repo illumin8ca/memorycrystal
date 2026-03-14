@@ -1,0 +1,86 @@
+---
+title: "Under the Hood: How Memory Crystal Stores and Recalls Memories"
+description: "Technical architecture deep-dive covering Convex backend, embeddings, vector retrieval, graph enrichment, and STM/LTM design."
+date: "2026-03-07"
+category: "architecture"
+tags: ["convex", "vector-search", "system-design"]
+author: "Memory Crystal Team"
+---
+
+# System overview
+
+Memory Crystal is a layered memory system, not a single table with embeddings.
+
+## Core layers
+
+1. **Capture pipeline** from agent events
+2. **Normalization and enrichment**
+3. **Storage in Convex**
+4. **Embedding and indexing**
+5. **Recall and reranking**
+
+## Convex as operational backend
+
+Convex handles structured memory records, per-key namespaces, and query APIs with predictable latency.
+
+Each memory record includes:
+
+- content summary
+- memory type
+- entities/relationships
+- salience score
+- retention policy
+
+## Embedding strategy
+
+Memory Crystal uses Gemini embeddings for semantic vectors. Text is chunked conservatively to preserve coherence. Over-chunking hurts retrieval quality.
+
+## STM vs LTM
+
+### Short-term memory
+Recent message stream used for exact-turn continuity.
+
+### Long-term memory
+Durable facts/events optimized for cross-session recall.
+
+A consolidation process promotes strong STM signals into LTM when importance thresholds are met.
+
+## Graph enrichment
+
+Vector recall answers “similar text.” Graph enrichment answers “related entity context.”
+
+If a query mentions `billing migration`, graph edges can bring in owner, impacted repos, and prior decision notes even if phrasing differs.
+
+## Recall pipeline
+
+```ts
+const candidates = await vectorSearch(queryEmbedding, 30);
+const enriched = await attachGraphContext(candidates, entities);
+const ranked = rerank(enriched, intent, recency);
+return ranked.slice(0, 8);
+```
+
+## Multi-tenant safety
+
+Every request is scoped by API key/project namespace. Cross-tenant recall is blocked by design.
+
+## Observability
+
+Useful metrics:
+
+- capture success rate
+- recall latency p95
+- precision@k on probe set
+- stale-memory incidence
+
+## Failure modes and mitigations
+
+- noisy capture -> stricter write filters
+- stale context -> TTL + freshness boosts
+- empty recall -> fallback modes + diagnostics
+
+## Architecture principle
+
+Fast, scoped, and explainable recall beats “retrieve everything and hope the model figures it out.”
+
+That principle is why Memory Crystal remains stable as memory volume grows.
