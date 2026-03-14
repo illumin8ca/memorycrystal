@@ -6,6 +6,7 @@ import Footer from "../components/Footer";
 import { formatLimit, formatTtlDays, TIER_LIMITS } from "@shared/tierLimits";
 
 const sections = [
+  { id: "release-notes", label: "Release Notes" },
   { id: "what-is-memory-crystal", label: "What is Memory Crystal?" },
   { id: "getting-started", label: "Getting Started" },
   { id: "memory-architecture", label: "Memory Architecture" },
@@ -89,6 +90,18 @@ export default function DocsPage() {
           </aside>
 
           <div className="space-y-8">
+            <section id="release-notes" className="glass-card border border-white/[0.08] p-6 sm:p-8">
+              <h2 className="font-heading text-3xl">Release Notes</h2>
+              <p className="mt-4 text-secondary">Latest release: <span className="text-primary">v0.2.4</span> (March 13, 2026).</p>
+              <ul className="mt-4 space-y-2 text-secondary list-disc pl-5">
+                <li>OpenClaw v2026.3.12 compatibility updates for the plugin and installer</li>
+                <li>Install script now cleans legacy hook entries to make upgrades safer</li>
+                <li>Signup auth flow fixed in production deployment</li>
+                <li>Homepage visuals, demo video, blog launch, and release workflow updates</li>
+              </ul>
+              <p className="mt-4 text-secondary">For the full changelog, see <a href="/whats-new" className="text-accent hover:text-white">What&apos;s New</a>.</p>
+            </section>
+
             <section id="what-is-memory-crystal" className="glass-card border border-white/[0.08] p-6 sm:p-8">
               <h2 className="font-heading text-3xl">1. What is Memory Crystal?</h2>
               <p className="mt-4 text-secondary">Memory Crystal is an MCP-compatible memory layer for agents. It captures, stores, and recalls context so your model can continue across sessions with less loss of continuity.</p>

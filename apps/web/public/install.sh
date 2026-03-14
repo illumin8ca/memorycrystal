@@ -312,13 +312,13 @@ const installChanged =
   existingInstall.source !== 'path' ||
   existingInstall.sourcePath !== activePath ||
   existingInstall.installPath !== activePath ||
-  existingInstall.version !== '0.2.3';
+  existingInstall.version !== '0.2.4';
 
 cfg.plugins.installs['crystal-memory'] = {
   source: 'path',
   sourcePath: activePath,
   installPath: activePath,
-  version: '0.2.3',
+  version: '0.2.4',
   installedAt: installChanged
     ? new Date().toISOString()
     : (typeof existingInstall.installedAt === 'string' && existingInstall.installedAt

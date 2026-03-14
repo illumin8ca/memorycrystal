@@ -3,6 +3,20 @@ import Footer from "../components/Footer";
 
 const releaseEntries = [
   {
+    version: "v0.2.4",
+    date: "March 13, 2026",
+    items: [
+      "OpenClaw v2026.3.12 compatibility — cleaned stale hook entries, verified plugin loads under new security model",
+      "Install script now cleans legacy cortex-mcp hook entries for smoother upgrades",
+      "Fixed signup auth flow — synced missing SENDGRID_API_KEY and AUTH_SECRET to production Convex deployment",
+      "Added Remotion video project for programmatic product demo generation (video/)",
+      "Homepage placeholders replaced with generated product visuals and autoplay demo video",
+      "Added mandatory release workflow to repo AGENTS.md — version bumps require What&apos;s New + docs updates",
+      "Daily OpenClaw release monitor cron — automatically checks for upstream changes affecting Memory Crystal",
+      "Blog section launched with 10 articles covering use cases, guides, and best practices",
+    ],
+  },
+  {
     version: "v0.2.3",
     date: "March 12, 2026",
     items: [
