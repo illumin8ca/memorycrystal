@@ -68,6 +68,25 @@ This package is a plain Node HTTP service and can be deployed on Railway, Fly.io
 npm run start --workspace packages/mcp-server
 ```
 
+### Railway (monorepo)
+
+This repo already has a root `railway.toml` for the web app, so the MCP service must use its own config file.
+
+Use these **service settings** in Railway for the `mcp-server` service:
+
+- **Root Directory:** `/packages/mcp-server`
+- **Railway Config File:** `/packages/mcp-server/railway.toml`
+- **Port:** `3100`
+
+The package-local `railway.toml` handles:
+
+- build: `npm install && npm run build`
+- start: `node dist/index.js`
+- healthcheck: `/health`
+- watch path: `/packages/mcp-server/**`
+
+Why this matters: Railway will otherwise pick up the repo-root `railway.toml` and boot the Next.js web app instead of the MCP server.
+
 ## Notes
 
 - The server uses the official `@modelcontextprotocol/sdk` Streamable HTTP transport.
