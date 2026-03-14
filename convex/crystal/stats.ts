@@ -23,7 +23,7 @@ function pickLatestProfile<T extends { updatedAt?: number }>(profiles: T[]): T |
 
 const PRO_PRODUCT_ID = "f78ee82b-719e-4de8-850a-3e9eea3db4b0";
 const ULTRA_PRODUCT_ID = "9d59dd76-5026-4079-95f7-bf594f71121b";
-const UNLIMITED_EMAILS = ["andy@illumin8.ca", "admin@illumin8.ca", "andydoucet@gmail.com"];
+const UNLIMITED_EMAILS = ["admin@illumin8.ca", "admin@memorycrystal.ai"];
 
 function deriveTierFromProfile(
   profile: { subscriptionStatus?: string; plan?: string } | null | undefined,

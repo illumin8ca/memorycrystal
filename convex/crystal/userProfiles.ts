@@ -6,7 +6,7 @@ import { resolveEffectiveUserId } from "./impersonation";
 
 export type UserTier = "free" | "starter" | "pro" | "ultra" | "unlimited";
 
-const UNLIMITED_EMAILS = ["andy@illumin8.ca", "admin@illumin8.ca", "admin@memorycrystal.ai", "andydoucet@gmail.com"];
+const UNLIMITED_EMAILS = ["admin@illumin8.ca", "admin@memorycrystal.ai"];
 const PRO_PRODUCT_ID = "f78ee82b-719e-4de8-850a-3e9eea3db4b0";
 const ULTRA_PRODUCT_ID = "9d59dd76-5026-4079-95f7-bf594f71121b";
 
@@ -292,7 +292,8 @@ export const getByPolarSubscription = query({
 
 export const updateSubscription = mutation({
   args: {
-    userProfileId: v.id("crystalUserProfiles"),
+    userProfileId: v.optional(v.id("crystalUserProfiles")),
+    userId: v.optional(v.string()),
     polarSubscriptionId: v.optional(v.string()),
     polarCustomerId: v.optional(v.string()),
     subscriptionStatus: v.union(
@@ -301,11 +302,18 @@ export const updateSubscription = mutation({
     plan: v.optional(v.string()),
     webhookToken: v.string(),
   },
-  handler: async (ctx, { userProfileId, webhookToken, ...fields }) => {
+  handler: async (ctx, { userProfileId, userId, webhookToken, ...fields }) => {
     if (!process.env.POLAR_WEBHOOK_SECRET || webhookToken !== process.env.POLAR_WEBHOOK_SECRET) {
       throw new Error("Unauthorized");
     }
-    await ctx.db.patch(userProfileId, { ...fields, updatedAt: Date.now() });
+    const profile = userProfileId
+      ? await ctx.db.get(userProfileId)
+      : userId
+        ? await getOrCreateProfileForUser(ctx, userId)
+        : null;
+    if (!profile) throw new Error("userProfileId or userId is required");
+    await ctx.db.patch(profile._id, { ...fields, updatedAt: Date.now() });
+    return { profileId: profile._id, userId: profile.userId };
   },
 });
 
@@ -368,3 +376,4 @@ export const getCurrentUser = query({
     };
   },
 });
+
