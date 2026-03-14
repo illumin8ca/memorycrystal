@@ -58,65 +58,54 @@ export default function HomePage() {
             <div className="crystal-lattice opacity-70" />
           </div>
 
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-20">
-            <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-8 items-start">
-              <div>
-                <BracketHeading>PERSISTENT MEMORY FOR AI AGENTS</BracketHeading>
-                <h1 className="mt-3 text-[clamp(2rem,7vw,4.6rem)] leading-[1.02] tracking-wide">
-                  Stop re-explaining.
-                  <br />
-                  <span className="font-bold">Start shipping.</span>
-                </h1>
-                <p className="mt-6 text-base md:text-lg text-primary max-w-2xl">
-                  Memory Crystal gives OpenClaw and MCP-based agents durable memory across compactions,
-                  restarts, and new sessions. Decisions, workflows, and context stay available exactly when
-                  your agent needs them.
-                </p>
+          <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 text-center">
+            <div className="flex flex-col items-center">
+              <BracketHeading>PERSISTENT MEMORY FOR AI AGENTS</BracketHeading>
+              <h1 className="mt-4 font-heading text-[clamp(2.4rem,7vw,5.5rem)] leading-[0.98] tracking-[-0.03em] max-w-4xl">
+                Your AI forgets everything.
+                <br />
+                Fix that.
+              </h1>
+              <p className="mt-5 max-w-2xl text-base md:text-lg text-secondary leading-relaxed">
+                Persistent memory for OpenClaw, MCP, and agent workflows that should not reset every session.
+              </p>
 
+              <div className="mt-10 w-full max-w-3xl text-left">
+                <InstallCommandCard
+                  title="Install in one command"
+                  description="Copy it, run it, and give your agent memory that survives compactions, restarts, and new sessions."
+                  command={DEFAULT_INSTALL_COMMAND}
+                  compact
+                  showDocsLink={false}
+                />
               </div>
 
-              <aside className="glass-card border border-white/[0.08] p-6 md:p-8">
-                <p className="text-xs font-mono text-accent tracking-[0.2em] uppercase">Why teams switch</p>
-                <ul className="mt-4 space-y-4">
-                  {whyItMatters.map((point) => (
-                    <li key={point} className="flex gap-3 text-sm text-primary leading-relaxed">
-                      <CrystalIcon size={14} glow className="shrink-0 mt-1" />
-                      <span>{point}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-6 pt-6 border-t border-white/[0.08]">
-                  <p className="text-secondary text-sm">
-                    Works with OpenClaw, Claude Code, Codex CLI, and any MCP-compatible client.
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <Link href="/pricing" className="btn-primary px-4 py-3 text-xs inline-flex items-center justify-center">
-                      START FREE
-                    </Link>
-                    <Link href="/dashboard" className="btn-secondary px-4 py-3 text-xs inline-flex items-center justify-center">
-                      OPEN DASHBOARD
-                    </Link>
-                  </div>
-                </div>
-              </aside>
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                <Link href="/pricing" className="btn-primary px-6 py-3 text-xs inline-flex items-center justify-center">
+                  START FREE
+                </Link>
+                <Link href="/docs" className="btn-secondary px-6 py-3 text-xs inline-flex items-center justify-center">
+                  READ DOCS
+                </Link>
+              </div>
             </div>
           </div>
         </section>
 
         <section id="install" className="border-b border-white/[0.07] py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <BracketHeading>GET STARTED</BracketHeading>
-            <h2 className="mt-2 font-heading text-3xl md:text-5xl">Install in one command. Connect in minutes.</h2>
+            <BracketHeading>WHY TEAMS SWITCH</BracketHeading>
+            <h2 className="mt-2 font-heading text-3xl md:text-5xl">Stop losing context between sessions.</h2>
             <p className="mt-3 max-w-3xl text-secondary">
-              This is the fastest path: copy install, link your account, and let Memory Crystal begin capturing and recalling context immediately.
+              The install is above. This is why people keep it: once memory is persistent, your agent stops making you repeat yourself.
             </p>
-            <div className="mt-7">
-              <InstallCommandCard
-                title="Quick Install for OpenClaw + MCP"
-                description="Copy this command, run it once, then activate your free API key from pricing."
-                command={DEFAULT_INSTALL_COMMAND}
-                showDocsLink
-              />
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
+              {whyItMatters.map((point) => (
+                <article key={point} className="glass-card border border-white/[0.08] p-5">
+                  <CrystalIcon size={18} glow />
+                  <p className="mt-3 text-sm text-primary leading-relaxed">{point}</p>
+                </article>
+              ))}
             </div>
           </div>
         </section>
