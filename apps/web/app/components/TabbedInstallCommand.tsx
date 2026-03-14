@@ -27,14 +27,14 @@ const INSTALL_TABS: InstallTab[] = [
   {
     label: "Codex",
     platforms: ["macOS", "Linux", "Windows"],
-    command: "codex mcp add memory-crystal https://api.memorycrystal.ai/mcp",
-    note: "Set MEMORY_CRYSTAL_API_KEY in your environment or ~/.codex/config.toml",
+    command: 'codex mcp add memory-crystal --transport http https://api.memorycrystal.ai/mcp',
+    note: 'Then add bearer_token_env_var = "MEMORY_CRYSTAL_API_KEY" to ~/.codex/config.toml and export your API key.',
   },
   {
     label: "Factory",
     platforms: ["macOS", "Linux", "Windows"],
     command: "droid mcp add memory-crystal https://api.memorycrystal.ai/mcp",
-    note: "Or use /mcp in Droid to add from registry",
+    note: "Set MEMORY_CRYSTAL_API_KEY in your environment. Get your key at memorycrystal.ai/dashboard",
   },
 ];
 
