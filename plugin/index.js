@@ -739,10 +739,12 @@ module.exports = (api) => {
       try {
         const query = ensureString(params?.query, "query", 2);
         const limit = Number.isFinite(Number(params?.limit)) ? Number(params.limit) : 5;
+        // Don't hard-filter by channel for recall — memories may be stored without
+        // channel context or under a different channel key. Semantic search should
+        // be global across all memories for this user/apiKey.
         const data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/recall", {
           query,
           limit: Math.max(1, Math.min(limit, 20)),
-          channel: getChannelKey(ctx),
         });
         const memories = Array.isArray(data?.memories) ? data.memories : [];
         const results = memories.map((memory) => {
@@ -899,7 +901,6 @@ module.exports = (api) => {
         const limit = Number.isFinite(Number(params?.limit)) ? Number(params.limit) : undefined;
         const data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/recall", {
           query,
-          channel: getChannelKey(ctx),
           ...(limit ? { limit } : {}),
         });
         const memories = Array.isArray(data?.memories) ? data.memories : [];
@@ -980,7 +981,6 @@ module.exports = (api) => {
         const data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/recall", {
           query: topic,
           limit,
-          channel: getChannelKey(ctx),
         });
         const memories = Array.isArray(data?.memories) ? data.memories : [];
         const summary = {
@@ -1016,7 +1016,6 @@ module.exports = (api) => {
         const data = await crystalRequest(getPluginConfig(api, ctx), "/api/mcp/recall", {
           query: decision,
           limit,
-          channel: getChannelKey(ctx),
         });
         const memories = Array.isArray(data?.memories) ? data.memories : [];
         const decisionMemories = memories.filter((m) => m?.category === "decision");
