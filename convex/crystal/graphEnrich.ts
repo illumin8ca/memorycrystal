@@ -3,19 +3,18 @@ import { action, internalAction, internalMutation, internalQuery } from "../_gen
 import { internal } from "../_generated/api";
 import { type Id } from "../_generated/dataModel";
 
-const OPENAI_COMPLETIONS_ENDPOINT = "https://api.openai.com/v1/chat/completions";
 const GRAPH_TEMPERATURE = 0.1;
 
 const TIER_ENRICHMENT_MODELS: Record<string, string | null> = {
   free: null,
-  starter: "gpt-4o-mini",
-  pro: "gpt-4o",
-  ultra: "o4-mini",
-  unlimited: "o4-mini",
+  starter: "gemini-2.0-flash",
+  pro: "gemini-2.5-flash",
+  ultra: "gemini-2.5-flash",
+  unlimited: "gemini-2.5-flash",
 };
 
 function getEnrichmentModel(tier: string): string | null {
-  return TIER_ENRICHMENT_MODELS[tier] ?? "gpt-4o-mini";
+  return TIER_ENRICHMENT_MODELS[tier] ?? "gemini-2.0-flash";
 }
 
 const entityTypes = ["person", "project", "goal", "decision", "concept", "tool", "event", "resource", "channel"] as const;
@@ -421,43 +420,37 @@ export const enrichMemoryGraph: ReturnType<typeof internalAction> = internalActi
       return { enriched: false, reason: "free_tier" };
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      console.log("[graphEnrich] OPENAI_API_KEY missing; skipping enrichment", { memoryId: args.memoryId });
+      console.log("[graphEnrich] GEMINI_API_KEY missing; skipping enrichment", { memoryId: args.memoryId });
       return { enriched: false, reason: "missing_api_key" };
     }
 
     try {
-      const isReasoningModel = model.startsWith("o");
-      const openAIBody: Record<string, unknown> = {
-        model,
-        messages: [{ role: "user", content: buildPrompt(memory.title, memory.content) }],
-      };
-
-      if (isReasoningModel) {
-        openAIBody.max_completion_tokens = 1000;
-      } else {
-        openAIBody.temperature = GRAPH_TEMPERATURE;
-        openAIBody.max_tokens = 1000;
-      }
-
-      const response = await fetch(OPENAI_COMPLETIONS_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(openAIBody),
-      });
+      const prompt = buildPrompt(memory.title, memory.content);
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: GRAPH_TEMPERATURE,
+              responseMimeType: "application/json",
+            },
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => "unknown error");
-        console.log(`[graphEnrich] OpenAI error ${response.status}: ${errorText}`);
-        return { enriched: false, reason: `openai_${response.status}` };
+        console.log(`[graphEnrich] Gemini error ${response.status}: ${errorText}`);
+        return { enriched: false, reason: `gemini_${response.status}` };
       }
 
       const payload = await response.json();
-      const rawContent: string = payload?.choices?.[0]?.message?.content ?? "";
+      const rawContent: string = payload?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
       const extraction = parseExtraction(rawContent);
       if (!extraction) {
         console.log("[graphEnrich] Failed to parse extraction JSON", { memoryId: args.memoryId });
