@@ -87,6 +87,7 @@ let capturedMemoryId = null;
 let recallPayload = null;
 let memoryPayload = null;
 let statsPayload = null;
+let graphStatusPayload = null;
 
 await run('1. capture memory through /api/mcp/capture', async () => {
   const { response, payload } = await api('POST', '/api/mcp/capture', {
@@ -131,11 +132,17 @@ await run('4. inspect raw memory through /api/mcp/memory', async () => {
   memoryPayload = payload;
 
   const memory = payload.memory || {};
+  assert.equal(memory.graphEnriched, true, `Expected graphEnriched=true, got ${JSON.stringify(memory)}`);
+  assert.equal(typeof memory.graphEnrichedAt, 'number', `Expected graphEnrichedAt number, got ${JSON.stringify(memory)}`);
+  assert.ok(memory.graphEnrichedAt > 0, `Expected graphEnrichedAt > 0, got ${memory.graphEnrichedAt}`);
+
   observations.push({
     endpoint: '/api/mcp/memory',
     hasEmbeddingField: Object.prototype.hasOwnProperty.call(memory, 'embedding'),
     hasGraphEnrichedField: Object.prototype.hasOwnProperty.call(memory, 'graphEnriched'),
     hasGraphEnrichedAtField: Object.prototype.hasOwnProperty.call(memory, 'graphEnrichedAt'),
+    graphEnriched: memory.graphEnriched,
+    graphEnrichedAt: memory.graphEnrichedAt,
   });
 });
 
@@ -161,26 +168,20 @@ await run('5. embedding verification via externally visible API behavior', async
   assert.ok(match.score > 0, 'Positive semantic vector score is required when embedding is hidden');
 });
 
-await run('6. graph enrichment verification / observability check', async () => {
-  const recallMemory = recallPayload?.memories?.find((memory) => memory._id === capturedMemoryId || memory.title === uniqueTitle) || {};
-  const directGraphEnriched = recallMemory.graphEnriched ?? memoryPayload?.memory?.graphEnriched;
-  const directGraphEnrichedAt = recallMemory.graphEnrichedAt ?? memoryPayload?.memory?.graphEnrichedAt;
-
-  if (directGraphEnriched !== undefined || directGraphEnrichedAt !== undefined) {
-    assert.equal(directGraphEnriched, true);
-    assert.equal(typeof directGraphEnrichedAt, 'number');
-    assert.ok(directGraphEnrichedAt > 0);
-    observations.push({ endpoint: 'direct-memory-surface', graphFieldsExposed: true });
-    return;
-  }
-
-  observations.push({
-    endpoint: 'public-memory-surfaces',
-    graphFieldsExposed: false,
-    conclusion: 'graphEnriched and graphEnrichedAt are not exposed on /api/mcp/recall or /api/mcp/memory, and no public graph status endpoint is routed in convex/http.ts.',
-  });
-
-  assert.ok(true, 'Graph enrichment code path is scheduled on capture, but its result is not externally observable through current public endpoints.');
+await run('6. graph enrichment verification via /api/mcp/graph-status', async () => {
+  const { response, payload } = await api('GET', '/api/mcp/graph-status');
+  assert.equal(response.status, 200, `graph-status status ${response.status}: ${JSON.stringify(payload)}`);
+  assert.equal(payload?.ok, true, `graph-status payload: ${JSON.stringify(payload)}`);
+  assert.equal(typeof payload?.totalNodes, 'number');
+  assert.equal(typeof payload?.totalRelations, 'number');
+  assert.equal(typeof payload?.enrichedMemories, 'number');
+  assert.equal(typeof payload?.totalMemories, 'number');
+  assert.equal(typeof payload?.enrichmentPercent, 'number');
+  assert.ok(payload.totalNodes > 0, `Expected totalNodes > 0, got ${JSON.stringify(payload)}`);
+  assert.ok(payload.totalRelations > 0, `Expected totalRelations > 0, got ${JSON.stringify(payload)}`);
+  assert.ok(payload.enrichedMemories > 0, `Expected enrichedMemories > 0, got ${JSON.stringify(payload)}`);
+  graphStatusPayload = payload;
+  observations.push({ endpoint: '/api/mcp/graph-status', ...payload });
 });
 
 await run('7. GET /api/mcp/stats', async () => {

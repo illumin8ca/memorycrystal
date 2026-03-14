@@ -12,6 +12,7 @@ import {
   mcpSearchMessages,
   mcpReflect,
   mcpStats,
+  mcpGraphStatus,
   mcpWakeGet,
   mcpWakePost,
 } from "./crystal/mcp";
@@ -35,6 +36,7 @@ http.route({ path: "/api/mcp/log", method: "POST", handler: mcpLog });
 http.route({ path: "/api/mcp/reflect", method: "POST", handler: mcpReflect });
 http.route({ path: "/api/mcp/stats", method: "GET", handler: mcpStats });
 http.route({ path: "/api/mcp/stats", method: "POST", handler: mcpStats });
+http.route({ path: "/api/mcp/graph-status", method: "GET", handler: mcpGraphStatus });
 http.route({ path: "/api/polar/webhook", method: "POST", handler: polarWebhook });
 http.route({ path: "/api/device/start", method: "POST", handler: deviceStart });
 http.route({ path: "/api/device/status", method: "GET", handler: deviceStatus });

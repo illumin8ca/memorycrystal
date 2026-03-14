@@ -909,6 +909,8 @@ export const mcpGetMemory = httpAction(async (ctx, request) => {
       source: memory.source,
       channel: memory.channel,
       archived: memory.archived,
+      graphEnriched: memory.graphEnriched ?? false,
+      graphEnrichedAt: memory.graphEnrichedAt ?? null,
     },
   });
 });
@@ -1147,6 +1149,20 @@ export const mcpStats = httpAction(async (ctx, request) => {
     byStore: stats.byStore,
     apiKeyLabel: auth.key.label ?? null,
   });
+});
+
+export const mcpGraphStatus = httpAction(async (ctx, request) => {
+  const auth = await requireAuth(ctx, request);
+  if (!auth) return json({ error: "Unauthorized" }, 401);
+
+  const rateLimitResponse = await withRateLimit(ctx, auth.keyHash);
+  if (rateLimitResponse) return rateLimitResponse;
+
+  const stats = await ctx.runQuery(internal.crystal.graph.getUserGraphStatus, {
+    userId: auth.userId,
+  });
+
+  return json({ ok: true, ...stats });
 });
 
 export const mcpReflect = httpAction(async (ctx, request) => {

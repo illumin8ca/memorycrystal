@@ -1,6 +1,6 @@
 import { stableUserId } from "./auth";
 import { v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { internalQuery, mutation, query } from "../_generated/server";
 
 const nowMs = () => Date.now();
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
@@ -195,6 +195,43 @@ export const getKnowledgeGraphFoundationStatus = query({
       relations: (await ctx.db.query("crystalRelations").filter((q) => q.eq(q.field("userId"), userId)).take(200)).length,
       links: (await ctx.db.query("crystalMemoryNodeLinks").filter((q) => q.eq(q.field("userId"), userId)).take(200)).length,
       generatedAt: nowMs(),
+    };
+  },
+});
+
+export const getUserGraphStatus = internalQuery({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    const [nodes, relations, enrichedMemories, totalMemories] = await Promise.all([
+      ctx.db
+        .query("crystalNodes")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("crystalRelations")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("crystalMemories")
+        .withIndex("by_graph_enriched", (q) => q.eq("graphEnriched", true).eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("crystalMemories")
+        .withIndex("by_user", (q) => q.eq("userId", userId).eq("archived", false))
+        .collect(),
+    ]);
+
+    const totalNodes = nodes.length;
+    const totalRelations = relations.length;
+    const enrichedCount = enrichedMemories.length;
+    const totalMemoryCount = totalMemories.length;
+
+    return {
+      totalNodes,
+      totalRelations,
+      enrichedMemories: enrichedCount,
+      totalMemories: totalMemoryCount,
+      enrichmentPercent: totalMemoryCount > 0 ? Math.round((enrichedCount / totalMemoryCount) * 100) : 0,
     };
   },
 });
