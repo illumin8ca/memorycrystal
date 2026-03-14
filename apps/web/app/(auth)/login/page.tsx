@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import CrystalIcon from "../../components/CrystalIcon";
@@ -46,6 +46,8 @@ function getOAuthFallbackError(providerLabel: string, message: string): string {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirectTo") || "/dashboard";
   const { signIn } = useAuthActions();
   const [step, setStep] = useState<Step>("credentials");
   const [email, setEmail] = useState("");
@@ -76,11 +78,11 @@ export default function LoginPage() {
         email: email.trim(),
         password,
         flow: "signIn",
-        redirectTo: "/dashboard",
+        redirectTo,
       });
       if (result.signingIn) {
-        // Fully authenticated — go to dashboard
-        router.push("/dashboard");
+        // Fully authenticated — go to destination
+        router.push(redirectTo);
       } else {
         // Password was correct but email needs verification — a code was sent
         setStep("verify");
@@ -131,7 +133,7 @@ export default function LoginPage() {
         code: code.trim(),
         flow: "email-verification",
       });
-      router.push("/dashboard");
+      router.push(redirectTo);
     } catch (err) {
       setError(friendlyVerifyError((err as Error).message ?? ""));
     } finally {
@@ -201,7 +203,7 @@ export default function LoginPage() {
         newPassword,
         flow: "reset-verification",
       });
-      router.push("/dashboard");
+      router.push(redirectTo);
     } catch (err) {
       setError(friendlyVerifyError((err as Error).message ?? ""));
     } finally {
@@ -232,9 +234,9 @@ export default function LoginPage() {
     setSuggestedProvider(null);
     setLoadingMode("github");
     try {
-      const result = await signIn("github", { redirectTo: "/dashboard" });
+      const result = await signIn("github", { redirectTo });
       if (result.signingIn) {
-        router.push("/dashboard");
+        router.push(redirectTo);
       }
     } catch (err) {
       const msg = (err as Error).message ?? "";
@@ -250,9 +252,9 @@ export default function LoginPage() {
     setSuggestedProvider(null);
     setLoadingMode("google");
     try {
-      const result = await signIn("google", { redirectTo: "/dashboard" });
+      const result = await signIn("google", { redirectTo });
       if (result.signingIn) {
-        router.push("/dashboard");
+        router.push(redirectTo);
       }
     } catch (err) {
       const msg = (err as Error).message ?? "";

@@ -23,6 +23,8 @@ import type * as crystal_consolidate from "../crystal/consolidate.js";
 import type * as crystal_dashboard from "../crystal/dashboard.js";
 import type * as crystal_dashboardTotals from "../crystal/dashboardTotals.js";
 import type * as crystal_decay from "../crystal/decay.js";
+import type * as crystal_deviceAuth from "../crystal/deviceAuth.js";
+import type * as crystal_deviceHttp from "../crystal/deviceHttp.js";
 import type * as crystal_evalStats from "../crystal/evalStats.js";
 import type * as crystal_graph from "../crystal/graph.js";
 import type * as crystal_graphEnrich from "../crystal/graphEnrich.js";
@@ -67,6 +69,8 @@ declare const fullApi: ApiFromModules<{
   "crystal/dashboard": typeof crystal_dashboard;
   "crystal/dashboardTotals": typeof crystal_dashboardTotals;
   "crystal/decay": typeof crystal_decay;
+  "crystal/deviceAuth": typeof crystal_deviceAuth;
+  "crystal/deviceHttp": typeof crystal_deviceHttp;
   "crystal/evalStats": typeof crystal_evalStats;
   "crystal/graph": typeof crystal_graph;
   "crystal/graphEnrich": typeof crystal_graphEnrich;

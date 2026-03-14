@@ -4,6 +4,27 @@ set -euo pipefail
 CONVEX_URL="https://rightful-mockingbird-389.convex.site"
 INSTALL_BASE="${CRYSTAL_INSTALL_BASE:-https://memorycrystal.ai}"
 PLUGIN_REPO_BASE="$INSTALL_BASE/install-assets/plugin"
+DEVICE_START_URL="$CONVEX_URL/api/device/start"
+DEVICE_STATUS_URL="$CONVEX_URL/api/device/status"
+API_KEY="${CRYSTAL_API_KEY:-}"
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --api-key)
+      if [ $# -lt 2 ]; then
+        echo "  ✗ --api-key requires a value."
+        exit 1
+      fi
+      API_KEY="$2"
+      shift 2
+      ;;
+    *)
+      echo "  ✗ Unknown argument: $1"
+      echo "    Supported: --api-key <key>"
+      exit 1
+      ;;
+  esac
+done
 
 DETECT_OPENCLAW_DIR() {
   if [ -n "${OPENCLAW_DIR:-}" ]; then
@@ -61,6 +82,96 @@ fetch_plugin_file() {
 
   mv "$tmp_file" "$target"
   INSTALL_CHANGED=1
+}
+
+open_authorization_url() {
+  local url="$1"
+
+  if command -v open >/dev/null 2>&1; then
+    open "$url" >/dev/null 2>&1 && return 0
+  fi
+
+  if command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$url" >/dev/null 2>&1 && return 0
+  fi
+
+  return 1
+}
+
+prompt_for_api_key() {
+  if [ ! -r /dev/tty ]; then
+    echo "  ✗ Interactive terminal required to enter your API key."
+    exit 1
+  fi
+
+  IFS= read -r -p "  Enter your Memory Crystal API key: " API_KEY < /dev/tty
+  echo ""
+
+  if [ -z "$API_KEY" ]; then
+    echo "  ✗ No API key provided. Exiting."
+    exit 1
+  fi
+}
+
+start_device_auth_flow() {
+  local start_json
+  local device_code
+  local user_code
+  local verification_url
+  local status_json
+  local status
+  local api_key
+  local attempts=60
+  local slept=0
+
+  start_json="$(curl -fsSL -X POST "$DEVICE_START_URL")" || return 1
+  device_code="$(printf '%s' "$start_json" | node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync(0,'utf8')); process.stdout.write(data.device_code || '');")"
+  user_code="$(printf '%s' "$start_json" | node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync(0,'utf8')); process.stdout.write(data.user_code || '');")"
+  verification_url="$(printf '%s' "$start_json" | node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync(0,'utf8')); process.stdout.write(data.verification_url || '');")"
+
+  if [ -z "$device_code" ] || [ -z "$verification_url" ]; then
+    return 1
+  fi
+
+  echo "  → Open browser to authorize this install"
+  echo "    Code: $user_code"
+  echo "    URL:  $verification_url"
+  echo ""
+
+  if open_authorization_url "$verification_url"; then
+    echo "  ✓ Browser opened. Approve the install, then come back here."
+  else
+    echo "  → Could not open a browser automatically."
+    echo "    Visit the URL above, then authorize the device."
+  fi
+
+  echo "  → Waiting for authorization (up to 3 minutes)..."
+  while [ "$attempts" -gt 0 ]; do
+    status_json="$(curl -fsSL "$DEVICE_STATUS_URL?device_code=$device_code" 2>/dev/null || true)"
+    status="$(printf '%s' "$status_json" | node -e "const fs=require('fs'); try { const data=JSON.parse(fs.readFileSync(0,'utf8')); process.stdout.write(data.status || ''); } catch { process.stdout.write(''); }")"
+
+    case "$status" in
+      complete)
+        api_key="$(printf '%s' "$status_json" | node -e "const fs=require('fs'); const data=JSON.parse(fs.readFileSync(0,'utf8')); process.stdout.write(data.apiKey || '');")"
+        if [ -n "$api_key" ]; then
+          API_KEY="$api_key"
+          echo "  ✓ Device authorized"
+          return 0
+        fi
+        ;;
+      expired)
+        echo "  ✗ Device authorization expired."
+        return 1
+        ;;
+    esac
+
+    attempts=$((attempts - 1))
+    slept=$((slept + 3))
+    sleep 3
+  done
+
+  echo "  ✗ Timed out waiting for browser authorization."
+  return 1
 }
 
 verify_openclaw_install() {
@@ -154,21 +265,17 @@ echo "  ✓ OpenClaw detected ($(openclaw --version 2>/dev/null || echo 'version
 
 # ── Get API key ───────────────────────────────────────────────────────────────
 echo ""
-echo "  Get your API key at: https://memorycrystal.ai/dashboard/settings"
-echo "  This installer always asks for your API key on every run."
-echo ""
-
-if [ ! -r /dev/tty ]; then
-  echo "  ✗ Interactive terminal required to enter your API key."
-  exit 1
-fi
-
-IFS= read -r -p "  Enter your Memory Crystal API key: " API_KEY < /dev/tty
-echo ""
-
-if [ -z "$API_KEY" ]; then
-  echo "  ✗ No API key provided. Exiting."
-  exit 1
+if [ -n "$API_KEY" ]; then
+  echo "  → Using API key provided via flag/environment"
+else
+  echo "  → Starting browser authorization flow"
+  if ! start_device_auth_flow; then
+    echo ""
+    echo "  → Falling back to manual API key entry"
+    echo "    Create one at: https://memorycrystal.ai/dashboard/settings"
+    echo ""
+    prompt_for_api_key
+  fi
 fi
 
 # Validate key against the API

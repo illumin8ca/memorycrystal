@@ -351,6 +351,18 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_key_hash", ["keyHash"]),
 
+  crystalDeviceAuth: defineTable({
+    deviceCode: v.string(),
+    userCode: v.string(),
+    status: v.union(v.literal("pending"), v.literal("complete"), v.literal("expired")),
+    apiKey: v.optional(v.string()),
+    userId: v.optional(v.string()),
+    expiresAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_device_code", ["deviceCode"])
+    .index("by_user_code", ["userCode"]),
+
   crystalRateLimits: defineTable({
     key: v.string(),
     windowStart: v.number(),
