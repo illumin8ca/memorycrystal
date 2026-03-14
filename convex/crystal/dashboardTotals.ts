@@ -285,80 +285,43 @@ export async function getDashboardTotals(ctx: any, userId: string): Promise<Dash
 
 export async function computeDashboardTotalsFromSource(ctx: any, userId: string): Promise<DashboardTotalsSnapshot> {
   const totals: DashboardTotalsSnapshot = newEmptyTotals(userId);
-  let cursor: string | null = null;
 
-  while (true) {
-    const page: any = await ctx.db
-      .query("crystalMemories")
-      .withIndex("by_user", (q: any) => q.eq("userId", userId))
-      .paginate({
-        numItems: 400,
-        cursor,
-        maximumBytesRead: 4_000_000,
-      });
+  const memories = await ctx.db
+    .query("crystalMemories")
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .collect();
 
-    for (const memory of (page as any).page as Array<any>) {
-      totals.totalMemories += 1;
-      if (memory.archived) {
-        totals.archivedMemories += 1;
-        continue;
-      }
-
-      totals.activeMemories += 1;
-      if (memory.store in totals.activeMemoriesByStore) {
-        totals.activeMemoriesByStore[memory.store as MemoryStore] = clampCount(
-          (totals.activeMemoriesByStore[memory.store as MemoryStore] || 0) + 1,
-        );
-      }
-
-      if (
-        memory.createdAt !== undefined &&
-        (totals.lastCaptureCreatedAt === undefined || memory.createdAt > (totals.lastCaptureCreatedAt ?? Number.NEGATIVE_INFINITY))
-      ) {
-        totals.lastCaptureMemoryId = memory._id;
-        totals.lastCaptureStore = normalizeStore(memory.store);
-        totals.lastCaptureTitle = memory.title;
-        totals.lastCaptureCreatedAt = memory.createdAt;
-      }
+  for (const memory of memories as Array<any>) {
+    totals.totalMemories += 1;
+    if (memory.archived) {
+      totals.archivedMemories += 1;
+      continue;
     }
 
-    if (page.isDone) {
-      break;
+    totals.activeMemories += 1;
+    if (memory.store in totals.activeMemoriesByStore) {
+      totals.activeMemoriesByStore[memory.store as MemoryStore] = clampCount(
+        (totals.activeMemoriesByStore[memory.store as MemoryStore] || 0) + 1,
+      );
     }
 
-    const nextCursor = (page as any).continueCursor ?? null;
-    if (!nextCursor) {
-      break;
+    if (
+      memory.createdAt !== undefined &&
+      (totals.lastCaptureCreatedAt === undefined || memory.createdAt > (totals.lastCaptureCreatedAt ?? Number.NEGATIVE_INFINITY))
+    ) {
+      totals.lastCaptureMemoryId = memory._id;
+      totals.lastCaptureStore = normalizeStore(memory.store);
+      totals.lastCaptureTitle = memory.title;
+      totals.lastCaptureCreatedAt = memory.createdAt;
     }
-
-    cursor = nextCursor;
   }
 
-  let messageCursor: string | null = null;
-  while (true) {
-    const page: any = await ctx.db
-      .query("crystalMessages")
-      .withIndex("by_user_time", (q: any) => q.eq("userId", userId))
-      .paginate({
-        numItems: 400,
-        cursor: messageCursor,
-        maximumBytesRead: 4_000_000,
-      });
+  const messages = await ctx.db
+    .query("crystalMessages")
+    .withIndex("by_user_time", (q: any) => q.eq("userId", userId))
+    .collect();
 
-    totals.totalMessages += (page.page ?? []).length;
-
-    if (page.isDone) {
-      break;
-    }
-
-    const nextCursor = (page as any).continueCursor ?? null;
-    if (!nextCursor) {
-      break;
-    }
-
-    messageCursor = nextCursor;
-  }
-
+  totals.totalMessages = messages.length;
   totals.activeStoreCount = Object.values(totals.activeMemoriesByStore).filter((count) => count > 0).length;
   totals.updatedAt = Date.now();
 
