@@ -1283,7 +1283,7 @@ export const backfillEmbeddings = internalAction({
     let done = false;
 
     while (succeeded < target) {
-      const page = await ctx.runQuery(internal.crystal.mcp.listMemoriesPageForEmbeddingBackfill, {
+      const page: { page: Array<{ _id: any; content: string; embedding?: number[] }>; isDone: boolean; continueCursor?: string } = await ctx.runQuery(internal.crystal.mcp.listMemoriesPageForEmbeddingBackfill, {
         cursor: cursor ?? undefined,
         pageSize: EMBEDDING_BACKFILL_PAGE_SIZE,
       });
