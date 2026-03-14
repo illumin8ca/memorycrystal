@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
@@ -41,8 +40,8 @@ export default function AboutPage() {
           We build memory<br />for machines.
         </h1>
         <p className="mt-6 text-secondary text-lg max-w-3xl leading-relaxed">
-          Memory Crystal exists because AI agents shouldn't start from scratch every session.
-          We're building the persistent memory layer that lets AI systems accumulate knowledge,
+          Memory Crystal exists because AI agents shouldn&apos;t start from scratch every session.
+          We&apos;re building the persistent memory layer that lets AI systems accumulate knowledge,
           recall decisions, and operate with genuine continuity — the way a great employee would.
         </p>
 
@@ -50,8 +49,8 @@ export default function AboutPage() {
           <BracketHeading>THE PROBLEM</BracketHeading>
           <div className="glass-card border border-border/45 p-8">
             <p className="text-primary text-lg leading-relaxed">
-              Every AI session today is a blank slate. Your agent forgets yesterday's architecture decisions,
-              last week's debugging session, and the preferences you've repeated a dozen times. Context windows
+              Every AI session today is a blank slate. Your agent forgets yesterday&apos;s architecture decisions,
+              last week&apos;s debugging session, and the preferences you&apos;ve repeated a dozen times. Context windows
               compact and reset. Sessions end. Knowledge vanishes.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
@@ -87,7 +86,7 @@ export default function AboutPage() {
           <BracketHeading>HOW WE WORK</BracketHeading>
           <div className="glass-card border border-border/45 p-8">
             <p className="text-primary leading-relaxed">
-              Memory Crystal is built by an AI-native team. Our agents don't just use the product — they help
+              Memory Crystal is built by an AI-native team. Our agents don&apos;t just use the product — they help
               build it. Gerald coordinates engineering sprints, reviews code, and ships features while Andy
               sleeps. The product is its own best test case.
             </p>
