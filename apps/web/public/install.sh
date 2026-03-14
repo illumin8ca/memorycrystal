@@ -239,6 +239,7 @@ cfg.hooks.internal.enabled = true;
 if (cfg.hooks.internal.entries && typeof cfg.hooks.internal.entries === 'object') {
   delete cfg.hooks.internal.entries['crystal-memory'];
   delete cfg.hooks.internal.entries['crystal-stm'];
+  delete cfg.hooks.internal.entries['cortex-mcp'];
 }
 
 cfg.plugins ??= {};
