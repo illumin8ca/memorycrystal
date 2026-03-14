@@ -17,8 +17,10 @@
     "@polar-sh/sdk": "^0.45.2",
     "convex": "^1.24.1",
     "framer-motion": "^12.34.5",
+    "gray-matter": "^4.0.3",
     "lucide-react": "^0.577.0",
     "next": "15.5.12",
+    "next-mdx-remote": "^6.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-icons": "*"

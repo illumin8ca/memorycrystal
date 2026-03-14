@@ -1,63 +1,23 @@
 import fs from "node:fs";
 import path from "node:path";
-import { evaluate } from "@mdx-js/mdx";
-import * as runtime from "react/jsx-runtime";
-import type { ComponentType } from "react";
+import matter from "gray-matter";
 
 const BLOG_DIR = path.join(process.cwd(), "content", "blog");
 
-type Frontmatter = {
+export type BlogPostMeta = {
+  slug: string;
   title: string;
   description: string;
   date: string;
   category: string;
   tags: string[];
   author: string;
-};
-
-export type BlogPostMeta = Frontmatter & {
-  slug: string;
   readTime: string;
 };
 
 export type BlogPost = BlogPostMeta & {
   content: string;
 };
-
-function parseFrontmatter(raw: string): { data: Frontmatter; content: string } {
-  const match = raw.match(/^---\n([\s\S]*?)\n---\n?/);
-  if (!match) {
-    throw new Error("Missing frontmatter block in blog post");
-  }
-
-  const frontmatterText = match[1];
-  const body = raw.slice(match[0].length).trim();
-
-  const getString = (key: string): string => {
-    const keyMatch = frontmatterText.match(new RegExp(`^${key}:\\s*\"([^\"]+)\"`, "m"));
-    return keyMatch?.[1]?.trim() ?? "";
-  };
-
-  const tagsMatch = frontmatterText.match(/^tags:\s*\[(.*?)\]\s*$/m);
-  const tags = tagsMatch?.[1]
-    ? tagsMatch[1]
-        .split(",")
-        .map((tag) => tag.trim().replace(/^"|"$/g, ""))
-        .filter(Boolean)
-    : [];
-
-  return {
-    data: {
-      title: getString("title"),
-      description: getString("description"),
-      date: getString("date"),
-      category: getString("category"),
-      author: getString("author") || "Memory Crystal Team",
-      tags,
-    },
-    content: body,
-  };
-}
 
 function calculateReadTime(content: string): string {
   const words = content
@@ -82,11 +42,16 @@ export function getAllPosts(): BlogPostMeta[] {
       const slug = file.replace(/\.mdx$/, "");
       const filePath = path.join(BLOG_DIR, file);
       const raw = fs.readFileSync(filePath, "utf8");
-      const { data, content } = parseFrontmatter(raw);
+      const { data, content } = matter(raw);
 
       return {
         slug,
-        ...data,
+        title: data.title || "",
+        description: data.description || "",
+        date: data.date || "",
+        category: data.category || "",
+        tags: data.tags || [],
+        author: data.author || "Memory Crystal Team",
         readTime: calculateReadTime(content),
       };
     })
@@ -98,11 +63,16 @@ export function getPostBySlug(slug: string): BlogPost | null {
   if (!fs.existsSync(filePath)) return null;
 
   const raw = fs.readFileSync(filePath, "utf8");
-  const { data, content } = parseFrontmatter(raw);
+  const { data, content } = matter(raw);
 
   return {
     slug,
-    ...data,
+    title: data.title || "",
+    description: data.description || "",
+    date: data.date || "",
+    category: data.category || "",
+    tags: data.tags || [],
+    author: data.author || "Memory Crystal Team",
     content,
     readTime: calculateReadTime(content),
   };
@@ -111,12 +81,4 @@ export function getPostBySlug(slug: string): BlogPost | null {
 export function getAllCategories(): string[] {
   const categories = new Set(getAllPosts().map((post) => post.category));
   return Array.from(categories).sort((a, b) => a.localeCompare(b));
-}
-
-export async function getPostComponent(content: string): Promise<ComponentType> {
-  const mod = await evaluate(content, {
-    ...runtime,
-  });
-
-  return mod.default;
 }
