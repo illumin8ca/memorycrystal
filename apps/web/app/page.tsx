@@ -3,7 +3,7 @@ import Link from "next/link";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import CrystalIcon from "./components/CrystalIcon";
-import { InstallCommandCard, DEFAULT_INSTALL_COMMAND } from "./components/InstallCommandCard";
+import TabbedInstallCommand from "./components/TabbedInstallCommand";
 
 const coreFeatures = [
   {
@@ -71,13 +71,7 @@ export default function HomePage() {
               </p>
 
               <div className="mt-10 w-full max-w-3xl text-left">
-                <InstallCommandCard
-                  title="Install in one command"
-                  description="Copy it, run it, and give your agent memory that survives compactions, restarts, and new sessions."
-                  command={DEFAULT_INSTALL_COMMAND}
-                  compact
-                  showDocsLink={false}
-                />
+                <TabbedInstallCommand />
               </div>
 
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
