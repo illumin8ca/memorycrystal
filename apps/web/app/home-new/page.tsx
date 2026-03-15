@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ImageIcon, PlayCircle } from "lucide-react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import CrystalIcon from "../components/CrystalIcon";
@@ -203,34 +202,43 @@ export default function HomeNewPage() {
 
         <section className="border-b border-white/[0.07] py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <BracketHeading>DEMO VIDEO</BracketHeading>
-            <div className="glass-card border border-dashed border-accent/40 p-8 md:p-10">
-              <h3 className="font-heading text-2xl md:text-3xl">Live product demo coming soon</h3>
-              <p className="mt-3 text-secondary max-w-2xl">
-                Andy will add a walkthrough video here showing installation, recall, and graph enrichment in action.
-              </p>
-              <div className="mt-6 h-48 md:h-64 border border-white/[0.09] bg-white/[0.02] flex items-center justify-center">
-                <PlayCircle className="h-14 w-14 text-accent/90" strokeWidth={1.5} aria-hidden="true" />
-              </div>
+            <BracketHeading>SEE IT IN ACTION</BracketHeading>
+            <div className="glass-card border border-accent/20 p-4 md:p-6">
+              <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                poster="/images/crystal-demo-poster.webp"
+                className="w-full rounded-lg border border-white/[0.09]"
+              >
+                <source src="/images/demo-loop.mp4" type="video/mp4" />
+              </video>
             </div>
           </div>
         </section>
 
         <section className="border-b border-white/[0.07] py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <BracketHeading>SCREENSHOTS / WALKTHROUGH</BracketHeading>
+            <BracketHeading>DASHBOARD &amp; INSTALL</BracketHeading>
             <div className="grid md:grid-cols-2 gap-4">
-              <div className="glass-card border border-dashed border-white/[0.18] p-6">
-                <h3 className="font-heading text-xl">Dashboard and graph views</h3>
-                <div className="mt-4 h-56 border border-white/[0.09] bg-white/[0.02] flex items-center justify-center">
-                  <ImageIcon className="h-12 w-12 text-accent/85" strokeWidth={1.5} aria-hidden="true" />
-                </div>
+              <div className="glass-card border border-white/[0.08] p-4">
+                <h3 className="font-heading text-xl mb-4">Memory Dashboard</h3>
+                <img
+                  src="/images/dashboard-preview.webp"
+                  alt="Memory Crystal dashboard showing memory stats, recall accuracy, and memory list"
+                  className="w-full rounded-lg border border-white/[0.09]"
+                  loading="lazy"
+                />
               </div>
-              <div className="glass-card border border-dashed border-white/[0.18] p-6">
-                <h3 className="font-heading text-xl">Install + recall flow visuals</h3>
-                <div className="mt-4 h-56 border border-white/[0.09] bg-white/[0.02] flex items-center justify-center">
-                  <ImageIcon className="h-12 w-12 text-accent/85" strokeWidth={1.5} aria-hidden="true" />
-                </div>
+              <div className="glass-card border border-white/[0.08] p-4">
+                <h3 className="font-heading text-xl mb-4">Install &amp; Recall Flow</h3>
+                <img
+                  src="/images/install-recall-preview.webp"
+                  alt="Terminal showing Memory Crystal installation and agent recalling past context"
+                  className="w-full rounded-lg border border-white/[0.09]"
+                  loading="lazy"
+                />
               </div>
             </div>
           </div>
