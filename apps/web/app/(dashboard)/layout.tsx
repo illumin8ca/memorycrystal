@@ -55,7 +55,9 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
   const { canImpersonate, activeSession, startImpersonation, stopImpersonation } = useImpersonation();
   const handleSignOut = async () => {
     await signOut();
-    router.push("/");
+    // Use full navigation instead of client-side router.push —
+    // iOS PWA doesn't reliably handle Next.js router after auth state clears.
+    window.location.href = "/";
   };
 
   useEffect(() => {
@@ -67,6 +69,16 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
 
   // During sign-out, auth state clears before navigation completes.
   // Return a minimal loading shell to prevent Convex query errors.
+  // Redirect to home after 2s as a safety net (iOS PWA can get stuck).
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      const timeout = setTimeout(() => {
+        window.location.href = "/";
+      }, 2000);
+      return () => clearTimeout(timeout);
+    }
+  }, [authLoading, isAuthenticated]);
+
   if (authLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen bg-void flex items-center justify-center">
