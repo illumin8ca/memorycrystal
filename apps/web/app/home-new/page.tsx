@@ -4,6 +4,7 @@ import Footer from "../components/Footer";
 import CrystalIcon from "../components/CrystalIcon";
 import { InstallCommandCard, DEFAULT_INSTALL_COMMAND } from "../components/InstallCommandCard";
 import AgentShowcase from "../components/AgentShowcase";
+import TerminalAnimation from "../components/TerminalAnimation";
 
 const coreFeatures = [
   {
@@ -136,18 +137,26 @@ export default function HomeNewPage() {
 
         <section id="install" className="border-b border-white/[0.07] py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <BracketHeading>GET STARTED</BracketHeading>
-            <h2 className="mt-2 font-heading text-3xl md:text-5xl">Install in one command. Connect in minutes.</h2>
-            <p className="mt-3 max-w-3xl text-secondary">
-              This is the fastest path: copy install, link your account, and let Memory Crystal begin capturing and recalling context immediately.
-            </p>
-            <div className="mt-7">
-              <InstallCommandCard
-                title="Quick Install for OpenClaw + MCP"
-                description="Copy this command, run it once, then activate your free API key from pricing."
-                command={DEFAULT_INSTALL_COMMAND}
-                showDocsLink
-              />
+            <div className="grid lg:grid-cols-[1fr_1.1fr] gap-8 items-start">
+              <div>
+                <BracketHeading>GET STARTED</BracketHeading>
+                <h2 className="mt-2 font-heading text-3xl md:text-5xl">Install in one command. Connect in minutes.</h2>
+                <p className="mt-3 max-w-xl text-secondary">
+                  Copy the command, run it once, approve in your browser, and Memory Crystal starts capturing context immediately.
+                </p>
+                <div className="mt-6">
+                  <InstallCommandCard
+                    title="Quick Install"
+                    description="Run this, then approve the browser auth flow."
+                    command={DEFAULT_INSTALL_COMMAND}
+                    showDocsLink
+                  />
+                </div>
+              </div>
+              <div className="hidden lg:block">
+                <p className="text-xs font-mono text-secondary tracking-[0.2em] uppercase mb-3">How it works</p>
+                <TerminalAnimation />
+              </div>
             </div>
           </div>
         </section>
