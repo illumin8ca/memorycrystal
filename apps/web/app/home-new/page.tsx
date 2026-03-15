@@ -3,6 +3,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import CrystalIcon from "../components/CrystalIcon";
 import { InstallCommandCard, DEFAULT_INSTALL_COMMAND } from "../components/InstallCommandCard";
+import AgentShowcase from "../components/AgentShowcase";
 
 const coreFeatures = [
   {
@@ -241,6 +242,19 @@ export default function HomeNewPage() {
                 />
               </div>
             </div>
+          </div>
+        </section>
+
+        <section className="border-b border-white/[0.07] py-14">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <BracketHeading>MEMORY IN ACTION</BracketHeading>
+            <h2 className="mt-2 font-heading text-3xl md:text-5xl max-w-5xl">
+              See what happens when your agent actually remembers.
+            </h2>
+            <p className="mt-3 max-w-3xl text-secondary">
+              These are real moments from an agent powered by Memory Crystal — compactions, new sessions, cross-context recall.
+            </p>
+            <AgentShowcase />
           </div>
         </section>
 
