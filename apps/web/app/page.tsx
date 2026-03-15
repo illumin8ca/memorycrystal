@@ -2,7 +2,7 @@ import Link from "next/link";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import CrystalIcon from "./components/CrystalIcon";
-import { InstallCommandCard, DEFAULT_INSTALL_COMMAND } from "./components/InstallCommandCard";
+import TabbedInstallCommand from "./components/TabbedInstallCommand";
 import AgentShowcase from "./components/AgentShowcase";
 import TerminalAnimation from "./components/TerminalAnimation";
 
@@ -145,12 +145,7 @@ export default function HomeNewPage() {
                   Copy the command, run it once, approve in your browser, and Memory Crystal starts capturing context immediately.
                 </p>
                 <div className="mt-6">
-                  <InstallCommandCard
-                    title="Quick Install"
-                    description="Run this, then approve the browser auth flow."
-                    command={DEFAULT_INSTALL_COMMAND}
-                    showDocsLink
-                  />
+                  <TabbedInstallCommand />
                 </div>
               </div>
               <div>
