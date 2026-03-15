@@ -1,9 +1,10 @@
-import Image from "next/image";
 import Link from "next/link";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import CrystalIcon from "./components/CrystalIcon";
-import TabbedInstallCommand from "./components/TabbedInstallCommand";
+import { InstallCommandCard, DEFAULT_INSTALL_COMMAND } from "./components/InstallCommandCard";
+import AgentShowcase from "./components/AgentShowcase";
+import TerminalAnimation from "./components/TerminalAnimation";
 
 const coreFeatures = [
   {
@@ -34,6 +35,24 @@ const whyItMatters = [
   "Give every agent the same shared memory layer across sessions.",
 ];
 
+const contextManagerLimits = [
+  "Session-scoped only",
+  "Single platform",
+  "Regex/keyword search",
+  "Gone when session resets",
+  "No semantic understanding",
+];
+
+const memoryCrystalAdvantages = [
+  "Cross-session persistence",
+  "Works with OpenClaw + Claude Code + Codex + any MCP client",
+  "Semantic embedding search",
+  "Knowledge graph with 3,800+ nodes",
+  "Survives compaction/restarts/new sessions",
+];
+
+const platformBadges = ["OpenClaw", "Claude Code", "Codex CLI", "Cursor", "Any MCP Client"];
+
 function BracketHeading({ children }: { children: string }) {
   return (
     <p className="text-xs font-mono text-secondary tracking-[0.25em] uppercase">
@@ -46,7 +65,7 @@ function BracketHeading({ children }: { children: string }) {
 
 
 
-export default function HomePage() {
+export default function HomeNewPage() {
   return (
     <div className="min-h-screen bg-void text-primary">
       <Header />
@@ -58,78 +77,87 @@ export default function HomePage() {
             <div className="crystal-lattice opacity-70" />
           </div>
 
-          <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 text-center">
-            <div className="flex flex-col items-center">
-              <BracketHeading>PERSISTENT MEMORY FOR AI AGENTS</BracketHeading>
-              <h1 className="mt-4 font-heading text-[clamp(2.4rem,7vw,5.5rem)] leading-[0.98] tracking-[-0.03em] max-w-4xl">
-                Your AI forgets everything.
-                <br />
-                Fix that.
-              </h1>
-              <p className="mt-5 max-w-2xl text-base md:text-lg text-secondary leading-relaxed">
-                Persistent memory for OpenClaw, MCP, and agent workflows that should not reset every session.
-              </p>
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-20">
+            <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-8 items-start">
+              <div>
+                <BracketHeading>PERSISTENT MEMORY FOR AI AGENTS</BracketHeading>
+                <h1 className="mt-3 text-[clamp(2rem,7vw,4.6rem)] leading-[1.02] tracking-wide">
+                  Stop re-explaining.
+                  <br />
+                  <span className="font-bold">Start shipping.</span>
+                </h1>
+                <p className="mt-6 text-base md:text-lg text-primary max-w-2xl">
+                  Memory Crystal gives your AI agents durable memory across compactions, restarts, and new
+                  sessions. Decisions, workflows, and context stay available exactly when your agent needs
+                  them.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-mono uppercase tracking-[0.18em] text-secondary">
+                  <span className="text-secondary/80">Works with</span>
+                  {platformBadges.map((platform) => (
+                    <span key={platform} className="rounded-full border border-[#2180D6]/30 bg-white/[0.03] px-3 py-1 text-primary/90">
+                      {platform}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-5 glass-card border border-[#2180D6]/20 px-4 py-3 max-w-3xl">
+                  <p className="text-sm md:text-[15px] text-primary/95">
+                    1,800+ memories • 3,800+ graph nodes • 4,900+ relations • Semantic recall across every session
+                  </p>
+                </div>
 
-              <div className="mt-10 w-full max-w-3xl text-left">
-                <TabbedInstallCommand />
               </div>
 
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                <Link href="/pricing" className="btn-primary px-6 py-3 text-xs inline-flex items-center justify-center">
-                  START FREE
-                </Link>
-                <Link href="/docs" className="btn-secondary px-6 py-3 text-xs inline-flex items-center justify-center">
-                  READ DOCS
-                </Link>
-              </div>
+              <aside className="glass-card border border-white/[0.08] p-6 md:p-8">
+                <p className="text-xs font-mono text-accent tracking-[0.2em] uppercase">Why teams switch</p>
+                <ul className="mt-4 space-y-4">
+                  {whyItMatters.map((point) => (
+                    <li key={point} className="flex gap-3 text-sm text-primary leading-relaxed">
+                      <CrystalIcon size={14} glow className="shrink-0 mt-1" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-6 pt-6 border-t border-white/[0.08]">
+                  <p className="text-secondary text-sm">
+                    Works with OpenClaw, Claude Code, Codex CLI, and any MCP-compatible client.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <Link href="/pricing" className="btn-primary px-4 py-3 text-xs inline-flex items-center justify-center">
+                      START FREE
+                    </Link>
+                    <Link href="/dashboard" className="btn-secondary px-4 py-3 text-xs inline-flex items-center justify-center">
+                      OPEN DASHBOARD
+                    </Link>
+                  </div>
+                </div>
+              </aside>
             </div>
           </div>
         </section>
 
         <section id="install" className="border-b border-white/[0.07] py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <BracketHeading>WHY TEAMS SWITCH</BracketHeading>
-            <h2 className="mt-2 font-heading text-3xl md:text-5xl">Stop losing context between sessions.</h2>
-            <p className="mt-3 max-w-3xl text-secondary">
-              The install is above. This is why people keep it: once memory is persistent, your agent stops making you repeat yourself.
-            </p>
-            <div className="mt-8 grid gap-4 md:grid-cols-3">
-              {whyItMatters.map((point) => (
-                <article key={point} className="glass-card border border-white/[0.08] p-5">
-                  <CrystalIcon size={18} glow />
-                  <p className="mt-3 text-sm text-primary leading-relaxed">{point}</p>
-                </article>
-              ))}
+            <div className="grid lg:grid-cols-[1fr_1.1fr] gap-8 items-start">
+              <div>
+                <BracketHeading>GET STARTED</BracketHeading>
+                <h2 className="mt-2 font-heading text-3xl md:text-5xl">Install in one command. Connect in minutes.</h2>
+                <p className="mt-3 max-w-xl text-secondary">
+                  Copy the command, run it once, approve in your browser, and Memory Crystal starts capturing context immediately.
+                </p>
+                <div className="mt-6">
+                  <InstallCommandCard
+                    title="Quick Install"
+                    description="Run this, then approve the browser auth flow."
+                    command={DEFAULT_INSTALL_COMMAND}
+                    showDocsLink
+                  />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-mono text-secondary tracking-[0.2em] uppercase mb-3">How it works</p>
+                <TerminalAnimation />
+              </div>
             </div>
-          </div>
-        </section>
-
-        <section className="border-b border-white/[0.07] py-14">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <BracketHeading>WORKS EVERYWHERE YOUR AGENTS DO</BracketHeading>
-            <h2 className="mt-2 font-heading text-3xl md:text-5xl">One memory layer. Every platform.</h2>
-            <p className="mt-3 max-w-3xl text-secondary">
-              Memory Crystal connects via MCP — the open standard for AI tool integration.
-              Your memories are shared across every agent and client that supports it.
-            </p>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                { name: "OpenClaw", desc: "Native plugin with deep integration — auto-capture, recall hooks, and wake briefings.", platforms: "macOS · Linux" },
-                { name: "Claude Code", desc: "Add as a Streamable HTTP MCP server. Claude gets persistent memory across coding sessions.", platforms: "macOS · Linux · Windows" },
-                { name: "Codex CLI", desc: "Register as an MCP server in config.toml. Memory persists across Codex sessions and IDE.", platforms: "macOS · Linux · Windows" },
-                { name: "Factory / Droid", desc: "Add via /mcp or the Droid CLI. Your agent's memory travels between Factory projects.", platforms: "macOS · Linux · Windows" },
-              ].map((client) => (
-                <article key={client.name} className="glass-card border border-white/[0.08] p-5">
-                  <p className="font-mono text-accent text-sm">{client.name}</p>
-                  <p className="mt-2 text-sm text-primary leading-relaxed">{client.desc}</p>
-                  <p className="mt-3 text-xs text-secondary font-mono">{client.platforms}</p>
-                </article>
-              ))}
-            </div>
-            <p className="mt-6 text-secondary text-sm">
-              Switching agents? Your memories come with you. Memory Crystal is the shared layer underneath.
-              Already using OpenClaw&apos;s built-in memory? The installer migrates your existing memories automatically.
-            </p>
           </div>
         </section>
 
@@ -151,16 +179,48 @@ export default function HomePage() {
 
         <section className="border-b border-white/[0.07] py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <BracketHeading>CONTEXT VS MEMORY</BracketHeading>
+            <h2 className="mt-2 font-heading text-3xl md:text-5xl max-w-5xl">
+              Context management keeps your conversation. Memory Crystal keeps your knowledge.
+            </h2>
+            <div className="mt-8 grid gap-4 lg:grid-cols-2">
+              <article className="glass-card border border-white/[0.08] p-6 md:p-7">
+                <h3 className="font-heading text-2xl">Context Managers</h3>
+                <ul className="mt-5 space-y-3">
+                  {contextManagerLimits.map((point) => (
+                    <li key={point} className="flex gap-3 text-sm text-primary leading-relaxed">
+                      <span className="mt-1 h-2 w-2 rounded-full bg-white/35 shrink-0" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+              <article className="glass-card border border-[#2180D6]/30 bg-[#2180D6]/[0.05] p-6 md:p-7">
+                <h3 className="font-heading text-2xl text-primary">Memory Crystal</h3>
+                <ul className="mt-5 space-y-3">
+                  {memoryCrystalAdvantages.map((point) => (
+                    <li key={point} className="flex gap-3 text-sm text-primary leading-relaxed">
+                      <CrystalIcon size={14} glow className="shrink-0 mt-1 text-[#2180D6]" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-white/[0.07] py-14">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <BracketHeading>SEE IT IN ACTION</BracketHeading>
-            <h2 className="mt-2 font-heading text-3xl md:text-5xl">Memory that works across every session.</h2>
-            <div className="mt-8 glass-card border border-white/[0.08] overflow-hidden">
+            <div className="glass-card border border-accent/20 p-4 md:p-6">
               <video
                 autoPlay
                 loop
                 muted
                 playsInline
                 poster="/images/crystal-demo-poster.webp"
-                className="w-full aspect-video object-cover"
+                className="w-full rounded-lg border border-white/[0.09]"
               >
                 <source src="/images/demo-loop.mp4" type="video/mp4" />
               </video>
@@ -170,35 +230,40 @@ export default function HomePage() {
 
         <section className="border-b border-white/[0.07] py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <BracketHeading>INSIDE THE PRODUCT</BracketHeading>
+            <BracketHeading>DASHBOARD &amp; INSTALL</BracketHeading>
             <div className="grid md:grid-cols-2 gap-4">
-              <div className="glass-card border border-white/[0.08] overflow-hidden">
-                <Image
+              <div className="glass-card border border-white/[0.08] p-4">
+                <h3 className="font-heading text-xl mb-4">Memory Dashboard</h3>
+                <img
                   src="/images/dashboard-preview.webp"
-                  alt="Memory Crystal dashboard showing memories, stats, and recall accuracy"
-                  width={768}
-                  height={512}
-                  className="w-full h-auto"
+                  alt="Memory Crystal dashboard showing memory stats, recall accuracy, and memory list"
+                  className="w-full rounded-lg border border-white/[0.09]"
+                  loading="lazy"
                 />
-                <div className="p-5">
-                  <h3 className="font-heading text-xl">Memory dashboard</h3>
-                  <p className="mt-2 text-secondary text-sm">Track memories, confidence scores, and recall health at a glance.</p>
-                </div>
               </div>
-              <div className="glass-card border border-white/[0.08] overflow-hidden">
-                <Image
+              <div className="glass-card border border-white/[0.08] p-4">
+                <h3 className="font-heading text-xl mb-4">Install &amp; Recall Flow</h3>
+                <img
                   src="/images/install-recall-preview.webp"
-                  alt="Terminal showing Memory Crystal install flow and agent recall"
-                  width={768}
-                  height={512}
-                  className="w-full h-auto"
+                  alt="Terminal showing Memory Crystal installation and agent recalling past context"
+                  className="w-full rounded-lg border border-white/[0.09]"
+                  loading="lazy"
                 />
-                <div className="p-5">
-                  <h3 className="font-heading text-xl">Install + recall in action</h3>
-                  <p className="mt-2 text-secondary text-sm">One command to install. Context flows into every session automatically.</p>
-                </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section className="border-b border-white/[0.07] py-14">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <BracketHeading>MEMORY IN ACTION</BracketHeading>
+            <h2 className="mt-2 font-heading text-3xl md:text-5xl max-w-5xl">
+              See what happens when your agent actually remembers.
+            </h2>
+            <p className="mt-3 max-w-3xl text-secondary">
+              These are real moments from an agent powered by Memory Crystal — compactions, new sessions, cross-context recall.
+            </p>
+            <AgentShowcase />
           </div>
         </section>
 
