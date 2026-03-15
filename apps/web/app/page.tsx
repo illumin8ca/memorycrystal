@@ -6,29 +6,6 @@ import TabbedInstallCommand from "./components/TabbedInstallCommand";
 import AgentShowcase from "./components/AgentShowcase";
 import TerminalAnimation from "./components/TerminalAnimation";
 
-const coreFeatures = [
-  {
-    title: "Graph Enrichment",
-    copy: "Memory Crystal links memories to people, projects, decisions, and tools so your agent recalls connected context, not isolated snippets.",
-  },
-  {
-    title: "Adaptive Recall Modes",
-    copy: "Switch between general, decision, project, people, workflow, and conversation recall to pull exactly the context needed for each task.",
-  },
-  {
-    title: "Relationship Tools",
-    copy: "Trace ownership, dependencies, and cross-project links with built-in graph tools that keep your AI grounded in reality.",
-  },
-  {
-    title: "Memory Health Dashboard",
-    copy: "See coverage, staleness, and memory quality at a glance so you can trust what your agent remembers.",
-  },
-  {
-    title: "Salience Filtering",
-    copy: "Important memories are promoted. Low-value noise stays out of the way. Recall stays sharp as your history grows.",
-  },
-];
-
 const whyItMatters = [
   "OpenClaw sessions compact and reset. Your context should not.",
   "Stop repeating architecture decisions and team conventions every day.",
@@ -63,14 +40,13 @@ function BracketHeading({ children }: { children: string }) {
   );
 }
 
-
-
-export default function HomeNewPage() {
+export default function HomePage() {
   return (
     <div className="min-h-screen bg-void text-primary">
       <Header />
 
       <main>
+        {/* ── 1. HERO ── */}
         <section className="relative border-b border-white/[0.07] overflow-hidden">
           <div className="absolute inset-0 pointer-events-none">
             <div className="gradient-pulse" />
@@ -104,7 +80,6 @@ export default function HomeNewPage() {
                     1,800+ memories • 3,800+ graph nodes • 4,900+ relations • Semantic recall across every session
                   </p>
                 </div>
-
               </div>
 
               <aside className="glass-card border border-white/[0.08] p-6 md:p-8">
@@ -135,14 +110,15 @@ export default function HomeNewPage() {
           </div>
         </section>
 
+        {/* ── 2. INSTALL ── */}
         <section id="install" className="border-b border-white/[0.07] py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-[1fr_1.1fr] gap-8 items-start">
               <div>
                 <BracketHeading>GET STARTED</BracketHeading>
-                <h2 className="mt-2 font-heading text-3xl md:text-5xl">Install in one command. Connect in minutes.</h2>
+                <h2 className="mt-2 font-heading text-3xl md:text-5xl">Install in one command.</h2>
                 <p className="mt-3 max-w-xl text-secondary">
-                  Copy the command, run it once, approve in your browser, and Memory Crystal starts capturing context immediately.
+                  Pick your platform. Run the command. Approve in your browser. Done.
                 </p>
                 <div className="mt-6">
                   <TabbedInstallCommand />
@@ -156,22 +132,7 @@ export default function HomeNewPage() {
           </div>
         </section>
 
-        <section className="border-b border-white/[0.07] py-14">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <BracketHeading>WHAT MEMORY CRYSTAL DOES</BracketHeading>
-            <h2 className="mt-2 font-heading text-3xl md:text-5xl">A memory system built for serious AI work.</h2>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {coreFeatures.map((feature) => (
-                <article key={feature.title} className="glass-card border border-white/[0.08] p-6">
-                  <CrystalIcon size={20} glow />
-                  <h3 className="mt-3 font-heading text-2xl">{feature.title}</h3>
-                  <p className="mt-3 text-secondary text-sm leading-relaxed">{feature.copy}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
+        {/* ── 3. CONTEXT VS MEMORY ── */}
         <section className="border-b border-white/[0.07] py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <BracketHeading>CONTEXT VS MEMORY</BracketHeading>
@@ -205,50 +166,7 @@ export default function HomeNewPage() {
           </div>
         </section>
 
-        <section className="border-b border-white/[0.07] py-14">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <BracketHeading>SEE IT IN ACTION</BracketHeading>
-            <div className="glass-card border border-accent/20 p-4 md:p-6">
-              <video
-                autoPlay
-                loop
-                muted
-                playsInline
-                poster="/images/crystal-demo-poster.webp"
-                className="w-full rounded-lg border border-white/[0.09]"
-              >
-                <source src="/images/demo-loop.mp4" type="video/mp4" />
-              </video>
-            </div>
-          </div>
-        </section>
-
-        <section className="border-b border-white/[0.07] py-14">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <BracketHeading>DASHBOARD &amp; INSTALL</BracketHeading>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="glass-card border border-white/[0.08] p-4">
-                <h3 className="font-heading text-xl mb-4">Memory Dashboard</h3>
-                <img
-                  src="/images/dashboard-preview.webp"
-                  alt="Memory Crystal dashboard showing memory stats, recall accuracy, and memory list"
-                  className="w-full rounded-lg border border-white/[0.09]"
-                  loading="lazy"
-                />
-              </div>
-              <div className="glass-card border border-white/[0.08] p-4">
-                <h3 className="font-heading text-xl mb-4">Install &amp; Recall Flow</h3>
-                <img
-                  src="/images/install-recall-preview.webp"
-                  alt="Terminal showing Memory Crystal installation and agent recalling past context"
-                  className="w-full rounded-lg border border-white/[0.09]"
-                  loading="lazy"
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-
+        {/* ── 4. AGENT SHOWCASE ── */}
         <section className="border-b border-white/[0.07] py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <BracketHeading>MEMORY IN ACTION</BracketHeading>
@@ -256,18 +174,19 @@ export default function HomeNewPage() {
               See what happens when your agent actually remembers.
             </h2>
             <p className="mt-3 max-w-3xl text-secondary">
-              These are real moments from an agent powered by Memory Crystal — compactions, new sessions, cross-context recall.
+              Real moments from an agent powered by Memory Crystal — compactions, new sessions, cross-context recall.
             </p>
             <AgentShowcase />
           </div>
         </section>
 
+        {/* ── 5. CTA ── */}
         <section className="py-16">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <BracketHeading>READY TO STOP LOSING CONTEXT?</BracketHeading>
-            <h2 className="mt-2 font-heading text-3xl md:text-5xl">Install now. Start free. Keep your agent aligned.</h2>
+            <h2 className="mt-2 font-heading text-3xl md:text-5xl">Install now. Start free.</h2>
             <p className="mt-4 text-secondary">
-              Get the free plan, copy install, and turn Memory Crystal on before your next coding session.
+              Free plan includes 500 memories, semantic search, graph enrichment, and 3 platform channels.
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
               <Link href="/pricing" className="btn-primary px-6 py-3 text-xs inline-flex items-center justify-center">
