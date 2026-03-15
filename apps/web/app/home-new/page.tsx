@@ -153,7 +153,7 @@ export default function HomeNewPage() {
                   />
                 </div>
               </div>
-              <div className="hidden lg:block">
+              <div>
                 <p className="text-xs font-mono text-secondary tracking-[0.2em] uppercase mb-3">How it works</p>
                 <TerminalAnimation />
               </div>
