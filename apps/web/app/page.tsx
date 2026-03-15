@@ -46,22 +46,50 @@ export default function HomePage() {
       <Header />
 
       <main>
-        {/* ── 1. HERO ── */}
-        <section className="relative border-b border-white/[0.07] overflow-hidden">
+        {/* ── 1. INSTALL (with SEO H1) ── */}
+        <section id="install" className="relative border-b border-white/[0.07] overflow-hidden">
           <div className="absolute inset-0 pointer-events-none">
             <div className="gradient-pulse" />
             <div className="crystal-lattice opacity-70" />
           </div>
 
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 md:py-20">
+            <div className="grid lg:grid-cols-[1fr_1.1fr] gap-8 items-start">
+              <div>
+                <h1 className="text-[clamp(2rem,7vw,4.6rem)] leading-[1.02] tracking-wide">
+                  Persistent Memory
+                  <br />
+                  <span className="font-bold">for AI Agents</span>
+                </h1>
+                <p className="mt-4 font-heading text-xl md:text-2xl text-secondary">
+                  Install in one command.
+                </p>
+                <p className="mt-3 max-w-xl text-secondary">
+                  Pick your platform. Run the command. Approve in your browser. Done.
+                </p>
+                <div className="mt-6">
+                  <TabbedInstallCommand />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-mono text-secondary tracking-[0.2em] uppercase mb-3">How it works</p>
+                <TerminalAnimation />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 2. VALUE PROP ── */}
+        <section className="border-b border-white/[0.07] py-14">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-8 items-start">
               <div>
-                <BracketHeading>PERSISTENT MEMORY FOR AI AGENTS</BracketHeading>
-                <h1 className="mt-3 text-[clamp(2rem,7vw,4.6rem)] leading-[1.02] tracking-wide">
+                <BracketHeading>WHY MEMORY CRYSTAL</BracketHeading>
+                <h2 className="mt-3 font-heading text-3xl md:text-5xl leading-[1.05]">
                   Stop re-explaining.
                   <br />
-                  <span className="font-bold">Start shipping.</span>
-                </h1>
+                  Start shipping.
+                </h2>
                 <p className="mt-6 text-base md:text-lg text-primary max-w-2xl">
                   Memory Crystal gives your AI agents durable memory across compactions, restarts, and new
                   sessions. Decisions, workflows, and context stay available exactly when your agent needs
@@ -106,28 +134,6 @@ export default function HomePage() {
                   </div>
                 </div>
               </aside>
-            </div>
-          </div>
-        </section>
-
-        {/* ── 2. INSTALL ── */}
-        <section id="install" className="border-b border-white/[0.07] py-14">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid lg:grid-cols-[1fr_1.1fr] gap-8 items-start">
-              <div>
-                <BracketHeading>GET STARTED</BracketHeading>
-                <h2 className="mt-2 font-heading text-3xl md:text-5xl">Install in one command.</h2>
-                <p className="mt-3 max-w-xl text-secondary">
-                  Pick your platform. Run the command. Approve in your browser. Done.
-                </p>
-                <div className="mt-6">
-                  <TabbedInstallCommand />
-                </div>
-              </div>
-              <div>
-                <p className="text-xs font-mono text-secondary tracking-[0.2em] uppercase mb-3">How it works</p>
-                <TerminalAnimation />
-              </div>
             </div>
           </div>
         </section>

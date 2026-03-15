@@ -100,7 +100,7 @@ export default function TabbedInstallCommand() {
 
         <div className="mt-4 border border-white/[0.09] bg-void overflow-x-auto">
           <div className="flex items-start justify-between gap-3 px-4 py-4 sm:px-5 sm:py-5">
-            <pre className="min-w-0 flex-1 pr-4 text-sm sm:text-base font-mono text-primary whitespace-pre-wrap break-all">
+            <pre className="min-w-0 flex-1 pr-4 text-[12px] md:text-[13px] font-mono text-primary whitespace-pre-wrap break-all">
               {currentTab.command}
             </pre>
             <button
