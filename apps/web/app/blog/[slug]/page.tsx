@@ -14,8 +14,26 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const post = getPostBySlug(slug);
   if (!post) return {};
   return {
-    title: `${post.title} | Memory Crystal Blog`,
+    title: post.title,
     description: post.description,
+    alternates: {
+      canonical: `https://memorycrystal.ai/blog/${slug}`,
+    },
+    openGraph: {
+      title: post.title,
+      description: post.description,
+      type: "article",
+      url: `https://memorycrystal.ai/blog/${slug}`,
+      publishedTime: post.date,
+      authors: [post.author],
+      tags: post.tags,
+      siteName: "Memory Crystal",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.description,
+    },
   };
 }
 

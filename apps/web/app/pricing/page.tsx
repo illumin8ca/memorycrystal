@@ -37,7 +37,7 @@ const pricingPlans: PricingPlan[] = [
       planFeatureFromTier("free").stm,
       planFeatureFromTier("free").ttl,
       planFeatureFromTier("free").channels,
-      "Knowledge Graph Enrichment — Not included",
+      "Knowledge Graph Enrichment — Basic (Gemini Flash)",
       "Adaptive Recall Modes — Not included (general only)",
       "Relationship Graph Tools — Not included",
       "Memory Health Dashboard — Not included",
@@ -134,6 +134,10 @@ export default function PricingPage() {
             </article>
           ))}
         </section>
+
+        <p className="mt-6 max-w-3xl text-sm text-secondary/80">
+          Memory Crystal&apos;s free tier includes semantic search, graph enrichment, and multi-platform support. Most context management tools are single-platform only.
+        </p>
       </main>
       <Footer />
     </div>

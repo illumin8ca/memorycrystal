@@ -7,7 +7,7 @@ import { applyDashboardTotalsDelta } from "./dashboardTotals";
 const GRAPH_TEMPERATURE = 0.1;
 
 const TIER_ENRICHMENT_MODELS: Record<string, string | null> = {
-  free: null,
+  free: "gemini-2.0-flash",
   starter: "gemini-2.0-flash",
   pro: "gemini-2.5-flash",
   ultra: "gemini-2.5-flash",

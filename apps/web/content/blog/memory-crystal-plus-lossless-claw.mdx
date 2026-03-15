@@ -1,0 +1,156 @@
+---
+title: "Using Memory Crystal with Lossless Claw: The Complete Memory Stack"
+description: "How to combine LCM's lossless context management with Memory Crystal's persistent cross-session memory for agents that never forget."
+date: "2026-03-15"
+category: "guides"
+tags: ["openclaw", "lossless-claw", "lcm", "integration", "plugins"]
+author: "Memory Crystal Team"
+---
+
+# Two memory problems, two different tools
+
+A lot of people treat "memory" as one thing in agent systems. It isn't.
+
+There are really two separate problems:
+
+1. **The current session gets too large** and the model runs out of context window.
+2. **The session ends** and everything useful disappears.
+
+Lossless Claw solves the first problem. Memory Crystal solves the second.
+
+That distinction matters because these plugins are not competitors. They operate at different layers of the stack.
+
+## The two memory problems
+
+### 1. Context windows overflow
+
+In long OpenClaw sessions, sooner or later the active transcript gets too large to fit cleanly into the model's context window.
+
+Lossless Claw Memory (LCM) fixes that by replacing built-in compaction with DAG-based summarization. It stores every message in local SQLite, builds summary DAGs, and gives you tools like `lcm_grep`, `lcm_describe`, and `lcm_expand_query` to inspect session history without losing information.
+
+In other words: LCM manages **what the model can see right now**.
+
+### 2. Sessions reset and knowledge disappears
+
+Even if your in-session compaction is perfect, a reset still wipes the working context. Decisions, people, workflows, and project history are gone unless something persists them across sessions.
+
+That is the job of Memory Crystal.
+
+Memory Crystal stores durable knowledge with semantic embeddings and a knowledge graph, then recalls relevant context in future sessions. It is designed for **cross-session memory**, not context window management.
+
+## How they work together
+
+OpenClaw supports both plugins at the same time because they live in different plugin slots:
+
+- **LCM** goes in the `contextEngine` slot
+- **Memory Crystal** goes in the `memory` slot
+
+That means they do not conflict.
+
+### Lossless Claw
+
+- manages the live session context
+- summarizes long conversations into a DAG instead of dropping information
+- helps the model stay grounded in the current thread
+- supports mid-conversation search and expansion with LCM tools
+
+### Memory Crystal
+
+- captures durable knowledge across sessions
+- stores decisions, people, workflows, and project context
+- performs semantic recall when a new session starts
+- adds graph-based context that goes beyond literal keyword matches
+
+A good mental model is this:
+
+- **LCM** answers: *What from this session should the model see right now?*
+- **Memory Crystal** answers: *What from prior sessions should the model remember now?*
+
+## Setup guide
+
+Here is the OpenClaw config to run both together:
+
+```json
+{
+  "plugins": {
+    "slots": {
+      "contextEngine": "lossless-claw",
+      "memory": "crystal-memory"
+    },
+    "entries": {
+      "lossless-claw": {
+        "enabled": true,
+        "config": {
+          "freshTailCount": 32,
+          "contextThreshold": 0.75,
+          "incrementalMaxDepth": -1
+        }
+      },
+      "crystal-memory": {
+        "enabled": true,
+        "config": {
+          "apiKey": "your-api-key-here"
+        }
+      }
+    }
+  }
+}
+```
+
+Once configured this way, OpenClaw uses LCM for session context handling and Memory Crystal for durable recall.
+
+## What each plugin handles
+
+| Task | Plugin |
+| --- | --- |
+| `/compact` | **LCM** — DAG summarization with no information loss |
+| Session start recall | **Memory Crystal** — semantic recall of relevant prior knowledge |
+| Mid-conversation search | **LCM** — tools like `lcm_grep` and `lcm_expand_query` |
+| Cross-session knowledge | **Memory Crystal** — recall and capture of durable memories |
+| Knowledge graph | **Memory Crystal** only |
+| Context window management | **LCM** only |
+
+You can think of it as a clean split of responsibilities:
+
+- **LCM** is your in-session memory infrastructure
+- **Memory Crystal** is your cross-session memory infrastructure
+
+## Why you need both
+
+If you only use LCM, your current session stays rich and lossless, but a reset still clears the slate.
+
+If you only use Memory Crystal, you get durable recall across sessions, but it does not solve context window pressure inside a long active conversation.
+
+Together, they form a complete memory stack:
+
+- **LCM** keeps long sessions coherent
+- **Memory Crystal** keeps knowledge alive between sessions
+
+That combination is what you want if your agent does real work over time instead of living one chat at a time.
+
+## Cross-platform bonus
+
+There is also a practical advantage to pairing them.
+
+LCM is OpenClaw-specific. Memory Crystal is not.
+
+Memory Crystal also works with tools like:
+
+- Claude Code
+- Codex CLI
+- Cursor via MCP
+
+So if OpenClaw is where you do long, complex sessions, LCM makes those sessions far more capable. And if you move between different agent tools, Memory Crystal carries durable knowledge across all of them.
+
+That gives you a nice division of labor:
+
+- **LCM** optimizes your OpenClaw runtime
+- **Memory Crystal** preserves what matters across sessions and across tools
+
+## Bottom line
+
+Lossless Claw and Memory Crystal solve different problems, and that is exactly why they work so well together.
+
+Use LCM when you want lossless in-session context management.
+Use Memory Crystal when you want persistent cross-session memory.
+Use both when you want an agent stack that can handle long conversations **and** remember what happened yesterday.

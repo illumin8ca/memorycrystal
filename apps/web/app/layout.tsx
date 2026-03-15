@@ -35,7 +35,10 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Memory Crystal — Persistent Memory for Claude Code, Codex & AI Agents",
+  title: {
+    default: "Memory Crystal — Persistent Memory for Claude Code, Codex & AI Agents",
+    template: "%s | Memory Crystal",
+  },
   description: "Memory Crystal is the MCP server that gives Claude Code, Codex, and OpenClaw persistent memory across sessions and compactions. Never lose context again. Free plan available.",
   keywords: [
     "Claude Code persistent memory",
@@ -48,20 +51,45 @@ export const metadata: Metadata = {
     "persistent context for AI coding assistants",
     "MCP memory server",
     "Claude Code memory loss fix",
+    "persistent memory MCP server",
+    "AI coding assistant memory",
+    "agent memory layer",
+    "cross-session memory AI",
   ],
   openGraph: {
     title: "Memory Crystal — Persistent Memory for Claude Code & AI Agents",
     description: "The MCP server that gives Claude Code, Codex, and OpenClaw persistent memory. Never lose context when compacting. Free plan available.",
     type: "website",
     url: "https://memorycrystal.ai",
+    siteName: "Memory Crystal",
+    images: [
+      {
+        url: "https://memorycrystal.ai/icons/icon-512.png",
+        width: 512,
+        height: 512,
+        alt: "Memory Crystal — Persistent Memory for AI Agents",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Memory Crystal — Persistent Memory for Claude Code & AI Agents",
     description: "The MCP server that gives Claude Code, Codex, and OpenClaw persistent memory. Never lose context when compacting.",
+    site: "@memorycrystal",
   },
   alternates: {
     canonical: "https://memorycrystal.ai",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
   icons: {
     icon: [
@@ -80,6 +108,34 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
 };
 
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Memory Crystal",
+  url: "https://memorycrystal.ai",
+  logo: "https://memorycrystal.ai/icons/icon-512.png",
+  description:
+    "Memory Crystal is the MCP server that gives Claude Code, Codex, and OpenClaw persistent memory across sessions and compactions.",
+  sameAs: ["https://github.com/openclaw/memorycrystal"],
+};
+
+const softwareJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Memory Crystal",
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "macOS, Linux, Windows",
+  url: "https://memorycrystal.ai",
+  description:
+    "Persistent memory MCP server for Claude Code, Codex, OpenClaw, and any MCP-compatible AI coding assistant. Never lose context between sessions.",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+    description: "Free plan available",
+  },
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -87,6 +143,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }}
+        />
+      </head>
       <body suppressHydrationWarning className={`${oxanium.variable} ${audiowide.variable} ${inter.variable} bg-void text-primary antialiased`}>
         <ConvexAuthNextjsServerProvider>
           <ConvexClientProvider>

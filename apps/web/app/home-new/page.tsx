@@ -34,6 +34,24 @@ const whyItMatters = [
   "Give every agent the same shared memory layer across sessions.",
 ];
 
+const contextManagerLimits = [
+  "Session-scoped only",
+  "Single platform",
+  "Regex/keyword search",
+  "Gone when session resets",
+  "No semantic understanding",
+];
+
+const memoryCrystalAdvantages = [
+  "Cross-session persistence",
+  "Works with OpenClaw + Claude Code + Codex + any MCP client",
+  "Semantic embedding search",
+  "Knowledge graph with 3,800+ nodes",
+  "Survives compaction/restarts/new sessions",
+];
+
+const platformBadges = ["OpenClaw", "Claude Code", "Codex CLI", "Cursor", "Any MCP Client"];
+
 function BracketHeading({ children }: { children: string }) {
   return (
     <p className="text-xs font-mono text-secondary tracking-[0.25em] uppercase">
@@ -68,10 +86,23 @@ export default function HomeNewPage() {
                   <span className="font-bold">Start shipping.</span>
                 </h1>
                 <p className="mt-6 text-base md:text-lg text-primary max-w-2xl">
-                  Memory Crystal gives OpenClaw and MCP-based agents durable memory across compactions,
-                  restarts, and new sessions. Decisions, workflows, and context stay available exactly when
-                  your agent needs them.
+                  Memory Crystal gives your AI agents durable memory across compactions, restarts, and new
+                  sessions. Decisions, workflows, and context stay available exactly when your agent needs
+                  them.
                 </p>
+                <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-mono uppercase tracking-[0.18em] text-secondary">
+                  <span className="text-secondary/80">Works with</span>
+                  {platformBadges.map((platform) => (
+                    <span key={platform} className="rounded-full border border-[#2180D6]/30 bg-white/[0.03] px-3 py-1 text-primary/90">
+                      {platform}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-5 glass-card border border-[#2180D6]/20 px-4 py-3 max-w-3xl">
+                  <p className="text-sm md:text-[15px] text-primary/95">
+                    1,800+ memories • 3,800+ graph nodes • 4,900+ relations • Semantic recall across every session
+                  </p>
+                </div>
 
               </div>
 
@@ -133,6 +164,39 @@ export default function HomeNewPage() {
                   <p className="mt-3 text-secondary text-sm leading-relaxed">{feature.copy}</p>
                 </article>
               ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-white/[0.07] py-14">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <BracketHeading>CONTEXT VS MEMORY</BracketHeading>
+            <h2 className="mt-2 font-heading text-3xl md:text-5xl max-w-5xl">
+              Context management keeps your conversation. Memory Crystal keeps your knowledge.
+            </h2>
+            <div className="mt-8 grid gap-4 lg:grid-cols-2">
+              <article className="glass-card border border-white/[0.08] p-6 md:p-7">
+                <h3 className="font-heading text-2xl">Context Managers</h3>
+                <ul className="mt-5 space-y-3">
+                  {contextManagerLimits.map((point) => (
+                    <li key={point} className="flex gap-3 text-sm text-primary leading-relaxed">
+                      <span className="mt-1 h-2 w-2 rounded-full bg-white/35 shrink-0" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+              <article className="glass-card border border-[#2180D6]/30 bg-[#2180D6]/[0.05] p-6 md:p-7">
+                <h3 className="font-heading text-2xl text-primary">Memory Crystal</h3>
+                <ul className="mt-5 space-y-3">
+                  {memoryCrystalAdvantages.map((point) => (
+                    <li key={point} className="flex gap-3 text-sm text-primary leading-relaxed">
+                      <CrystalIcon size={14} glow className="shrink-0 mt-1 text-[#2180D6]" />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
             </div>
           </div>
         </section>

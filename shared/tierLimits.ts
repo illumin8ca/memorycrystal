@@ -10,7 +10,7 @@ export type TierLimits = {
 };
 
 export const TIER_LIMITS: Record<UserTier, TierLimits> = {
-  free: { memories: 500, stmMessages: 500, channels: 1, stmTtlDays: 30 },
+  free: { memories: 500, stmMessages: 500, channels: 3, stmTtlDays: 30 },
   starter: { memories: 10_000, stmMessages: 5_000, channels: 5, stmTtlDays: 60 },
   pro: { memories: 25_000, stmMessages: 25_000, channels: null, stmTtlDays: 90 },
   ultra: { memories: 50_000, stmMessages: null, channels: null, stmTtlDays: 365 },
