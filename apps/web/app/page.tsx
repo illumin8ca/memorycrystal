@@ -3,8 +3,9 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import CrystalIcon from "./components/CrystalIcon";
 import TabbedInstallCommand from "./components/TabbedInstallCommand";
-import AgentShowcase from "./components/AgentShowcase";
 import TerminalAnimation from "./components/TerminalAnimation";
+import MockScreenshots from "./components/MockScreenshots";
+import ExplainerAnimation from "./components/ExplainerAnimation";
 
 const whyItMatters = [
   "OpenClaw sessions compact and reset. Your context should not.",
@@ -72,7 +73,6 @@ export default function HomePage() {
                 </div>
               </div>
               <div>
-                <p className="text-xs font-mono text-secondary tracking-[0.2em] uppercase mb-3">How it works</p>
                 <TerminalAnimation />
               </div>
             </div>
@@ -172,7 +172,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ── 4. AGENT SHOWCASE ── */}
+        {/* ── 4. SCREENSHOTS ── */}
         <section className="border-b border-white/[0.07] py-14">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <BracketHeading>MEMORY IN ACTION</BracketHeading>
@@ -180,9 +180,23 @@ export default function HomePage() {
               See what happens when your agent actually remembers.
             </h2>
             <p className="mt-3 max-w-3xl text-secondary">
-              Real moments from an agent powered by Memory Crystal — compactions, new sessions, cross-context recall.
+              Real examples across terminal, Discord, and Telegram — your agent recalls context no matter where the conversation happens.
             </p>
-            <AgentShowcase />
+            <MockScreenshots />
+          </div>
+        </section>
+
+        {/* ── 5. HOW IT WORKS ── */}
+        <section className="border-b border-white/[0.07] py-14">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <BracketHeading>HOW IT WORKS</BracketHeading>
+            <h2 className="mt-2 font-heading text-3xl md:text-5xl max-w-4xl">
+              From conversation to persistent knowledge in six steps.
+            </h2>
+            <p className="mt-3 max-w-3xl text-secondary">
+              Memory Crystal captures, embeds, enriches, and stores your agent&apos;s context — then recalls it automatically when needed.
+            </p>
+            <ExplainerAnimation />
           </div>
         </section>
 
